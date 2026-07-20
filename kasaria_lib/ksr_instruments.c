@@ -161,7 +161,7 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
     Instrument *ip;
     Sample     *sp;
     FILE       *fp;
-    u_char       tmp[1024];
+    u_char      tmp[1024];
     int         i, j, noluck = 0;
 #ifdef PATCH_EXT_LIST
     static char *patch_ext[] = PATCH_EXT_LIST;
@@ -219,7 +219,7 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
     {
 
         u_char  fractions;
-        long  tmplong;
+        long    tmplong;
         u_short tmpshort;
         u_char  tmpchar;
 
@@ -357,7 +357,7 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
 
         if(!(sp->modes & MODES_16BIT)) /* convert to 16-bit data */
         {
-            long   i  = sp->data_length;
+            long     i  = sp->data_length;
             u_char  *cp = (u_char *)(sp->data);
             u_short *tmp, *newdata;
             tmp = newdata = (u_short *)safe_malloc(sp->data_length * 2);
@@ -387,7 +387,7 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
 
         if(sp->modes & MODES_UNSIGNED) /* convert to signed data */
         {
-            long  i   = sp->data_length / 2;
+            long   i   = sp->data_length / 2;
             short *tmp = (short *)sp->data;
             while(i--)
                 *tmp++ ^= 0x8000;
@@ -422,7 +422,7 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
             /* Try to determine a volume scaling factor for the sample.
             This is a very crude adjustment, but things sound more
             balanced with it. Still, this should be a runtime option. */
-            long  i      = sp->data_length / 2;
+            long   i      = sp->data_length / 2;
             short  maxamp = 0, a;
             short *tmp    = (short *)sp->data;
             while(i--)
@@ -618,8 +618,8 @@ static long sf_tc_to_offset(int val)
 
 static long sf_calc_envelope_rate(Kasaria *ksr, long msec)
 {
-    long  diff = 255;
-    f64 rate;
+    long diff = 255;
+    f64  rate;
     if(msec < 1)
         msec = 1;
     diff <<= (7 + 15);
@@ -645,8 +645,8 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
     SFGenLayer   *inst_zone;
     SFSampleInfo *sfsample;
     int           total_samples, count;
-    long         start, end, loop_start, loop_end, loop_mode;
-    long         attenuation, pan;
+    long          start, end, loop_start, loop_end, loop_mode;
+    long          attenuation, pan;
     int           root_key, fine_tune, coarse_tune, sample_flags;
     int           gen_val;
     int           attack_tc, decay_tc, sustain_level, release_tc;
@@ -864,7 +864,7 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
             /* Stage 1: decay (peak to sustain) */
             /* SF2 sustain: 0 cB = full volume, 1000 cB = silence (centibels) */
             {
-                f64 sus_amp         = pow(10.0, -sustain_level / 200.0);
+                f64 sus_amp            = pow(10.0, -sustain_level / 200.0);
                 sp->envelope_offset[1] = (long)(sus_amp * 255.0) << (7 + 15);
             }
             sp->envelope_rate[1]   = sf_calc_envelope_rate(ksr, sf_timecent_to_msec(decay_tc)) * (sp->envelope_offset[0] - sp->envelope_offset[1]) / sp->envelope_offset[0];
@@ -926,7 +926,7 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
 
                 /* Peak normalize sample volume */
                 {
-                    long  _i;
+                    long   _i;
                     short  _maxamp = 1, _a;
                     short *_tmp    = (short *)sp->data;
                     for(_i = 0; _i < num_samples; _i++)

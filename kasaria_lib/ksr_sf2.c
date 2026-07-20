@@ -205,13 +205,13 @@ SoundFontEffects default_sf2_effects = {
     .startloop_addrs_offset         = 0,
     .endloop_addrs_offset           = 0,
     .start_addrs_coarse_offset      = 0,
-    .mod_lfo_to_pitch               = 0.0f,      // cents, range: -12000 to 12000
-    .vib_lfo_to_pitch               = 0.0f,      // cents, range: -12000 to 12000
-    .mod_env_to_pitch               = 0.0f,      // cents, range: -12000 to 12000
-    .initial_filter_fc              = 13500,     // Hz, range: 1500 to 13500 (max = no filter)
-    .initial_filter_q               = 0.0f,      // centibels, range: 0 to 960 (0 = no resonance)
-    .mod_lfo_to_filter_fc           = 0.0f,      // cents, range: -12000 to 12000
-    .mod_env_to_filter_fc           = 0.0f,      // cents, range: -12000 to 12000
+    .mod_lfo_to_pitch               = 0.0f,  // cents, range: -12000 to 12000
+    .vib_lfo_to_pitch               = 0.0f,  // cents, range: -12000 to 12000
+    .mod_env_to_pitch               = 0.0f,  // cents, range: -12000 to 12000
+    .initial_filter_fc              = 13500, // Hz, range: 1500 to 13500 (max = no filter)
+    .initial_filter_q               = 0.0f,  // centibels, range: 0 to 960 (0 = no resonance)
+    .mod_lfo_to_filter_fc           = 0.0f,  // cents, range: -12000 to 12000
+    .mod_env_to_filter_fc           = 0.0f,  // cents, range: -12000 to 12000
     .end_addrs_coarse_offset        = 0,
     .mod_lfo_to_volume              = 0.0f,      // centibels, range: -960 to 960
     .chorus_effects_send            = 0.0f,      // range: 0 to 1000 (0 = no send)
@@ -238,20 +238,20 @@ SoundFontEffects default_sf2_effects = {
     .keynum_to_vol_env_hold         = 0.0f,      // timecents/key, range: -1200 to 1200
     .keynum_to_vol_env_decay        = 0.0f,      // timecents/key, range: -1200 to 1200
     .instrument                     = 0,
-    .key_range                      = 127,       // 0 to 127 (full keyboard)
-    .vel_range                      = 127,       // 0 to 127 (full velocity)
+    .key_range                      = 127, // 0 to 127 (full keyboard)
+    .vel_range                      = 127, // 0 to 127 (full velocity)
     .start_loop_addrs_coarse_offset = 0,
-    .fixed_key                      = 255,       // 255 = disabled
-    .velocity                       = 255,       // 255 = disabled
-    .initial_attenuation            = 0.0f,      // centibels, 0 to 1440 (0 = no attenuation)
+    .fixed_key                      = 255,  // 255 = disabled
+    .velocity                       = 255,  // 255 = disabled
+    .initial_attenuation            = 0.0f, // centibels, 0 to 1440 (0 = no attenuation)
     .end_loop_addrs_coarse_offset   = 0,
-    .coarse_tune                    = 0.0f,      // semitones, -120 to 120
-    .fine_tune                      = 0.0f,      // cents, -99 to 99
+    .coarse_tune                    = 0.0f, // semitones, -120 to 120
+    .fine_tune                      = 0.0f, // cents, -99 to 99
     .sample_id                      = 0,
-    .sample_modes                   = 0,         // 0 = continuous (no loop)
-    .scale_tuning                   = 100.0f,    // percent, 100 = equal temperament
-    .exclusive_class                = 0,         // 0 = not exclusive
-    .overriding_root_key            = 255,       // 255 = disabled (use sample's root key)
+    .sample_modes                   = 0,      // 0 = continuous (no loop)
+    .scale_tuning                   = 100.0f, // percent, 100 = equal temperament
+    .exclusive_class                = 0,      // 0 = not exclusive
+    .overriding_root_key            = 255,    // 255 = disabled (use sample's root key)
 };
 
 

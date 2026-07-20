@@ -109,7 +109,7 @@ static void designfir(f64 *g, f64 fc)
 
 static void filter(sample_t *result, sample_t *data, long length, f64 coef[])
 {
-    long sample, i, sample_window;
+    long  sample, i, sample_window;
     short peak = 0;
     f64   sum;
 

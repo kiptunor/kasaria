@@ -61,10 +61,10 @@ static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
     Voice    *vp    = &ksr->voice[v];
     sample_t *dest  = ksr->resample_buffer;
     sample_t *src   = vp->sample->data;
-    long     ofs   = vp->sample_offset;
-    long     incr  = vp->sample_increment;
-    long     le    = vp->sample->data_length;
-    long     count = *countptr;
+    long      ofs   = vp->sample_offset;
+    long      incr  = vp->sample_increment;
+    long      le    = vp->sample->data_length;
+    long      count = *countptr;
 
 #ifdef PRECALC_LOOPS
     long i;
@@ -122,10 +122,10 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
     /* Play sample until end-of-loop, skip back and continue. */
 
     INTERPVARS;
-    long     ofs  = vp->sample_offset;
-    long     incr = vp->sample_increment;
-    long     le   = vp->sample->loop_end;
-    long     ll   = le - vp->sample->loop_start;
+    long      ofs  = vp->sample_offset;
+    long      incr = vp->sample_increment;
+    long      le   = vp->sample->loop_end;
+    long      ll   = le - vp->sample->loop_start;
     sample_t *dest = ksr->resample_buffer;
     sample_t *src  = vp->sample->data;
 
@@ -170,10 +170,10 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
 static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
 {
     INTERPVARS;
-    long     ofs  = vp->sample_offset;
-    long     incr = vp->sample_increment;
-    long     le   = vp->sample->loop_end;
-    long     ls   = vp->sample->loop_start;
+    long      ofs  = vp->sample_offset;
+    long      incr = vp->sample_increment;
+    long      le   = vp->sample->loop_end;
+    long      ls   = vp->sample->loop_start;
     sample_t *dest = ksr->resample_buffer, *src = vp->sample->data;
 
 #ifdef PRECALC_LOOPS
@@ -286,9 +286,9 @@ static int vib_phase_to_inc_ptr(int phase)
 
 static long update_vibrato(Kasaria *ksr, Voice *vp, int sign)
 {
-    long  depth;
-    int    phase, pb;
-    f64 a;
+    long depth;
+    int  phase, pb;
+    f64  a;
 
     if(vp->vibrato_phase++ >= 2 * VIBRATO_SAMPLE_INCREMENTS - 1)
         vp->vibrato_phase = 0;
@@ -352,10 +352,10 @@ static sample_t *rs_vib_plain(Kasaria *ksr, int v, long *countptr)
     Voice    *vp    = &ksr->voice[v];
     sample_t *dest  = ksr->resample_buffer;
     sample_t *src   = vp->sample->data;
-    long     le    = vp->sample->data_length;
-    long     ofs   = vp->sample_offset;
-    long     incr  = vp->sample_increment;
-    long     count = *countptr;
+    long      le    = vp->sample->data_length;
+    long      ofs   = vp->sample_offset;
+    long      incr  = vp->sample_increment;
+    long      count = *countptr;
     int       cc    = vp->vibrato_control_counter;
 
     /* This has never been tested */
@@ -394,17 +394,17 @@ static sample_t *rs_vib_loop(Kasaria *ksr, Voice *vp, long count)
     /* Play sample until end-of-loop, skip back and continue. */
 
     INTERPVARS;
-    long     ofs  = vp->sample_offset;
-    long     incr = vp->sample_increment;
-    long     le   = vp->sample->loop_end;
-    long     ll   = le - vp->sample->loop_start;
+    long      ofs  = vp->sample_offset;
+    long      incr = vp->sample_increment;
+    long      le   = vp->sample->loop_end;
+    long      ll   = le - vp->sample->loop_start;
     sample_t *dest = ksr->resample_buffer;
     sample_t *src  = vp->sample->data;
     int       cc   = vp->vibrato_control_counter;
 
 #ifdef PRECALC_LOOPS
     long i;
-    int   vibflag = 0;
+    int  vibflag = 0;
 
     while(count)
     {
@@ -461,10 +461,10 @@ static sample_t *rs_vib_loop(Kasaria *ksr, Voice *vp, long count)
 static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
 {
     INTERPVARS;
-    long     ofs  = vp->sample_offset;
-    long     incr = vp->sample_increment;
-    long     le   = vp->sample->loop_end;
-    long     ls   = vp->sample->loop_start;
+    long      ofs  = vp->sample_offset;
+    long      incr = vp->sample_increment;
+    long      le   = vp->sample->loop_end;
+    long      ls   = vp->sample->loop_start;
     sample_t *dest = ksr->resample_buffer;
     sample_t *src  = vp->sample->data;
     int       cc   = vp->vibrato_control_counter;
@@ -473,7 +473,7 @@ static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
     long le2 = le << 1;
     long ls2 = ls << 1;
     long i;
-    int   vibflag = 0;
+    int  vibflag = 0;
 
     /* Play normally until inside the loop region */
     while(count && (ofs <= ls))
@@ -600,8 +600,8 @@ static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
 
 sample_t *resample_voice(Kasaria *ksr, int v, long *countptr)
 {
-    long  ofs;
-    u_char  modes;
+    long   ofs;
+    u_char modes;
     Voice *vp = &ksr->voice[v];
 
     if(!(vp->sample->sample_rate))

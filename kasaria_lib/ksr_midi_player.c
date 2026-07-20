@@ -77,7 +77,7 @@ static void reset_midi(Kasaria *ksr)
 
 static void select_sample(Kasaria *ksr, int v, Instrument *ip)
 {
-    long  f, cdiff, diff;
+    long    f, cdiff, diff;
     int     s, i;
     Sample *sp, *closest;
 
@@ -408,7 +408,7 @@ static void kill_note(Kasaria *ksr, int i)
 /* Only one instance of a note can be playing on a single channel. */
 static void note_on(Kasaria *ksr, MidiEvent *e)
 {
-    int   i = ksr->voices, lowest = -1;
+    int  i = ksr->voices, lowest = -1;
     long lv = 0x7FFFFFFF, v;
 
     while(i--)
@@ -819,7 +819,7 @@ static void read_midi_text(Kasaria *ksr)
             buff = (buff & 0xFF000000) >> 24;
             if(!strlen(ksr->song_copyright))
             {
-                read                         = fread(ksr->song_copyright, 1, buff, ksr->fp_midi);
+                read                          = fread(ksr->song_copyright, 1, buff, ksr->fp_midi);
                 *(ksr->song_copyright + read) = '\0';
             }
             else
@@ -829,7 +829,7 @@ static void read_midi_text(Kasaria *ksr)
             buff = (buff & 0xFF000000) >> 24;
             if(!strlen(ksr->song_title))
             {
-                read                     = fread(ksr->song_title, 1, buff, ksr->fp_midi);
+                read                      = fread(ksr->song_title, 1, buff, ksr->fp_midi);
                 *(ksr->song_title + read) = '\0';
             }
             else
@@ -959,7 +959,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, char *filename)
 
     strncpy(ksr->sf_filename, filename, sizeof(ksr->sf_filename) - 1);
     ksr->sf_filename[sizeof(ksr->sf_filename) - 1] = '\0';
-    ksr->sf_loaded                                = 1;
+    ksr->sf_loaded                                 = 1;
 
     return 1;
 }
@@ -1412,7 +1412,7 @@ void ksr_render_24(Kasaria *ksr, int24 *buffer, long count)
 
 void ksr_render_long(Kasaria *ksr, long *buffer, long count)
 {
-    int   curframes, cursamples, i;
+    int  curframes, cursamples, i;
     long maxval = 1 << (31 - GUARD_BITS);
     if(!ksr || !buffer)
         return;
@@ -1438,7 +1438,7 @@ void ksr_render_long(Kasaria *ksr, long *buffer, long count)
                 ksr->common_buffer[i] = maxval * -1;
 
             ksr->common_buffer[i] = ksr->common_buffer[i] << GUARD_BITS;
-            buffer[i]            = ksr->common_buffer[i];
+            buffer[i]             = ksr->common_buffer[i];
         }
         buffer += cursamples;
         count  -= curframes;
@@ -1447,7 +1447,7 @@ void ksr_render_long(Kasaria *ksr, long *buffer, long count)
 
 void ksr_render_float(Kasaria *ksr, f32 *buffer, long count)
 {
-    int   curframes, cursamples, i;
+    int  curframes, cursamples, i;
     long maxval = 1 << (31 - GUARD_BITS);
     if(!ksr || !buffer)
         return;
@@ -1482,7 +1482,7 @@ void ksr_render_float(Kasaria *ksr, f32 *buffer, long count)
 
 void ksr_render_f64(Kasaria *ksr, f64 *buffer, long count)
 {
-    int   curframes, cursamples, i;
+    int  curframes, cursamples, i;
     long maxval = 1 << (31 - GUARD_BITS);
     if(!ksr || !buffer)
         return;
@@ -1753,7 +1753,7 @@ int ksr_play_midi(Kasaria *ksr, long type, u_char *buffer, long count)
             ksr_all_notes_off(ksr);
 
         ksr->current_sample += convert;
-        count              -= convert;
+        count               -= convert;
     }
     return 1;
 }

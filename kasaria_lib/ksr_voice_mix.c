@@ -37,7 +37,7 @@ int recompute_envelope(Kasaria *ksr, int v)
     if(stage > 5)
     {
         /* Envelope ran out. */
-        int tmp             = (ksr->voice[v].status == VOICE_DIE); /* Already displayed as dead */
+        int tmp              = (ksr->voice[v].status == VOICE_DIE); /* Already displayed as dead */
         ksr->voice[v].status = VOICE_FREE;
         if(!tmp)
             return 1;
@@ -62,15 +62,15 @@ int recompute_envelope(Kasaria *ksr, int v)
     ksr->voice[v].envelope_target    = ksr->voice[v].sample->envelope_offset[stage];
     ksr->voice[v].envelope_increment = ksr->voice[v].sample->envelope_rate[stage];
     if(ksr->voice[v].envelope_target < ksr->voice[v].envelope_volume)
-        ksr->voice[v].envelope_increment = - ksr->voice[v].envelope_increment;
+        ksr->voice[v].envelope_increment = -ksr->voice[v].envelope_increment;
 
     return 0;
 }
 
 void apply_envelope_to_amp(Kasaria *ksr, int v)
 {
-    f64 lamp = ksr->voice[v].left_amp, ramp;
-    long   la, ra;
+    f64  lamp = ksr->voice[v].left_amp, ramp;
+    long la, ra;
     if(ksr->voice[v].panned == PANNED_MYSTERY)
     {
         ramp = ksr->voice[v].right_amp;
@@ -413,7 +413,7 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, long *lp, int v, long c)
 {
 
     /* should be final_volume_t, but uint8 gives trouble. */
-    long    left, right, li, ri;
+    long     left, right, li, ri;
 
     sample_t s = 0; /* silly warning about uninitialized s */
 

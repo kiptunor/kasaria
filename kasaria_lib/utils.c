@@ -123,7 +123,7 @@ FILE *open_file(Kasaria *ksr, char *name, int decompress, int noise_mode)
         while(plp) /* Try along the path then */
         {
             *ksr->current_filename = 0;
-            l                     = strlen(plp->path);
+            l                      = strlen(plp->path);
             if(l)
             {
                 strcpy(ksr->current_filename, plp->path);
@@ -184,7 +184,7 @@ void add_to_pathlist(Kasaria *ksr, char *s)
 {
     PathList *plp = (PathList *)safe_malloc(sizeof(PathList));
     strcpy((plp->path = (char *)safe_malloc(strlen(s) + 1)), s);
-    plp->next    = ksr->pathlist;
+    plp->next     = ksr->pathlist;
     ksr->pathlist = plp;
 }
 

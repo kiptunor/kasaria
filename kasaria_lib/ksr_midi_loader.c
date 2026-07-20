@@ -35,7 +35,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 static void compute_sample_increment(Kasaria *ksr, long tempo, long divisions)
 {
     f64 a;
-    a                     = (f64)(tempo) * (f64)(ksr->play_mode.rate) * (65536.0 / 1000000.0) / (f64)(divisions);
+    a                      = (f64)(tempo) * (f64)(ksr->play_mode.rate) * (65536.0 / 1000000.0) / (f64)(divisions);
 
     ksr->sample_correction = (long)(a) & 0xFFFF;
     ksr->sample_increment  = (long)(a) >> 16;
@@ -44,7 +44,7 @@ static void compute_sample_increment(Kasaria *ksr, long tempo, long divisions)
 /* Read variable-length number (7 bits per byte, MSB first) */
 static long getvl(Kasaria *ksr)
 {
-    long l = 0;
+    long   l = 0;
     u_char c;
     for(;;)
     {
@@ -95,10 +95,10 @@ static int dumpstring(Kasaria *ksr, long len, char *label)
 be linked to the event list */
 static MidiEventList *read_midi_event(Kasaria *ksr)
 {
-    static u_char   laststatus, lastchan;
-    static u_char   nrpn = 0, rpn_msb[16], rpn_lsb[16]; /* one per channel */
-    u_char          me, type, a, b, c;
-    long          len;
+    static u_char  laststatus, lastchan;
+    static u_char  nrpn = 0, rpn_msb[16], rpn_lsb[16]; /* one per channel */
+    u_char         me, type, a, b, c;
+    long           len;
     MidiEventList *newev;
 
     for(;;)
@@ -291,7 +291,7 @@ static int read_track(Kasaria *ksr, int append)
 {
     MidiEventList *meep;
     MidiEventList *next, *newev;
-    long          len;
+    long           len;
     char           tmp[4];
 
     meep = ksr->evlist;
@@ -367,8 +367,8 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
 {
     MidiEvent     *groomed_list, *lp;
     MidiEventList *meep;
-    long          i, our_event_count, tempo, skip_this_event, new_value;
-    long          sample_cum, samples_to_do, at, st, dt, counting_time;
+    long           i, our_event_count, tempo, skip_this_event, new_value;
+    long           sample_cum, samples_to_do, at, st, dt, counting_time;
 
     int            current_bank[16], current_set[16], current_program[16];
     /* Or should each bank have its own current program? */
@@ -507,7 +507,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
 
 MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
 {
-    long len, divisions;
+    long  len, divisions;
     short format, tracks, divisions_tmp;
     int   i;
     char  tmp[4];
