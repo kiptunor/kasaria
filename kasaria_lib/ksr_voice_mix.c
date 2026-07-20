@@ -69,8 +69,8 @@ int recompute_envelope(Kasaria *ksr, int v)
 
 void apply_envelope_to_amp(Kasaria *ksr, int v)
 {
-    FLOAT_T lamp = ksr->voice[v].left_amp, ramp;
-    int32   la, ra;
+    f64 lamp = ksr->voice[v].left_amp, ramp;
+    long   la, ra;
     if(ksr->voice[v].panned == PANNED_MYSTERY)
     {
         ramp = ksr->voice[v].right_amp;
@@ -129,7 +129,7 @@ static int update_envelope(Kasaria *ksr, int v)
 
 static void update_tremolo(Kasaria *ksr, int v)
 {
-    int32 depth = ksr->voice[v].sample->tremolo_depth << 7;
+    long depth = ksr->voice[v].sample->tremolo_depth << 7;
 
     if(ksr->voice[v].tremolo_sweep)
     {
@@ -176,7 +176,7 @@ static int update_signal(Kasaria *ksr, int v)
     #define MIXATION(a) *lp++ += (a) * s;
 #endif
 
-static void mix_mystery_signal(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
+static void mix_mystery_signal(Kasaria *ksr, sample_t *sp, long *lp, int v, int count)
 {
     Voice         *vp   = ksr->voice + v;
     final_volume_t left = vp->left_mix, right = vp->right_mix;
@@ -223,7 +223,7 @@ static void mix_mystery_signal(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int
         }
 }
 
-static void mix_center_signal(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
+static void mix_center_signal(Kasaria *ksr, sample_t *sp, long *lp, int v, int count)
 {
     Voice         *vp   = ksr->voice + v;
     final_volume_t left = vp->left_mix;
@@ -268,7 +268,7 @@ static void mix_center_signal(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int 
         }
 }
 
-static void mix_single_signal(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
+static void mix_single_signal(Kasaria *ksr, sample_t *sp, long *lp, int v, int count)
 {
     Voice         *vp   = ksr->voice + v;
     final_volume_t left = vp->left_mix;
@@ -313,7 +313,7 @@ static void mix_single_signal(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int 
         }
 }
 
-static void mix_mono_signal(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
+static void mix_mono_signal(Kasaria *ksr, sample_t *sp, long *lp, int v, int count)
 {
     Voice         *vp   = ksr->voice + v;
     final_volume_t left = vp->left_mix;
@@ -356,7 +356,7 @@ static void mix_mono_signal(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int co
         }
 }
 
-static void mix_mystery(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
+static void mix_mystery(Kasaria *ksr, sample_t *sp, long *lp, int v, int count)
 {
     final_volume_t left  = ksr->voice[v].left_mix;
     final_volume_t right = ksr->voice[v].right_mix;
@@ -370,7 +370,7 @@ static void mix_mystery(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
     }
 }
 
-static void mix_center(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
+static void mix_center(Kasaria *ksr, sample_t *sp, long *lp, int v, int count)
 {
     final_volume_t left = ksr->voice[v].left_mix;
     sample_t       s;
@@ -383,7 +383,7 @@ static void mix_center(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
     }
 }
 
-static void mix_single(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
+static void mix_single(Kasaria *ksr, sample_t *sp, long *lp, int v, int count)
 {
     final_volume_t left = ksr->voice[v].left_mix;
     sample_t       s;
@@ -396,7 +396,7 @@ static void mix_single(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
     }
 }
 
-static void mix_mono(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
+static void mix_mono(Kasaria *ksr, sample_t *sp, long *lp, int v, int count)
 {
     final_volume_t left = ksr->voice[v].left_mix;
     sample_t       s;
@@ -409,11 +409,11 @@ static void mix_mono(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int count)
 }
 
 /* Ramp a note out in c samples */
-static void ramp_out(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int32 c)
+static void ramp_out(Kasaria *ksr, sample_t *sp, long *lp, int v, long c)
 {
 
     /* should be final_volume_t, but uint8 gives trouble. */
-    int32    left, right, li, ri;
+    long    left, right, li, ri;
 
     sample_t s = 0; /* silly warning about uninitialized s */
 
@@ -507,8 +507,11 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, int32 *lp, int v, int32 c)
 
 /**************** interface function ******************/
 
-void mix_voice(Kasaria *ksr, int32 *buf, int v, int32 c)
+void mix_voice(Kasaria *ksr, long *buf, int v, long c)
 {
+    /*
+    Prob this is where I have to handle SF2 effects
+    */
     Voice    *vp = ksr->voice + v;
     sample_t *sp;
     if(vp->status == VOICE_DIE)

@@ -164,7 +164,7 @@
    got done. */
 #define USE_LDEXP
 
-#define FLOAT_T           double
+//#define FLOAT_T           double
 
 /**************************************************************************/
 /* Anything below this shouldn't need to be changed unless you're porting
@@ -190,13 +190,6 @@
     #define LITTLE_ENDIAN
 #endif
 
-/* DEC MMS has 64 bit long words */
-typedef unsigned long  uint32;
-typedef long           int32;
-typedef unsigned short uint16;
-typedef short          int16;
-typedef unsigned char  uint8;
-typedef char           int8;
 
 /* Instrument files are little-endian, MIDI files big-endian, so we
    need to do some conversions. */
@@ -227,14 +220,14 @@ typedef char           int8;
 #define AMP_BITS          (15 - GUARD_BITS)
 
 #ifdef LOOKUP_HACK
-typedef int8  sample_t;
+typedef char  sample_t;
 typedef uint8 final_volume_t;
     #define FINAL_VOLUME(v) (~_l2u[v])
     #define MIXUP_SHIFT     5
     #define MAX_AMP_VALUE   4095
 #else
-typedef int16 sample_t;
-typedef int32 final_volume_t;
+typedef short sample_t;
+typedef long final_volume_t;
     #define FINAL_VOLUME(v) (v)
     #define MAX_AMP_VALUE   ((1 << (AMP_BITS + 1)) - 1)
 #endif

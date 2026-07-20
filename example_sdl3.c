@@ -36,7 +36,7 @@ void audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amou
             return;
         }
 
-        int rendered = ksr_play_midi(synth, AU_FLOAT, (uint8_t *)interleaved, chunk);
+        int rendered = ksr_play_midi(synth, AUDIO_FLOAT, (uint8_t *)interleaved, chunk);
 
         if(!rendered)
         {

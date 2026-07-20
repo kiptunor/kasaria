@@ -78,19 +78,19 @@ static void free_bank(Kasaria *ksr, int dr, int b)
     }
 }
 
-static int32 convert_envelope_rate(Kasaria *ksr, uint8 rate)
+static long convert_envelope_rate(Kasaria *ksr, u_char rate)
 {
-    int32 r;
+    long r;
 
     r  = 3 - ((rate >> 6) & 0x3);
     r *= 3;
-    r  = (int32)(rate & 0x3f) << r; /* 6.9 fixed point */
+    r  = (long)(rate & 0x3f) << r; /* 6.9 fixed point */
 
     /* 15.15 fixed point. */
     return (((r * 44100) / ksr->play_mode.rate) * ksr->control_ratio) << ((ksr->fast_decay) ? 10 : 9);
 }
 
-static int32 convert_envelope_offset(uint8 offset)
+static long convert_envelope_offset(u_char offset)
 {
     /* This is not too good... Can anyone tell me what these values mean?
     Are they GUS-style "exponential" volumes? And what does that mean? */
@@ -99,7 +99,7 @@ static int32 convert_envelope_offset(uint8 offset)
     return offset << (7 + 15);
 }
 
-static int32 convert_tremolo_sweep(Kasaria *ksr, uint8 sweep)
+static long convert_tremolo_sweep(Kasaria *ksr, u_char sweep)
 {
     if(!sweep)
         return 0;
@@ -107,12 +107,12 @@ static int32 convert_tremolo_sweep(Kasaria *ksr, uint8 sweep)
     return ((ksr->control_ratio * SWEEP_TUNING) << SWEEP_SHIFT) / (ksr->play_mode.rate * sweep);
 }
 
-static int32 convert_vibrato_sweep(Kasaria *ksr, uint8 sweep, int32 vib_control_ratio)
+static long convert_vibrato_sweep(Kasaria *ksr, u_char sweep, long vib_control_ratio)
 {
     if(!sweep)
         return 0;
 
-    return (int32)(FSCALE((double)(vib_control_ratio)*SWEEP_TUNING, SWEEP_SHIFT) / (double)(ksr->play_mode.rate * sweep));
+    return (long)(FSCALE((f64)(vib_control_ratio)*SWEEP_TUNING, SWEEP_SHIFT) / (f64)(ksr->play_mode.rate * sweep));
 
     /* this was overflowing with seashore.pat
 
@@ -120,20 +120,20 @@ static int32 convert_vibrato_sweep(Kasaria *ksr, uint8 sweep, int32 vib_control_
     (tm->play_mode.rate * sweep); */
 }
 
-static int32 convert_tremolo_rate(Kasaria *ksr, uint8 rate)
+static long convert_tremolo_rate(Kasaria *ksr, u_char rate)
 {
     return ((SINE_CYCLE_LENGTH * ksr->control_ratio * rate) << RATE_SHIFT) / (TREMOLO_RATE_TUNING * ksr->play_mode.rate);
 }
 
-static int32 convert_vibrato_rate(Kasaria *ksr, uint8 rate)
+static long convert_vibrato_rate(Kasaria *ksr, u_char rate)
 {
     /* Return a suitable vibrato_control_ratio value */
     return (VIBRATO_RATE_TUNING * ksr->play_mode.rate) / (rate * 2 * VIBRATO_SAMPLE_INCREMENTS);
 }
 
-static void reverse_data(int16 *sp, int32 ls, int32 le)
+static void reverse_data(short *sp, long ls, long le)
 {
-    int16 s, *ep = sp + le;
+    short s, *ep = sp + le;
     sp += ls;
     le -= ls;
     le /= 2;
@@ -161,7 +161,7 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
     Instrument *ip;
     Sample     *sp;
     FILE       *fp;
-    uint8       tmp[1024];
+    u_char       tmp[1024];
     int         i, j, noluck = 0;
 #ifdef PATCH_EXT_LIST
     static char *patch_ext[] = PATCH_EXT_LIST;
@@ -218,10 +218,10 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
     for(i = 0; i < ip->samples; i++)
     {
 
-        uint8  fractions;
-        int32  tmplong;
-        uint16 tmpshort;
-        uint8  tmpchar;
+        u_char  fractions;
+        long  tmplong;
+        u_short tmpshort;
+        u_char  tmpchar;
 
 #define READ_CHAR(thing)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
     if(1 != fread(&tmpchar, 1, 1, fp))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
@@ -265,7 +265,7 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
         if(panning == -1)
             sp->panning = (tmp[0] * 8 + 4) & 0x7f;
         else
-            sp->panning = (uint8)(panning & 0x7F);
+            sp->panning = (u_char)(panning & 0x7F);
 
         /* envelope, tremolo, and vibrato */
         if(18 != fread(tmp, 1, 18, fp))
@@ -300,7 +300,7 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
 
         /* Mark this as a fixed-pitch instrument if such a deed is desired. */
         if(note_to_use != -1)
-            sp->note_to_use = (uint8)(note_to_use);
+            sp->note_to_use = (u_char)(note_to_use);
         else
             sp->note_to_use = 0;
 
@@ -357,14 +357,14 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
 
         if(!(sp->modes & MODES_16BIT)) /* convert to 16-bit data */
         {
-            int32   i  = sp->data_length;
-            uint8  *cp = (uint8 *)(sp->data);
-            uint16 *tmp, *newdata;
-            tmp = newdata = (uint16 *)safe_malloc(sp->data_length * 2);
+            long   i  = sp->data_length;
+            u_char  *cp = (u_char *)(sp->data);
+            u_short *tmp, *newdata;
+            tmp = newdata = (u_short *)safe_malloc(sp->data_length * 2);
             while(i--)
-                *tmp++ = (uint16)(*cp++) << 8;
+                *tmp++ = (u_short)(*cp++) << 8;
 
-            cp       = (uint8 *)(sp->data);
+            cp       = (u_char *)(sp->data);
             sp->data = (sample_t *)newdata;
             free(cp);
             sp->data_length *= 2;
@@ -387,8 +387,8 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
 
         if(sp->modes & MODES_UNSIGNED) /* convert to signed data */
         {
-            int32  i   = sp->data_length / 2;
-            int16 *tmp = (int16 *)sp->data;
+            long  i   = sp->data_length / 2;
+            short *tmp = (short *)sp->data;
             while(i--)
                 *tmp++ ^= 0x8000;
         }
@@ -396,10 +396,10 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
         /* Reverse reverse loops and pass them off as normal loops */
         if(sp->modes & MODES_REVERSE)
         {
-            int32 t;
+            long t;
             /* The GUS apparently plays reverse loops by reversing the
             whole sample. We do the same because the GUS does not SUCK. */
-            reverse_data((int16 *)sp->data, 0, sp->data_length / 2);
+            reverse_data((short *)sp->data, 0, sp->data_length / 2);
 
             t               = sp->loop_start;
             sp->loop_start  = sp->data_length - sp->loop_end;
@@ -416,15 +416,15 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
 
 #ifdef ADJUST_SAMPLE_VOLUMES
         if(amp != -1)
-            sp->volume = (double)(amp) / 100.0;
+            sp->volume = (f64)(amp) / 100.0;
         else
         {
             /* Try to determine a volume scaling factor for the sample.
             This is a very crude adjustment, but things sound more
             balanced with it. Still, this should be a runtime option. */
-            int32  i      = sp->data_length / 2;
-            int16  maxamp = 0, a;
-            int16 *tmp    = (int16 *)sp->data;
+            long  i      = sp->data_length / 2;
+            short  maxamp = 0, a;
+            short *tmp    = (short *)sp->data;
             while(i--)
             {
                 a = *tmp++;
@@ -433,11 +433,11 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
                 if(a > maxamp)
                     maxamp = a;
             }
-            sp->volume = 32768.0 / (double)(maxamp);
+            sp->volume = 32768.0 / (f64)(maxamp);
         }
 #else
         if(amp != -1)
-            sp->volume = (double)(amp) / 100.0;
+            sp->volume = (f64)(amp) / 100.0;
         else
             sp->volume = 1.0;
 #endif
@@ -595,16 +595,16 @@ static int sf_find_gen(SFGenLayer *layer, int id, int def)
 }
 
 /* SF2 time cent to milliseconds: 1200 cents = octave, 0 cents = 1 sec */
-static int32 sf_timecent_to_msec(int tc)
+static long sf_timecent_to_msec(int tc)
 {
     if(tc <= -12000)
         return 1;
     if(tc >= 5000)
         return 30000;
-    return (int32)(1000.0 * pow(2.0, tc / 1200.0));
+    return (long)(1000.0 * pow(2.0, tc / 1200.0));
 }
 
-static int32 sf_tc_to_offset(int val)
+static long sf_tc_to_offset(int val)
 {
     /* Map SF2 attenuation (centibels) to GUS-style offset (0-255 range) */
     /* 0 cB = full volume, 1440 cB = silence */
@@ -613,20 +613,20 @@ static int32 sf_tc_to_offset(int val)
         attenuation = 0;
     if(attenuation > 1440)
         attenuation = 1440;
-    return (int32)((1.0 - (double)attenuation / 1440.0) * 255.0);
+    return (long)((1.0 - (f64)attenuation / 1440.0) * 255.0);
 }
 
-static int32 sf_calc_envelope_rate(Kasaria *ksr, int32 msec)
+static long sf_calc_envelope_rate(Kasaria *ksr, long msec)
 {
-    int32  diff = 255;
-    double rate;
+    long  diff = 255;
+    f64 rate;
     if(msec < 1)
         msec = 1;
     diff <<= (7 + 15);
-    rate   = ((double)diff / ksr->play_mode.rate) * ksr->control_ratio * 1000.0 / msec;
+    rate   = ((f64)diff / ksr->play_mode.rate) * ksr->control_ratio * 1000.0 / msec;
     if(ksr->fast_decay)
         rate *= 2;
-    return (int32)rate;
+    return (long)rate;
 }
 
 /*================================================================
@@ -645,8 +645,8 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
     SFGenLayer   *inst_zone;
     SFSampleInfo *sfsample;
     int           total_samples, count;
-    int32         start, end, loop_start, loop_end, loop_mode;
-    int32         attenuation, pan;
+    long         start, end, loop_start, loop_end, loop_mode;
+    long         attenuation, pan;
     int           root_key, fine_tune, coarse_tune, sample_flags;
     int           gen_val;
     int           attack_tc, decay_tc, sustain_level, release_tc;
@@ -827,15 +827,15 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
                 sp->sample_rate = 44100;
 
             /* Calculate MIDI note to frequency mapping */
-            sp->root_freq               = (int32)(8.176 * pow(2.0, (root_key + coarse_tune + fine_tune / 100.0) / 12.0) * 1000.0);
-            sp->low_freq                = (int32)(8.176 * pow(2.0, (low_key + coarse_tune) / 12.0) * 1000.0);
-            sp->high_freq               = (int32)(8.176 * pow(2.0, (high_key + coarse_tune) / 12.0) * 1000.0);
+            sp->root_freq               = (long)(8.176 * pow(2.0, (root_key + coarse_tune + fine_tune / 100.0) / 12.0) * 1000.0);
+            sp->low_freq                = (long)(8.176 * pow(2.0, (low_key + coarse_tune) / 12.0) * 1000.0);
+            sp->high_freq               = (long)(8.176 * pow(2.0, (high_key + coarse_tune) / 12.0) * 1000.0);
 
             /* Volume */
             sp->volume                  = pow(10.0, -attenuation / 200.0);
 
             /* Panning: SF2 uses 0=left, 500=center, 1000=right */
-            sp->panning                 = (uint8)((pan + 500) * 127 / 1000);
+            sp->panning                 = (u_char)((pan + 500) * 127 / 1000);
 
             /* Modes */
             sp->modes                   = MODES_16BIT | MODES_ENVELOPE | loop_mode;
@@ -864,8 +864,8 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
             /* Stage 1: decay (peak to sustain) */
             /* SF2 sustain: 0 cB = full volume, 1000 cB = silence (centibels) */
             {
-                double sus_amp         = pow(10.0, -sustain_level / 200.0);
-                sp->envelope_offset[1] = (int32)(sus_amp * 255.0) << (7 + 15);
+                f64 sus_amp         = pow(10.0, -sustain_level / 200.0);
+                sp->envelope_offset[1] = (long)(sus_amp * 255.0) << (7 + 15);
             }
             sp->envelope_rate[1]   = sf_calc_envelope_rate(ksr, sf_timecent_to_msec(decay_tc)) * (sp->envelope_offset[0] - sp->envelope_offset[1]) / sp->envelope_offset[0];
 
@@ -885,9 +885,9 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
 
             /* Read sample data from file */
             {
-                int32 num_samples = end - start;
-                int32 num_loops   = loop_end - loop_start;
-                int32 byte_offset;
+                long num_samples = end - start;
+                long num_loops   = loop_end - loop_start;
+                long byte_offset;
 
                 sp->data_length = num_samples;
                 sp->loop_start  = loop_start - start;
@@ -907,13 +907,13 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
                 }
 
                 /* Allocate and read */
-                sp->data         = (sample_t *)safe_malloc((num_samples + 2) * sizeof(int16));
+                sp->data         = (sample_t *)safe_malloc((num_samples + 2) * sizeof(short));
                 sp->data_alloced = 1;
 
-                byte_offset      = sf->samplepos + start * sizeof(int16);
+                byte_offset      = sf->samplepos + start * sizeof(short);
                 fseek(fp, byte_offset, SEEK_SET);
 
-                if(fread(sp->data, sizeof(int16), num_samples, fp) != (size_t)num_samples)
+                if(fread(sp->data, sizeof(short), num_samples, fp) != (size_t)num_samples)
                 {
                     free(sp->data);
                     sp->data = NULL;
@@ -926,9 +926,9 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
 
                 /* Peak normalize sample volume */
                 {
-                    int32  _i;
-                    int16  _maxamp = 1, _a;
-                    int16 *_tmp    = (int16 *)sp->data;
+                    long  _i;
+                    short  _maxamp = 1, _a;
+                    short *_tmp    = (short *)sp->data;
                     for(_i = 0; _i < num_samples; _i++)
                     {
                         _a = *_tmp++;
@@ -937,7 +937,7 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
                         if(_a > _maxamp)
                             _maxamp = _a;
                     }
-                    sp->volume = 32768.0 / (double)_maxamp * sp->volume;
+                    sp->volume = 32768.0 / (f64)_maxamp * sp->volume;
                 }
 
                 /* Anti-aliasing filter */

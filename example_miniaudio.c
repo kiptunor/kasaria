@@ -30,7 +30,7 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
     while(remaining > 0)
     {
         int chunk = remaining > BUFFER_FRAMES ? BUFFER_FRAMES : remaining;
-        int rendered = ksr_play_midi(synth, AU_FLOAT, (uint8_t *)interleaved, chunk);
+        int rendered = ksr_play_midi(synth, AUDIO_FLOAT, (uint8_t *)interleaved, chunk);
 
         if(!rendered)
         {

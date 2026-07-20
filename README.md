@@ -15,3 +15,4 @@ This midi synth is based on Timidity and it aims to provide an easy to use C API
 - [ ] SF2 Effects
 - [ ] SFZ Support
 - [ ] Audio Capture 
+- [ ] Builtin Audio Limiter

@@ -32,20 +32,20 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "ksr_internal.h"
 
 /* Computes how many (fractional) samples one MIDI delta-time unit contains */
-static void compute_sample_increment(Kasaria *ksr, int32 tempo, int32 divisions)
+static void compute_sample_increment(Kasaria *ksr, long tempo, long divisions)
 {
-    double a;
-    a                     = (double)(tempo) * (double)(ksr->play_mode.rate) * (65536.0 / 1000000.0) / (double)(divisions);
+    f64 a;
+    a                     = (f64)(tempo) * (f64)(ksr->play_mode.rate) * (65536.0 / 1000000.0) / (f64)(divisions);
 
-    ksr->sample_correction = (int32)(a) & 0xFFFF;
-    ksr->sample_increment  = (int32)(a) >> 16;
+    ksr->sample_correction = (long)(a) & 0xFFFF;
+    ksr->sample_increment  = (long)(a) >> 16;
 }
 
 /* Read variable-length number (7 bits per byte, MSB first) */
-static int32 getvl(Kasaria *ksr)
+static long getvl(Kasaria *ksr)
 {
-    int32 l = 0;
-    uint8 c;
+    long l = 0;
+    u_char c;
     for(;;)
     {
         if(fread(&c, 1, 1, ksr->fp) != 1)
@@ -61,7 +61,7 @@ static int32 getvl(Kasaria *ksr)
 
 /* Print a string from the file, followed by a newline. Any non-ASCII
 or unprintable characters will be converted to periods. */
-static int dumpstring(Kasaria *ksr, int32 len, char *label)
+static int dumpstring(Kasaria *ksr, long len, char *label)
 {
     signed char *s = (signed char *)safe_malloc(len + 1);
     if(len != fread(s, 1, len, ksr->fp))
@@ -95,10 +95,10 @@ static int dumpstring(Kasaria *ksr, int32 len, char *label)
 be linked to the event list */
 static MidiEventList *read_midi_event(Kasaria *ksr)
 {
-    static uint8   laststatus, lastchan;
-    static uint8   nrpn = 0, rpn_msb[16], rpn_lsb[16]; /* one per channel */
-    uint8          me, type, a, b, c;
-    int32          len;
+    static u_char   laststatus, lastchan;
+    static u_char   nrpn = 0, rpn_msb[16], rpn_lsb[16]; /* one per channel */
+    u_char          me, type, a, b, c;
+    long          len;
     MidiEventList *newev;
 
     for(;;)
@@ -291,7 +291,7 @@ static int read_track(Kasaria *ksr, int append)
 {
     MidiEventList *meep;
     MidiEventList *next, *newev;
-    int32          len;
+    long          len;
     char           tmp[4];
 
     meep = ksr->evlist;
@@ -363,12 +363,12 @@ static void free_midi_list(Kasaria *ksr)
 events, marking used instruments for loading. Convert event times to
 samples: handle tempo changes. Strip unnecessary events from the list.
 Free the linked list. */
-static MidiEvent *groom_list(Kasaria *ksr, int32 divisions, int32 *eventsp, int32 *samplesp)
+static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *samplesp)
 {
     MidiEvent     *groomed_list, *lp;
     MidiEventList *meep;
-    int32          i, our_event_count, tempo, skip_this_event, new_value;
-    int32          sample_cum, samples_to_do, at, st, dt, counting_time;
+    long          i, our_event_count, tempo, skip_this_event, new_value;
+    long          sample_cum, samples_to_do, at, st, dt, counting_time;
 
     int            current_bank[16], current_set[16], current_program[16];
     /* Or should each bank have its own current program? */
@@ -505,10 +505,10 @@ static MidiEvent *groom_list(Kasaria *ksr, int32 divisions, int32 *eventsp, int3
     return groomed_list;
 }
 
-MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, int32 *count, int32 *sp)
+MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
 {
-    int32 len, divisions;
-    int16 format, tracks, divisions_tmp;
+    long len, divisions;
+    short format, tracks, divisions_tmp;
     int   i;
     char  tmp[4];
 
@@ -536,10 +536,10 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, int32 *count, int32 *sp)
     if(divisions_tmp < 0)
     {
         /* SMPTE time -- totally untested. Got a MIDI file that uses this? */
-        divisions = (int32)(-(divisions_tmp / 256)) * (int32)(divisions_tmp & 0xFF);
+        divisions = (long)(-(divisions_tmp / 256)) * (long)(divisions_tmp & 0xFF);
     }
     else
-        divisions = (int32)(divisions_tmp);
+        divisions = (long)(divisions_tmp);
 
     if(len > 6)
         skip(ksr->fp, len - 6); /* skip the excess */

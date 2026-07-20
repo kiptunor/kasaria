@@ -35,7 +35,7 @@ playmidi.c -- random stuff in need of rearrangement
 
 static void adjust_amplification(Kasaria *ksr, int amplification)
 {
-    ksr->master_volume = (double)(amplification) / 100.0L;
+    ksr->master_volume = (f64)(amplification) / 100.0L;
 }
 
 static void reset_voices(Kasaria *ksr)
@@ -77,7 +77,7 @@ static void reset_midi(Kasaria *ksr)
 
 static void select_sample(Kasaria *ksr, int v, Instrument *ip)
 {
-    int32   f, cdiff, diff;
+    long  f, cdiff, diff;
     int     s, i;
     Sample *sp, *closest;
 
@@ -130,7 +130,7 @@ static void recompute_freq(Kasaria *ksr, int v)
 {
     int sign = (ksr->voice[v].sample_increment < 0), /* for bidirectional loops */
         pb   = ksr->channel[ksr->voice[v].channel].pitchbend;
-    double a;
+    f64 a;
 
     if(!ksr->voice[v].sample->sample_rate)
         return;
@@ -153,7 +153,7 @@ static void recompute_freq(Kasaria *ksr, int v)
         if(!(ksr->channel[ksr->voice[v].channel].pitchfactor))
         {
             /* Damn. Somebody bent the pitch. */
-            int32 i = pb * ksr->channel[ksr->voice[v].channel].pitchsens;
+            long i = pb * ksr->channel[ksr->voice[v].channel].pitchsens;
             if(pb < 0)
                 i = -i;
 
@@ -161,22 +161,22 @@ static void recompute_freq(Kasaria *ksr, int v)
         }
 
         if(pb > 0)
-            ksr->voice[v].frequency = (int32)(ksr->channel[ksr->voice[v].channel].pitchfactor * (double)(ksr->voice[v].orig_frequency));
+            ksr->voice[v].frequency = (long)(ksr->channel[ksr->voice[v].channel].pitchfactor * (f64)(ksr->voice[v].orig_frequency));
         else
-            ksr->voice[v].frequency = (int32)((double)(ksr->voice[v].orig_frequency) / ksr->channel[ksr->voice[v].channel].pitchfactor);
+            ksr->voice[v].frequency = (long)((f64)(ksr->voice[v].orig_frequency) / ksr->channel[ksr->voice[v].channel].pitchfactor);
     }
 
-    a = FSCALE(((double)(ksr->voice[v].sample->sample_rate) * (double)(ksr->voice[v].frequency)) / ((double)(ksr->voice[v].sample->root_freq) * (double)(ksr->play_mode.rate)), FRACTION_BITS);
+    a = FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
 
     if(sign)
         a = -a; /* need to preserve the loop direction */
 
-    ksr->voice[v].sample_increment = (int32)(a);
+    ksr->voice[v].sample_increment = (long)(a);
 }
 
 static void recompute_amp(Kasaria *ksr, int v)
 {
-    int32 tempamp;
+    long tempamp;
 
     /* TODO: use fscale */
 
@@ -188,35 +188,35 @@ static void recompute_amp(Kasaria *ksr, int v)
         {
             ksr->voice[v].panned   = PANNED_CENTER;
 
-            ksr->voice[v].left_amp = FSCALENEG((double)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 21);
+            ksr->voice[v].left_amp = FSCALENEG((f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 21);
         }
         else if(ksr->voice[v].panning < 5)
         {
             ksr->voice[v].panned   = PANNED_LEFT;
 
-            ksr->voice[v].left_amp = FSCALENEG((double)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 20);
+            ksr->voice[v].left_amp = FSCALENEG((f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 20);
         }
         else if(ksr->voice[v].panning > 123)
         {
             ksr->voice[v].panned   = PANNED_RIGHT;
 
             /* left_amp will be used */
-            ksr->voice[v].left_amp = FSCALENEG((double)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 20);
+            ksr->voice[v].left_amp = FSCALENEG((f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 20);
         }
         else
         {
             ksr->voice[v].panned     = PANNED_MYSTERY;
 
-            ksr->voice[v].left_amp   = FSCALENEG((double)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 27);
+            ksr->voice[v].left_amp   = FSCALENEG((f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 27);
             ksr->voice[v].right_amp  = ksr->voice[v].left_amp * (ksr->voice[v].panning);
-            ksr->voice[v].left_amp  *= (double)(127 - ksr->voice[v].panning);
+            ksr->voice[v].left_amp  *= (f64)(127 - ksr->voice[v].panning);
         }
     }
     else
     {
         ksr->voice[v].panned   = PANNED_CENTER;
 
-        ksr->voice[v].left_amp = FSCALENEG((double)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 21);
+        ksr->voice[v].left_amp = FSCALENEG((f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 21);
     }
 }
 
@@ -409,7 +409,7 @@ static void kill_note(Kasaria *ksr, int i)
 static void note_on(Kasaria *ksr, MidiEvent *e)
 {
     int   i = ksr->voices, lowest = -1;
-    int32 lv = 0x7FFFFFFF, v;
+    long lv = 0x7FFFFFFF, v;
 
     while(i--)
     {
@@ -567,7 +567,7 @@ static void adjust_volume(Kasaria *ksr, int c)
         }
 }
 
-static void seek_forward(Kasaria *ksr, int32 until_time)
+static void seek_forward(Kasaria *ksr, long until_time)
 {
     reset_voices(ksr);
     while(ksr->current_event->time < until_time)
@@ -640,7 +640,7 @@ static void seek_forward(Kasaria *ksr, int32 until_time)
     ksr->current_sample = until_time;
 }
 
-static void skip_to(Kasaria *ksr, int32 until_time)
+static void skip_to(Kasaria *ksr, long until_time)
 {
     if(ksr->current_sample > until_time)
         ksr->current_sample = 0;
@@ -652,7 +652,7 @@ static void skip_to(Kasaria *ksr, int32 until_time)
         seek_forward(ksr, until_time);
 }
 
-static void do_compute_data(Kasaria *ksr, int32 count)
+static void do_compute_data(Kasaria *ksr, long count)
 {
     int i, samples;
     samples = (ksr->play_mode.encoding & PE_MONO) ? count : (count * 2);
@@ -777,8 +777,8 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
 // Adapted from ReadMidiText function in gspmidi.cpp
 static void read_midi_text(Kasaria *ksr)
 {
-    uint32 buff;
-    uint32 read;
+    u_long buff;
+    u_long read;
 
     if(!ksr->fp_midi)
         return;
@@ -964,7 +964,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, char *filename)
     return 1;
 }
 
-void ksr_channel_note_on(Kasaria *ksr, uint8 channel, uint8 note, uint8 velocity)
+void ksr_channel_note_on(Kasaria *ksr, u_char channel, u_char note, u_char velocity)
 {
     MidiEvent ev;
     if(!ksr)
@@ -978,7 +978,7 @@ void ksr_channel_note_on(Kasaria *ksr, uint8 channel, uint8 note, uint8 velocity
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_note_off(Kasaria *ksr, uint8 channel, uint8 note)
+void ksr_channel_note_off(Kasaria *ksr, u_char channel, u_char note)
 {
     MidiEvent ev;
     if(!ksr)
@@ -991,7 +991,7 @@ void ksr_channel_note_off(Kasaria *ksr, uint8 channel, uint8 note)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_key_pressure(Kasaria *ksr, uint8 channel, uint8 note, uint8 velocity)
+void ksr_channel_key_pressure(Kasaria *ksr, u_char channel, u_char note, u_char velocity)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1005,7 +1005,7 @@ void ksr_channel_key_pressure(Kasaria *ksr, uint8 channel, uint8 note, uint8 vel
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_set_volume(Kasaria *ksr, uint8 channel, uint8 volume)
+void ksr_channel_set_volume(Kasaria *ksr, u_char channel, u_char volume)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1018,7 +1018,7 @@ void ksr_channel_set_volume(Kasaria *ksr, uint8 channel, uint8 volume)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_set_pan(Kasaria *ksr, uint8 channel, uint8 pan)
+void ksr_channel_set_pan(Kasaria *ksr, u_char channel, u_char pan)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1031,7 +1031,7 @@ void ksr_channel_set_pan(Kasaria *ksr, uint8 channel, uint8 pan)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_set_expression(Kasaria *ksr, uint8 channel, uint8 expression)
+void ksr_channel_set_expression(Kasaria *ksr, u_char channel, u_char expression)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1044,7 +1044,7 @@ void ksr_channel_set_expression(Kasaria *ksr, uint8 channel, uint8 expression)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_set_sustain(Kasaria *ksr, uint8 channel, uint8 sustain)
+void ksr_channel_set_sustain(Kasaria *ksr, u_char channel, u_char sustain)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1057,7 +1057,7 @@ void ksr_channel_set_sustain(Kasaria *ksr, uint8 channel, uint8 sustain)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_set_pitch_wheel(Kasaria *ksr, uint8 channel, uint16 pitch)
+void ksr_channel_set_pitch_wheel(Kasaria *ksr, u_char channel, u_short pitch)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1071,7 +1071,7 @@ void ksr_channel_set_pitch_wheel(Kasaria *ksr, uint8 channel, uint16 pitch)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_set_pitch_range(Kasaria *ksr, uint8 channel, uint8 range)
+void ksr_channel_set_pitch_range(Kasaria *ksr, u_char channel, u_char range)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1084,7 +1084,7 @@ void ksr_channel_set_pitch_range(Kasaria *ksr, uint8 channel, uint8 range)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_set_program(Kasaria *ksr, uint8 channel, uint8 program)
+void ksr_channel_set_program(Kasaria *ksr, u_char channel, u_char program)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1097,7 +1097,7 @@ void ksr_channel_set_program(Kasaria *ksr, uint8 channel, uint8 program)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_set_bank(Kasaria *ksr, uint8 channel, uint8 bank)
+void ksr_channel_set_bank(Kasaria *ksr, u_char channel, u_char bank)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1110,7 +1110,7 @@ void ksr_channel_set_bank(Kasaria *ksr, uint8 channel, uint8 bank)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_mono_mode(Kasaria *ksr, uint8 channel)
+void ksr_channel_mono_mode(Kasaria *ksr, u_char channel)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1122,7 +1122,7 @@ void ksr_channel_mono_mode(Kasaria *ksr, uint8 channel)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_poly_mode(Kasaria *ksr, uint8 channel)
+void ksr_channel_poly_mode(Kasaria *ksr, u_char channel)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1134,7 +1134,7 @@ void ksr_channel_poly_mode(Kasaria *ksr, uint8 channel)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_all_notes_off(Kasaria *ksr, uint8 channel)
+void ksr_channel_all_notes_off(Kasaria *ksr, u_char channel)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1146,7 +1146,7 @@ void ksr_channel_all_notes_off(Kasaria *ksr, uint8 channel)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_all_sounds_off(Kasaria *ksr, uint8 channel)
+void ksr_channel_all_sounds_off(Kasaria *ksr, u_char channel)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1158,7 +1158,7 @@ void ksr_channel_all_sounds_off(Kasaria *ksr, uint8 channel)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_reset_controllers(Kasaria *ksr, uint8 channel)
+void ksr_channel_reset_controllers(Kasaria *ksr, u_char channel)
 {
     MidiEvent ev;
     if(!ksr)
@@ -1170,7 +1170,7 @@ void ksr_channel_reset_controllers(Kasaria *ksr, uint8 channel)
     play_midi(ksr, &ev);
 }
 
-void ksr_channel_control_change(Kasaria *ksr, uint8 channel, uint8 controller, uint8 value)
+void ksr_channel_control_change(Kasaria *ksr, u_char channel, u_char controller, u_char value)
 {
     if(!ksr)
         return;
@@ -1238,10 +1238,10 @@ void ksr_channel_control_change(Kasaria *ksr, uint8 channel, uint8 controller, u
     }
 }
 
-void ksr_write_midi(Kasaria *ksr, uint8 byte1, uint8 byte2, uint8 byte3)
+void ksr_write_midi(Kasaria *ksr, u_char byte1, u_char byte2, u_char byte3)
 {
-    uint8 type    = byte1 & 0xf0;
-    uint8 channel = byte1 & 0x0f;
+    u_char type    = byte1 & 0xf0;
+    u_char channel = byte1 & 0x0f;
     if(!ksr)
         return;
 
@@ -1263,28 +1263,28 @@ void ksr_write_midi(Kasaria *ksr, uint8 byte1, uint8 byte2, uint8 byte3)
         ksr_channel_set_program(ksr, channel, byte2);
         break;
     case 0xe0:
-        ksr_channel_set_pitch_wheel(ksr, channel, (uint16)((byte3 << 7) | byte2));
+        ksr_channel_set_pitch_wheel(ksr, channel, (u_short)((byte3 << 7) | byte2));
         break;
     }
 }
 
-void ksr_write_midi_packed(Kasaria *ksr, uint32 data)
+void ksr_write_midi_packed(Kasaria *ksr, u_long data)
 {
-    uint8 byte1 = data & 0xff;
-    uint8 byte2 = (data >> 8) & 0x7f;
-    uint8 byte3 = (data >> 16) & 0x7f;
+    u_char byte1 = data & 0xff;
+    u_char byte2 = (data >> 8) & 0x7f;
+    u_char byte3 = (data >> 16) & 0x7f;
     if(!ksr)
         return;
 
     ksr_write_midi(ksr, byte1, byte2, byte3);
 }
 
-void ksr_write_sysex(Kasaria *ksr, uint8 *buffer, int32 count)
+void ksr_write_sysex(Kasaria *ksr, u_char *buffer, long count)
 {
-    const uint8 gm_reset_array[6]  = { 0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7 };
-    const uint8 gm2_reset_array[6] = { 0xF0, 0x7E, 0x7F, 0x09, 0x03, 0xF7 };
-    const uint8 gs_reset_array[11] = { 0xF0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7F, 0x00, 0x41, 0xF7 };
-    const uint8 xg_reset_array[9]  = { 0xF0, 0x43, 0x10, 0x4C, 0x00, 0x00, 0x7E, 0x00, 0xF7 };
+    const u_char gm_reset_array[6]  = { 0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7 };
+    const u_char gm2_reset_array[6] = { 0xF0, 0x7E, 0x7F, 0x09, 0x03, 0xF7 };
+    const u_char gs_reset_array[11] = { 0xF0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7F, 0x00, 0x41, 0xF7 };
+    const u_char xg_reset_array[9]  = { 0xF0, 0x43, 0x10, 0x4C, 0x00, 0x00, 0x7E, 0x00, 0xF7 };
     if(!ksr || !buffer)
         return;
 
@@ -1301,7 +1301,7 @@ void ksr_write_sysex(Kasaria *ksr, uint8 *buffer, int32 count)
         reset_midi(ksr);
 }
 
-void ksr_render_char(Kasaria *ksr, uint8 *buffer, int32 count)
+void ksr_render_char(Kasaria *ksr, u_char *buffer, long count)
 {
     int curframes, cursamples, i;
     if(!ksr || !buffer)
@@ -1330,14 +1330,14 @@ void ksr_render_char(Kasaria *ksr, uint8 *buffer, int32 count)
             else if(ksr->common_buffer[i] < -128)
                 ksr->common_buffer[i] = -128;
 
-            buffer[i] = (uint8)ksr->common_buffer[i] ^ 0x80;
+            buffer[i] = (u_char)ksr->common_buffer[i] ^ 0x80;
         }
         buffer += cursamples;
         count  -= curframes;
     }
 }
 
-void ksr_render_short(Kasaria *ksr, int16 *buffer, int32 count)
+void ksr_render_short(Kasaria *ksr, short *buffer, long count)
 {
     int curframes, cursamples, i;
     if(!ksr || !buffer)
@@ -1365,14 +1365,14 @@ void ksr_render_short(Kasaria *ksr, int16 *buffer, int32 count)
             else if(ksr->common_buffer[i] < -32768)
                 ksr->common_buffer[i] = -32768;
 
-            buffer[i] = (int16)ksr->common_buffer[i];
+            buffer[i] = (short)ksr->common_buffer[i];
         }
         buffer += cursamples;
         count  -= curframes;
     }
 }
 
-void ksr_render_24(Kasaria *ksr, int24 *buffer, int32 count)
+void ksr_render_24(Kasaria *ksr, int24 *buffer, long count)
 {
     int curframes, cursamples, i;
     if(!ksr || !buffer)
@@ -1410,10 +1410,10 @@ void ksr_render_24(Kasaria *ksr, int24 *buffer, int32 count)
     }
 }
 
-void ksr_render_long(Kasaria *ksr, int32 *buffer, int32 count)
+void ksr_render_long(Kasaria *ksr, long *buffer, long count)
 {
     int   curframes, cursamples, i;
-    int32 maxval = 1 << (31 - GUARD_BITS);
+    long maxval = 1 << (31 - GUARD_BITS);
     if(!ksr || !buffer)
         return;
 
@@ -1445,10 +1445,10 @@ void ksr_render_long(Kasaria *ksr, int32 *buffer, int32 count)
     }
 }
 
-void ksr_render_float(Kasaria *ksr, float *buffer, int32 count)
+void ksr_render_float(Kasaria *ksr, f32 *buffer, long count)
 {
     int   curframes, cursamples, i;
-    int32 maxval = 1 << (31 - GUARD_BITS);
+    long maxval = 1 << (31 - GUARD_BITS);
     if(!ksr || !buffer)
         return;
 
@@ -1472,7 +1472,7 @@ void ksr_render_float(Kasaria *ksr, float *buffer, int32 count)
                 ksr->common_buffer[i] = maxval - 1;
             else if(ksr->common_buffer[i] < -maxval)
                 ksr->common_buffer[i] = -maxval;
-            buffer[i] = ksr->common_buffer[i] / (float)maxval;
+            buffer[i] = ksr->common_buffer[i] / (f32)maxval;
         }
 
         buffer += cursamples;
@@ -1480,10 +1480,10 @@ void ksr_render_float(Kasaria *ksr, float *buffer, int32 count)
     }
 }
 
-void ksr_render_double(Kasaria *ksr, double *buffer, int32 count)
+void ksr_render_f64(Kasaria *ksr, f64 *buffer, long count)
 {
     int   curframes, cursamples, i;
-    int32 maxval = 1 << (31 - GUARD_BITS);
+    long maxval = 1 << (31 - GUARD_BITS);
     if(!ksr || !buffer)
         return;
 
@@ -1506,7 +1506,7 @@ void ksr_render_double(Kasaria *ksr, double *buffer, int32 count)
                 ksr->common_buffer[i] = maxval - 1;
             else if(ksr->common_buffer[i] < -maxval)
                 ksr->common_buffer[i] = -maxval;
-            buffer[i] = ksr->common_buffer[i] / (double)maxval;
+            buffer[i] = ksr->common_buffer[i] / (f64)maxval;
         }
 
         buffer += cursamples;
@@ -1514,7 +1514,7 @@ void ksr_render_double(Kasaria *ksr, double *buffer, int32 count)
     }
 }
 
-void ksr_render_ulaw(Kasaria *ksr, uint8 *buffer, int32 count)
+void ksr_render_ulaw(Kasaria *ksr, u_char *buffer, long count)
 {
     int curframes, cursamples, i;
     if(!ksr || !buffer)
@@ -1669,10 +1669,10 @@ int ksr_reload_midi(Kasaria *ksr)
     return 0;
 }
 
-int ksr_play_midi(Kasaria *ksr, int32 type, uint8 *buffer, int32 count)
+int ksr_play_midi(Kasaria *ksr, long type, u_char *buffer, long count)
 {
     int convert;
-    if(!ksr || !buffer || (type > AU_ULAW || type < AU_CHAR) || !ksr->current_event || (ksr->current_event->type == ME_EOT && !ksr_get_active_voices(ksr)))
+    if(!ksr || !buffer || (type > AUDIO_ULAW || type < AUDIO_CHAR) || !ksr->current_event || (ksr->current_event->type == ME_EOT && !ksr_get_active_voices(ksr)))
         return 0;
 
     while(count > 0)
@@ -1692,23 +1692,23 @@ int ksr_play_midi(Kasaria *ksr, int32 type, uint8 *buffer, int32 count)
 
         switch(type)
         {
-        case AU_CHAR:
-            ksr_render_char(ksr, (uint8 *)buffer, convert);
+        case AUDIO_CHAR:
+            ksr_render_char(ksr, (u_char *)buffer, convert);
             if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(uint8);
+                buffer += convert * 2 * sizeof(u_char);
             else
-                buffer += convert * sizeof(uint8);
+                buffer += convert * sizeof(u_char);
 
             break;
-        case AU_SHORT:
-            ksr_render_short(ksr, (int16 *)buffer, convert);
+        case AUDIO_SHORT:
+            ksr_render_short(ksr, (short *)buffer, convert);
             if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(int16);
+                buffer += convert * 2 * sizeof(short);
             else
-                buffer += convert * sizeof(int16);
+                buffer += convert * sizeof(short);
 
             break;
-        case AU_24:
+        case AUDIO_24:
             ksr_render_24(ksr, (int24 *)buffer, convert);
             if(!(ksr->play_mode.encoding & PE_MONO))
                 buffer += convert * 2 * sizeof(int24);
@@ -1716,36 +1716,36 @@ int ksr_play_midi(Kasaria *ksr, int32 type, uint8 *buffer, int32 count)
                 buffer += convert * sizeof(int24);
 
             break;
-        case AU_LONG:
-            ksr_render_long(ksr, (int32 *)buffer, convert);
+        case AUDIO_LONG:
+            ksr_render_long(ksr, (long *)buffer, convert);
             if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(int32);
+                buffer += convert * 2 * sizeof(long);
             else
-                buffer += convert * sizeof(int32);
+                buffer += convert * sizeof(long);
 
             break;
-        case AU_FLOAT:
-            ksr_render_float(ksr, (float *)buffer, convert);
+        case AUDIO_FLOAT:
+            ksr_render_float(ksr, (f32 *)buffer, convert);
             if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(float);
+                buffer += convert * 2 * sizeof(f32);
             else
-                buffer += convert * sizeof(float);
+                buffer += convert * sizeof(f32);
 
             break;
-        case AU_DOUBLE:
-            ksr_render_double(ksr, (double *)buffer, convert);
+        case AUDIO_DOUBLE:
+            ksr_render_f64(ksr, (f64 *)buffer, convert);
             if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(double);
+                buffer += convert * 2 * sizeof(f64);
             else
-                buffer += convert * sizeof(double);
+                buffer += convert * sizeof(f64);
 
             break;
-        case AU_ULAW:
-            ksr_render_ulaw(ksr, (uint8 *)buffer, convert);
+        case AUDIO_ULAW:
+            ksr_render_ulaw(ksr, (u_char *)buffer, convert);
             if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(uint8);
+                buffer += convert * 2 * sizeof(u_char);
             else
-                buffer += convert * sizeof(uint8);
+                buffer += convert * sizeof(u_char);
 
             break;
         }
@@ -1758,7 +1758,7 @@ int ksr_play_midi(Kasaria *ksr, int32 type, uint8 *buffer, int32 count)
     return 1;
 }
 
-int ksr_seek_midi(Kasaria *ksr, int32 time)
+int ksr_seek_midi(Kasaria *ksr, long time)
 {
     int total_time;
     if(!ksr || !ksr->current_event)
@@ -1775,7 +1775,7 @@ int ksr_seek_midi(Kasaria *ksr, int32 time)
     return ksr_get_current_time(ksr);
 }
 
-int ksr_fast_forward_midi(Kasaria *ksr, int32 time)
+int ksr_fast_forward_midi(Kasaria *ksr, long time)
 {
     int new_time;
     if(!ksr)
@@ -1785,7 +1785,7 @@ int ksr_fast_forward_midi(Kasaria *ksr, int32 time)
     return ksr_seek_midi(ksr, new_time);
 }
 
-int ksr_rewind_midi(Kasaria *ksr, int32 time)
+int ksr_rewind_midi(Kasaria *ksr, long time)
 {
     int new_time;
     if(!ksr)
@@ -2072,7 +2072,7 @@ void ksr_free_default_instrument(Kasaria *ksr)
     free_default_instrument(ksr);
 }
 
-int ksr_get_config_name(Kasaria *ksr, char *buffer, int32 count)
+int ksr_get_config_name(Kasaria *ksr, char *buffer, long count)
 {
     int len;
     if(!ksr)
@@ -2320,7 +2320,7 @@ int ksr_channel_get_mono(Kasaria *ksr, int channel)
     return ksr->channel[channel].mono;
 }
 
-int ksr_get_smf_name(Kasaria *ksr, char *buffer, int32 count)
+int ksr_get_smf_name(Kasaria *ksr, char *buffer, long count)
 {
     int len;
     if(!ksr)
@@ -2388,7 +2388,7 @@ int ksr_get_bitrate(Kasaria *ksr)
     return bitrate;
 }
 
-int ksr_get_song_title(Kasaria *ksr, char *buffer, int32 count)
+int ksr_get_song_title(Kasaria *ksr, char *buffer, long count)
 {
     int len;
     if(!ksr)
@@ -2402,7 +2402,7 @@ int ksr_get_song_title(Kasaria *ksr, char *buffer, int32 count)
     return len;
 }
 
-int ksr_get_song_copyright(Kasaria *ksr, char *buffer, int32 count)
+int ksr_get_song_copyright(Kasaria *ksr, char *buffer, long count)
 {
     int len;
     if(!ksr)
@@ -2415,20 +2415,20 @@ int ksr_get_song_copyright(Kasaria *ksr, char *buffer, int32 count)
     return len;
 }
 
-int ksr_millis2samples(Kasaria *ksr, int32 millis)
+int ksr_millis2samples(Kasaria *ksr, long millis)
 {
     if(!ksr)
         return 0;
 
-    return (int)((double)ksr->play_mode.rate * millis / 1000);
+    return (int)((f64)ksr->play_mode.rate * millis / 1000);
 }
 
-int ksr_samples2millis(Kasaria *ksr, int32 samples)
+int ksr_samples2millis(Kasaria *ksr, long samples)
 {
     if(!ksr)
         return 0;
 
-    return (int)((double)samples * 1000 / ksr->play_mode.rate);
+    return (int)((f64)samples * 1000 / ksr->play_mode.rate);
 }
 
 void ksr_shutdown(Kasaria *ksr)

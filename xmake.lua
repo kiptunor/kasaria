@@ -19,12 +19,3 @@ target("example-sdl3")
         "kasaria_lib/*.c",
         "example_sdl3.c"
     )
-
-
-target("example2")
-    set_default(false)
-    set_kind("binary")
-    add_files(
-        "kasaria_lib/*.c",
-        "diag.c"
-    )

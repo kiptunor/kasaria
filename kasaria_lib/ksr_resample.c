@@ -52,7 +52,7 @@ resample.c
 
 /*************** resampling with fixed increment *****************/
 
-static sample_t *rs_plain(Kasaria *ksr, int v, int32 *countptr)
+static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
 {
 
     /* Play sample until end, then free the voice. */
@@ -61,13 +61,13 @@ static sample_t *rs_plain(Kasaria *ksr, int v, int32 *countptr)
     Voice    *vp    = &ksr->voice[v];
     sample_t *dest  = ksr->resample_buffer;
     sample_t *src   = vp->sample->data;
-    int32     ofs   = vp->sample_offset;
-    int32     incr  = vp->sample_increment;
-    int32     le    = vp->sample->data_length;
-    int32     count = *countptr;
+    long     ofs   = vp->sample_offset;
+    long     incr  = vp->sample_increment;
+    long     le    = vp->sample->data_length;
+    long     count = *countptr;
 
 #ifdef PRECALC_LOOPS
-    int32 i;
+    long i;
 
     if(incr < 0)
         incr = -incr; /* In case we're coming out of a bidir loop */
@@ -116,21 +116,21 @@ static sample_t *rs_plain(Kasaria *ksr, int v, int32 *countptr)
     return ksr->resample_buffer;
 }
 
-static sample_t *rs_loop(Kasaria *ksr, Voice *vp, int32 count)
+static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
 {
 
     /* Play sample until end-of-loop, skip back and continue. */
 
     INTERPVARS;
-    int32     ofs  = vp->sample_offset;
-    int32     incr = vp->sample_increment;
-    int32     le   = vp->sample->loop_end;
-    int32     ll   = le - vp->sample->loop_start;
+    long     ofs  = vp->sample_offset;
+    long     incr = vp->sample_increment;
+    long     le   = vp->sample->loop_end;
+    long     ll   = le - vp->sample->loop_start;
     sample_t *dest = ksr->resample_buffer;
     sample_t *src  = vp->sample->data;
 
 #ifdef PRECALC_LOOPS
-    int32 i;
+    long i;
 
     while(count)
     {
@@ -167,17 +167,17 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, int32 count)
     return ksr->resample_buffer;
 }
 
-static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, int32 count)
+static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
 {
     INTERPVARS;
-    int32     ofs  = vp->sample_offset;
-    int32     incr = vp->sample_increment;
-    int32     le   = vp->sample->loop_end;
-    int32     ls   = vp->sample->loop_start;
+    long     ofs  = vp->sample_offset;
+    long     incr = vp->sample_increment;
+    long     le   = vp->sample->loop_end;
+    long     ls   = vp->sample->loop_start;
     sample_t *dest = ksr->resample_buffer, *src = vp->sample->data;
 
 #ifdef PRECALC_LOOPS
-    int32 le2 = le << 1, ls2 = ls << 1, i;
+    long le2 = le << 1, ls2 = ls << 1, i;
     /* Play normally until inside the loop region */
 
     if(ofs <= ls)
@@ -284,11 +284,11 @@ static int vib_phase_to_inc_ptr(int phase)
         return phase - VIBRATO_SAMPLE_INCREMENTS / 2;
 }
 
-static int32 update_vibrato(Kasaria *ksr, Voice *vp, int sign)
+static long update_vibrato(Kasaria *ksr, Voice *vp, int sign)
 {
-    int32  depth;
+    long  depth;
     int    phase, pb;
-    double a;
+    f64 a;
 
     if(vp->vibrato_phase++ >= 2 * VIBRATO_SAMPLE_INCREMENTS - 1)
         vp->vibrato_phase = 0;
@@ -321,9 +321,9 @@ static int32 update_vibrato(Kasaria *ksr, Voice *vp, int sign)
         }
     }
 
-    a  = FSCALE(((double)(vp->sample->sample_rate) * (double)(vp->frequency)) / ((double)(vp->sample->root_freq) * (double)(ksr->play_mode.rate)), FRACTION_BITS);
+    a  = FSCALE(((f64)(vp->sample->sample_rate) * (f64)(vp->frequency)) / ((f64)(vp->sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
 
-    pb = (int)((sine(vp->vibrato_phase * (SINE_CYCLE_LENGTH / (2 * VIBRATO_SAMPLE_INCREMENTS))) * (double)(depth)*VIBRATO_AMPLITUDE_TUNING));
+    pb = (int)((sine(vp->vibrato_phase * (SINE_CYCLE_LENGTH / (2 * VIBRATO_SAMPLE_INCREMENTS))) * (f64)(depth)*VIBRATO_AMPLITUDE_TUNING));
 
     if(pb < 0)
     {
@@ -335,15 +335,15 @@ static int32 update_vibrato(Kasaria *ksr, Voice *vp, int sign)
 
     /* If the sweep's over, we can store the newly computed sample_increment */
     if(!vp->vibrato_sweep)
-        vp->vibrato_sample_increment[phase] = (int32)a;
+        vp->vibrato_sample_increment[phase] = (long)a;
 
     if(sign)
         a = -a; /* need to preserve the loop direction */
 
-    return (int32)a;
+    return (long)a;
 }
 
-static sample_t *rs_vib_plain(Kasaria *ksr, int v, int32 *countptr)
+static sample_t *rs_vib_plain(Kasaria *ksr, int v, long *countptr)
 {
 
     /* Play sample until end, then free the voice. */
@@ -352,10 +352,10 @@ static sample_t *rs_vib_plain(Kasaria *ksr, int v, int32 *countptr)
     Voice    *vp    = &ksr->voice[v];
     sample_t *dest  = ksr->resample_buffer;
     sample_t *src   = vp->sample->data;
-    int32     le    = vp->sample->data_length;
-    int32     ofs   = vp->sample_offset;
-    int32     incr  = vp->sample_increment;
-    int32     count = *countptr;
+    long     le    = vp->sample->data_length;
+    long     ofs   = vp->sample_offset;
+    long     incr  = vp->sample_increment;
+    long     count = *countptr;
     int       cc    = vp->vibrato_control_counter;
 
     /* This has never been tested */
@@ -388,22 +388,22 @@ static sample_t *rs_vib_plain(Kasaria *ksr, int v, int32 *countptr)
     return ksr->resample_buffer;
 }
 
-static sample_t *rs_vib_loop(Kasaria *ksr, Voice *vp, int32 count)
+static sample_t *rs_vib_loop(Kasaria *ksr, Voice *vp, long count)
 {
 
     /* Play sample until end-of-loop, skip back and continue. */
 
     INTERPVARS;
-    int32     ofs  = vp->sample_offset;
-    int32     incr = vp->sample_increment;
-    int32     le   = vp->sample->loop_end;
-    int32     ll   = le - vp->sample->loop_start;
+    long     ofs  = vp->sample_offset;
+    long     incr = vp->sample_increment;
+    long     le   = vp->sample->loop_end;
+    long     ll   = le - vp->sample->loop_start;
     sample_t *dest = ksr->resample_buffer;
     sample_t *src  = vp->sample->data;
     int       cc   = vp->vibrato_control_counter;
 
 #ifdef PRECALC_LOOPS
-    int32 i;
+    long i;
     int   vibflag = 0;
 
     while(count)
@@ -458,21 +458,21 @@ static sample_t *rs_vib_loop(Kasaria *ksr, Voice *vp, int32 count)
     return ksr->resample_buffer;
 }
 
-static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, int32 count)
+static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
 {
     INTERPVARS;
-    int32     ofs  = vp->sample_offset;
-    int32     incr = vp->sample_increment;
-    int32     le   = vp->sample->loop_end;
-    int32     ls   = vp->sample->loop_start;
+    long     ofs  = vp->sample_offset;
+    long     incr = vp->sample_increment;
+    long     le   = vp->sample->loop_end;
+    long     ls   = vp->sample->loop_start;
     sample_t *dest = ksr->resample_buffer;
     sample_t *src  = vp->sample->data;
     int       cc   = vp->vibrato_control_counter;
 
 #ifdef PRECALC_LOOPS
-    int32 le2 = le << 1;
-    int32 ls2 = ls << 1;
-    int32 i;
+    long le2 = le << 1;
+    long ls2 = ls << 1;
+    long i;
     int   vibflag = 0;
 
     /* Play normally until inside the loop region */
@@ -598,10 +598,10 @@ static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, int32 count)
     return ksr->resample_buffer;
 }
 
-sample_t *resample_voice(Kasaria *ksr, int v, int32 *countptr)
+sample_t *resample_voice(Kasaria *ksr, int v, long *countptr)
 {
-    int32  ofs;
-    uint8  modes;
+    long  ofs;
+    u_char  modes;
     Voice *vp = &ksr->voice[v];
 
     if(!(vp->sample->sample_rate))
@@ -655,22 +655,34 @@ sample_t *resample_voice(Kasaria *ksr, int v, int32 *countptr)
 
 void pre_resample(Kasaria *ksr, Sample *sp)
 {
-    double            a, xdiff;
-    int32             incr, ofs, newlen, count;
-    int16            *newdata, *dest, *src = (int16 *)sp->data, *vptr;
-    int32             v, v1, v2, v3, v4, i;
+    f64               a;
+    f64               xdiff;
+    long              incr;
+    long              ofs;
+    long              newlen;
+    long              count;
+    long              v;
+    long              v1;
+    long              v2;
+    long              v3;
+    long              v4;
+    long              i;
+    short            *newdata;
+    short            *dest;
+    short            *src = (short *)sp->data;
+    short            *vptr;
 
     static const char note_name[12][3] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 
-    a                                  = ((double)(sp->sample_rate) * freq_table[(int)(sp->note_to_use)]) / ((double)(sp->root_freq) * ksr->play_mode.rate);
+    a                                  = ((f64)(sp->sample_rate) * freq_table[(int)(sp->note_to_use)]) / ((f64)(sp->root_freq) * ksr->play_mode.rate);
 
     if(sp->data_length / a >= 0x7fffffffL)
     {
         /* Too large to compute */
         return;
     }
-    newlen = (int32)(sp->data_length / a);
-    dest = newdata = (int16 *)safe_malloc((newlen >> (FRACTION_BITS - 1)) + 2);
+    newlen = (long)(sp->data_length / a);
+    dest = newdata = (short *)safe_malloc((newlen >> (FRACTION_BITS - 1)) + 2);
 
     count          = (newlen >> FRACTION_BITS) - 1;
     ofs = incr = (sp->data_length - (1 << FRACTION_BITS)) / count;
@@ -689,14 +701,14 @@ void pre_resample(Kasaria *ksr, Sample *sp)
         v3    = *(vptr + 1);
         v4    = *(vptr + 2);
         xdiff = FSCALENEG(ofs & FRACTION_MASK, FRACTION_BITS);
-        v     = (int32)(v2 + (xdiff / 6.0) * (-2 * v1 - 3 * v2 + 6 * v3 - v4 + xdiff * (3 * (v1 - 2 * v2 + v3) + xdiff * (-v1 + 3 * (v2 - v3) + v4))));
+        v     = (long)(v2 + (xdiff / 6.0) * (-2 * v1 - 3 * v2 + 6 * v3 - v4 + xdiff * (3 * (v1 - 2 * v2 + v3) + xdiff * (-v1 + 3 * (v2 - v3) + v4))));
 
         if(v < -32768)
             *dest++ = -32768;
         else if(v > 32767)
             *dest++ = 32767;
         else
-            *dest++ = (int16)v;
+            *dest++ = (short)v;
         ofs += incr;
     }
 
@@ -704,7 +716,7 @@ void pre_resample(Kasaria *ksr, Sample *sp)
     {
         v1      = src[ofs >> FRACTION_BITS];
         v2      = src[(ofs >> FRACTION_BITS) + 1];
-        *dest++ = (int16)(v1 + (((v2 - v1) * (ofs & FRACTION_MASK)) >> FRACTION_BITS));
+        *dest++ = (short)(v1 + (((v2 - v1) * (ofs & FRACTION_MASK)) >> FRACTION_BITS));
     }
     else
         *dest++ = src[ofs >> FRACTION_BITS];
@@ -713,8 +725,8 @@ void pre_resample(Kasaria *ksr, Sample *sp)
     *dest           = *(dest - 1) / 2;
 
     sp->data_length = newlen;
-    sp->loop_start  = (int32)(sp->loop_start / a);
-    sp->loop_end    = (int32)(sp->loop_end / a);
+    sp->loop_start  = (long)(sp->loop_start / a);
+    sp->loop_end    = (long)(sp->loop_end / a);
 
     free(sp->data);
 

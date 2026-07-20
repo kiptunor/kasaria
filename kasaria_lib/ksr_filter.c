@@ -36,10 +36,10 @@ April 95
 #include <string.h>
 
 /*  bessel  function   */
-static FLOAT_T ino(float x)
+static f64 ino(f32 x)
 {
-    FLOAT_T y, de, e, sde;
-    int     i;
+    f64 y, de, e, sde;
+    int i;
 
     y  = x / 2;
     e  = 1.0;
@@ -47,7 +47,7 @@ static FLOAT_T ino(float x)
     i  = 1;
     do
     {
-        de   = de * y / (FLOAT_T)i;
+        de   = de * y / (f64)i;
         sde  = de * de;
         e   += sde;
     } while(!((e * 1.0e-08 - sde > 0) || (i++ > 25)));
@@ -56,37 +56,41 @@ static FLOAT_T ino(float x)
 }
 
 /* Kaiser Window (symetric) */
-static void kaiser(FLOAT_T *w, int n, FLOAT_T beta)
+static void kaiser(f64 *w, int n, f64 beta)
 {
-    FLOAT_T xind, xi;
-    int     i;
+    f64 xind;
+    f64 xi;
+    int i;
 
     xind = (2 * n - 1) * (2 * n - 1);
     for(i = 0; i < n; i++)
     {
         xi   = i + 0.5;
-        w[i] = ino((FLOAT_T)(beta * sqrt((double)(1. - 4 * xi * xi / xind)))) / ino((FLOAT_T)beta);
+        w[i] = ino((f64)(beta * sqrt((f64)(1. - 4 * xi * xi / xind)))) / ino((f64)beta);
     }
 }
 
 /*
  * fir coef in g, cuttoff frequency in fc
  */
-static void designfir(FLOAT_T *g, FLOAT_T fc)
+static void designfir(f64 *g, f64 fc)
 {
-    int     i;
-    FLOAT_T xi, omega, att, beta;
-    FLOAT_T w[ORDER2];
+    int i;
+    f64 xi;
+    f64 omega;
+    f64 att;
+    f64 beta;
+    f64 w[ORDER2];
 
     for(i = 0; i < ORDER2; i++)
     {
-        xi    = (FLOAT_T)i + 0.5;
+        xi    = (f64)i + 0.5;
         omega = PI * xi;
-        g[i]  = sin((double)omega * fc) / omega;
+        g[i]  = sin((f64)omega * fc) / omega;
     }
 
     att  = 40.; /* attenuation  in  db */
-    beta = (FLOAT_T)exp(log((double)0.58417 * (att - 20.96)) * 0.4) + 0.07886 * (att - 20.96);
+    beta = (f64)exp(log((f64)0.58417 * (att - 20.96)) * 0.4) + 0.07886 * (att - 20.96);
     kaiser(w, ORDER2, beta);
 
     /* Matrix product */
@@ -101,13 +105,13 @@ static void designfir(FLOAT_T *g, FLOAT_T fc)
  */
 
 /* This is quick hack for antialiasing filter's bug fix. */
-#define sample_t int16
+#define sample_t short
 
-static void filter(sample_t *result, sample_t *data, int32 length, FLOAT_T coef[])
+static void filter(sample_t *result, sample_t *data, long length, f64 coef[])
 {
-    int32   sample, i, sample_window;
-    int16   peak = 0;
-    FLOAT_T sum;
+    long sample, i, sample_window;
+    short peak = 0;
+    f64   sum;
 
     /* Simulate leading 0 at the begining of the buffer */
     for(sample = 0; sample < ORDER2; sample++)
@@ -186,19 +190,19 @@ static void filter(sample_t *result, sample_t *data, int32 length, FLOAT_T coef[
 /* I don't worry about looping point -> they will remain soft if they  */
 /* were already                                                        */
 /***********************************************************************/
-void antialiasing(Sample *sp, int32 output_rate)
+void antialiasing(Sample *sp, long output_rate)
 {
     sample_t *temp;
     int       i;
-    FLOAT_T   fir_symetric[ORDER];
-    FLOAT_T   fir_coef[ORDER2];
-    FLOAT_T   freq_cut; /* cutoff frequency [0..1.0] FREQ_CUT/SAMP_FREQ*/
+    f64       fir_symetric[ORDER];
+    f64       fir_coef[ORDER2];
+    f64       freq_cut; /* cutoff frequency [0..1.0] FREQ_CUT/SAMP_FREQ*/
 
     /* No oversampling  */
     if(output_rate >= sp->sample_rate)
         return;
 
-    freq_cut = (FLOAT_T)output_rate / (FLOAT_T)sp->sample_rate;
+    freq_cut = (f64)output_rate / (f64)sp->sample_rate;
 
     designfir(fir_coef, freq_cut);
 
@@ -210,7 +214,7 @@ void antialiasing(Sample *sp, int32 output_rate)
     temp = (sample_t *)safe_malloc(sp->data_length);
     memcpy(temp, sp->data, sp->data_length);
 
-    filter((int16 *)sp->data, temp, sp->data_length / sizeof(sample_t), fir_symetric);
+    filter((short *)sp->data, temp, sp->data_length / sizeof(sample_t), fir_symetric);
 
     free(temp);
 }

@@ -28,7 +28,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "ksr_internal.h"
 
-static int set_channel_flag(int32 *flags, int32 i, char *name)
+static int set_channel_flag(long *flags, long i, char *name)
 {
     if(i == 0)
         *flags = 0;
@@ -47,7 +47,7 @@ static int set_channel_flag(int32 *flags, int32 i, char *name)
     return 0;
 }
 
-static int set_value(int32 *param, int32 i, int32 low, int32 high, char *name)
+static int set_value(long *param, long i, long low, long high, char *name)
 {
     if(i < low || i > high)
     {

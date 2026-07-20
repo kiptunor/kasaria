@@ -28,8 +28,23 @@
 #include <stdio.h>
 
 #include "config.h"
-#include "ksr_sf2.h"
 #include "kasaria.h"
+#include "ksr_sf2.h"
+
+
+typedef uint8_t        u8;
+typedef uint16_t       u16;
+typedef uint32_t       u32;
+typedef uint64_t       u64;
+typedef int8_t         i8;
+typedef int16_t        i16;
+typedef int32_t        i32;
+typedef int64_t        i64;
+typedef float          f32;
+typedef double         f64;
+typedef unsigned long  u_long;
+typedef unsigned short u_short;
+typedef unsigned char  u_char;
 
 typedef struct
 {
@@ -52,27 +67,27 @@ typedef struct
 
 typedef struct
 {
-    int32     loop_start;
-    int32     loop_end;
-    int32     data_length;
-    int32     sample_rate;
-    int32     low_freq;
-    int32     high_freq;
-    int32     root_freq;
-    int32     envelope_rate[6];
-    int32     envelope_offset[6];
-    FLOAT_T   volume;
+    long      loop_start;
+    long      loop_end;
+    long      data_length;
+    long      sample_rate;
+    long      low_freq;
+    long      high_freq;
+    long      root_freq;
+    long      envelope_rate[6];
+    long      envelope_offset[6];
+    f64       volume;
     sample_t *data;
-    int32     tremolo_sweep_increment;
-    int32     tremolo_phase_increment;
-    int32     vibrato_sweep_increment;
-    int32     vibrato_control_ratio;
-    uint8     tremolo_depth;
-    uint8     vibrato_depth;
-    uint8     modes;
-    int8      panning;
-    int8      note_to_use;
-    int32     data_alloced;
+    long      tremolo_sweep_increment;
+    long      tremolo_phase_increment;
+    long      vibrato_sweep_increment;
+    long      vibrato_control_ratio;
+    u_char    tremolo_depth;
+    u_char    vibrato_depth;
+    u_char    modes;
+    char      panning;
+    char      note_to_use;
+    long      data_alloced;
 } Sample;
 
 /* Bits in modes: */
@@ -118,17 +133,17 @@ typedef struct
 
 typedef struct
 {
-    int32 rate;
-    int32 encoding;
+    long rate;
+    long encoding;
 } PlayMode;
 
 typedef struct
 {
-    int32 time;
-    uint8 channel;
-    uint8 type;
-    uint8 b;
-    uint8 a;
+    long   time;
+    u_char channel;
+    u_char type;
+    u_char b;
+    u_char a;
 } MidiEvent;
 
 /* Midi events */
@@ -154,18 +169,18 @@ typedef struct
 
 typedef struct
 {
-    int     bank;
-    int     program;
-    int     volume;
-    int     sustain;
-    int     panning;
-    int     pitchbend;
-    int     expression;
-    int     mono; /* one note only on this channel */
-    int     pitchsens;
+    int bank;
+    int program;
+    int volume;
+    int sustain;
+    int panning;
+    int pitchbend;
+    int expression;
+    int mono; /* one note only on this channel */
+    int pitchsens;
     /* chorus, reverb... Coming soon to a 300-MHz, eight-way superscalar
         processor near you */
-    FLOAT_T pitchfactor; /* precomputed pitch bend factor to save some fdiv's */
+    f64 pitchfactor; /* precomputed pitch bend factor to save some fdiv's */
 } Channel;
 
 /* Causes the instrument's default panning to be used. */
@@ -173,41 +188,99 @@ typedef struct
 
 typedef struct
 {
-    uint8          status;
-    uint8          channel;
-    uint8          note;
-    uint8          velocity;
+    // Effects common for SF2 standard
+    u32 start_addrs_offset;
+    u32 end_addrs_offset;
+    u32 startloop_addrs_offset;
+    u32 endloop_addrs_offset;
+    u32 start_addrs_coarse_offset;
+    f32 mod_lfo_to_pitch;
+    f32 vib_lfo_to_pitch;
+    f32 mod_env_to_pitch;
+    u16 initial_filter_fc;
+    f32 initial_filter_q;
+    f32 mod_lfo_to_filter_fc;
+    f32 mod_env_to_filter_fc;
+    u32 end_addrs_coarse_offset;
+    f32 mod_lfo_to_volume;
+    f32 chorus_effects_send;
+    f32 reverb_effects_send;
+    f32 pan;
+    f32 delay_mod_LFO;
+    f32 freq_mod_LFO;
+    f32 delay_vib_LFO;
+    f32 freq_vib_LFO;
+    f32 delay_mod_env;
+    f32 attack_mod_env;
+    f32 hold_mod_env;
+    f32 decay_mod_env;
+    f32 sustain_mod_env;
+    f32 release_mod_env;
+    f32 keynum_to_mod_env_hold;
+    f32 keynum_to_mod_env_decay;
+    f32 delay_vol_env;
+    f32 attack_vol_env;
+    f32 hold_vol_env;
+    f32 decay_vol_env;
+    f32 sustain_vol_env;
+    f32 release_vol_env;
+    f32 keynum_to_vol_env_hold;
+    f32 keynum_to_vol_env_decay;
+    u16 instrument;
+    u8  key_range;
+    u8  vel_range;
+    u32 start_loop_addrs_coarse_offset;
+    u8  fixed_key;
+    u8  velocity;
+    f32 initial_attenuation;
+    u32 end_loop_addrs_coarse_offset;
+    f32 coarse_tune;
+    f32 fine_tune;
+    u32 sample_id;
+    u8  sample_modes;
+    f32 scale_tuning;
+    u8  exclusive_class;
+    u16 overriding_root_key;
+} SoundFontEffects;
 
-    Sample        *sample;
+typedef struct
+{
+    u_char           status;
+    u_char           channel;
+    u_char           note;
+    u_char           velocity;
 
-    int32          orig_frequency;
-    int32          frequency;
-    int32          sample_offset;
-    int32          sample_increment;
-    int32          envelope_volume;
-    int32          envelope_target;
-    int32          envelope_increment;
-    int32          tremolo_sweep;
-    int32          tremolo_sweep_position;
-    int32          tremolo_phase;
-    int32          tremolo_phase_increment;
-    int32          vibrato_sweep;
-    int32          vibrato_sweep_position;
+    Sample          *sample;
 
-    final_volume_t left_mix;
-    final_volume_t right_mix;
+    long             orig_frequency;
+    long             frequency;
+    long             sample_offset;
+    long             sample_increment;
+    long             envelope_volume;
+    long             envelope_target;
+    long             envelope_increment;
+    long             tremolo_sweep;
+    long             tremolo_sweep_position;
+    long             tremolo_phase;
+    long             tremolo_phase_increment;
+    long             vibrato_sweep;
+    long             vibrato_sweep_position;
 
-    FLOAT_T        left_amp;
-    FLOAT_T        right_amp;
-    FLOAT_T        tremolo_volume;
-    int32          vibrato_sample_increment[VIBRATO_SAMPLE_INCREMENTS];
-    int            vibrato_phase;
-    int            vibrato_control_ratio;
-    int            vibrato_control_counter;
-    int            envelope_stage;
-    int            control_counter;
-    int            panning;
-    int            panned;
+    final_volume_t   left_mix;
+    final_volume_t   right_mix;
+
+    f64              left_amp;
+    f64              right_amp;
+    f64              tremolo_volume;
+    long             vibrato_sample_increment[VIBRATO_SAMPLE_INCREMENTS];
+    int              vibrato_phase;
+    int              vibrato_control_ratio;
+    int              vibrato_control_counter;
+    int              envelope_stage;
+    int              control_counter;
+    int              panning;
+    int              panned;
+    SoundFontEffects sf2_effects;
 } Voice;
 
 /* Voice status options: */
@@ -234,19 +307,19 @@ typedef struct
 } MidiEventList;
 
 #ifdef LOOKUP_SINE
-FLOAT_T sine(int x);
+f64 sine(int x);
 #else
     #include <math.h>
     #define sine(x) (sin((2 * PI / 1024.0) * (x)))
 #endif
 
 #define SINE_CYCLE_LENGTH 1024
-extern int32   freq_table[];
-extern FLOAT_T vol_table[];
-extern FLOAT_T bend_fine[];
-extern FLOAT_T bend_coarse[];
-extern uint8  *_l2u;    /* 13-bit PCM to 8-bit u-law */
-extern uint8   _l2u_[]; /* used in LOOKUP_HACK */
+extern long    freq_table[];
+extern f64     vol_table[];
+extern f64     bend_fine[];
+extern f64     bend_coarse[];
+extern u_char *_l2u;    /* 13-bit PCM to 8-bit u-law */
+extern u_char  _l2u_[]; /* used in LOOKUP_HACK */
 #ifdef LOOKUP_HACK
 extern int16 _u2l[];
 #endif
@@ -267,40 +340,40 @@ struct Kasaria
     int            fast_decay;
     int            dynamic_loading;
     PlayMode       play_mode;
-    int32          common_buffer[AUDIO_BUFFER_SIZE * 2]; /* stereo samples */
-    int32         *buffer_pointer;
+    long           common_buffer[AUDIO_BUFFER_SIZE * 2]; /* stereo samples */
+    long          *buffer_pointer;
     Channel        channel[16];
     Voice          voice[MAX_VOICES];
-    int32          control_rate;
-    int32          control_ratio;
-    FLOAT_T        master_volume;
-    int32          drumchannels;
-    int32          quietchannels;
-    int32          lost_notes;
-    int32          cut_notes;
+    long           control_rate;
+    long           control_ratio;
+    f64            master_volume;
+    long           drumchannels;
+    long           quietchannels;
+    long           lost_notes;
+    long           cut_notes;
     int            adjust_panning_immediately;
     int            voices;
-    uint8          rpn_msb[16];
-    uint8          rpn_lsb[16];
+    u_char         rpn_msb[16];
+    u_char         rpn_lsb[16];
     MidiEvent     *event_list;
     MidiEvent     *current_event;
-    int32          sample_count;
-    int32          current_sample;
+    long           sample_count;
+    long           current_sample;
     FILE          *fp_midi;
-    int32          events_midi;
+    long           events_midi;
     char           song_title[256];
     char           song_copyright[256];
     char           last_smf[1024];
     /* to avoid some unnecessary parameter passing */
     MidiEventList *evlist;
-    int32          event_count;
+    long           event_count;
     FILE          *fp;
-    int32          at;
+    long           at;
     /* These would both fit into 32 bits, but they are often added in
         large multiples, so it's simpler to have two roomy ints */
     /* samples per MIDI delta-t */
-    int32          sample_increment;
-    int32          sample_correction;
+    long           sample_increment;
+    long           sample_correction;
     sample_t       resample_buffer[AUDIO_BUFFER_SIZE];
 #ifdef LOOKUP_HACK
     int32 *mixup;
@@ -321,16 +394,16 @@ void        free_pathlist(Kasaria *tm);
 void        close_file(FILE *fp);
 void        skip(FILE *fp, size_t len);
 void       *safe_malloc(size_t count);
-void        antialiasing(Sample *sp, int32 output_rate);
+void        antialiasing(Sample *sp, long output_rate);
 int         load_missing_instruments(Kasaria *tm);
 void        free_instruments(Kasaria *tm);
 int         set_default_instrument(Kasaria *tm, char *name);
 void        free_default_instrument(Kasaria *tm);
-void        mix_voice(Kasaria *tm, int32 *buf, int v, int32 c);
+void        mix_voice(Kasaria *tm, long *buf, int v, long c);
 int         recompute_envelope(Kasaria *tm, int v);
 void        apply_envelope_to_amp(Kasaria *tm, int v);
-MidiEvent  *read_midi_file(Kasaria *tm, FILE *mfp, int32 *count, int32 *sp);
-sample_t   *resample_voice(Kasaria *tm, int v, int32 *countptr);
+MidiEvent  *read_midi_file(Kasaria *tm, FILE *mfp, long *count, long *sp);
+sample_t   *resample_voice(Kasaria *tm, int v, long *countptr);
 void        pre_resample(Kasaria *tm, Sample *sp);
 void        init_tables(Kasaria *tm);
 void        free_tables(Kasaria *tm);

@@ -199,6 +199,61 @@ enum
     SHDR_ID
 };
 
+SoundFontEffects default_sf2_effects = {
+    .start_addrs_offset             = 0,
+    .end_addrs_offset               = 0,
+    .startloop_addrs_offset         = 0,
+    .endloop_addrs_offset           = 0,
+    .start_addrs_coarse_offset      = 0,
+    .mod_lfo_to_pitch               = 0.0f,      // cents, range: -12000 to 12000
+    .vib_lfo_to_pitch               = 0.0f,      // cents, range: -12000 to 12000
+    .mod_env_to_pitch               = 0.0f,      // cents, range: -12000 to 12000
+    .initial_filter_fc              = 13500,     // Hz, range: 1500 to 13500 (max = no filter)
+    .initial_filter_q               = 0.0f,      // centibels, range: 0 to 960 (0 = no resonance)
+    .mod_lfo_to_filter_fc           = 0.0f,      // cents, range: -12000 to 12000
+    .mod_env_to_filter_fc           = 0.0f,      // cents, range: -12000 to 12000
+    .end_addrs_coarse_offset        = 0,
+    .mod_lfo_to_volume              = 0.0f,      // centibels, range: -960 to 960
+    .chorus_effects_send            = 0.0f,      // range: 0 to 1000 (0 = no send)
+    .reverb_effects_send            = 0.0f,      // range: 0 to 1000 (0 = no send)
+    .pan                            = 0.0f,      // range: -500 to 500 (0 = center)
+    .delay_mod_LFO                  = -12000.0f, // timecents, -12000 = 0 seconds
+    .freq_mod_LFO                   = 0.0f,      // mHz, range: 140 to infinity
+    .delay_vib_LFO                  = -12000.0f, // timecents, -12000 = 0 seconds
+    .freq_vib_LFO                   = 0.0f,      // mHz, range: 140 to infinity
+    .delay_mod_env                  = -12000.0f, // timecents, -12000 = 0 seconds
+    .attack_mod_env                 = -12000.0f, // timecents, -12000 = 0 seconds
+    .hold_mod_env                   = -12000.0f, // timecents, -12000 = 0 seconds
+    .decay_mod_env                  = -12000.0f, // timecents, -12000 = 0 seconds
+    .sustain_mod_env                = 1000.0f,   // range: 0 to 1000 (1000 = full sustain)
+    .release_mod_env                = -12000.0f, // timecents, -12000 = 0 seconds
+    .keynum_to_mod_env_hold         = 0.0f,      // timecents/key, range: -1200 to 1200
+    .keynum_to_mod_env_decay        = 0.0f,      // timecents/key, range: -1200 to 1200
+    .delay_vol_env                  = -12000.0f, // timecents, -12000 = 0 seconds
+    .attack_vol_env                 = -12000.0f, // timecents, -12000 = 0 seconds
+    .hold_vol_env                   = -12000.0f, // timecents, -12000 = 0 seconds
+    .decay_vol_env                  = -12000.0f, // timecents, -12000 = 0 seconds
+    .sustain_vol_env                = 0.0f,      // range: 0 to 1000 (0 = full sustain level)
+    .release_vol_env                = -12000.0f, // timecents, -12000 = 0 seconds
+    .keynum_to_vol_env_hold         = 0.0f,      // timecents/key, range: -1200 to 1200
+    .keynum_to_vol_env_decay        = 0.0f,      // timecents/key, range: -1200 to 1200
+    .instrument                     = 0,
+    .key_range                      = 127,       // 0 to 127 (full keyboard)
+    .vel_range                      = 127,       // 0 to 127 (full velocity)
+    .start_loop_addrs_coarse_offset = 0,
+    .fixed_key                      = 255,       // 255 = disabled
+    .velocity                       = 255,       // 255 = disabled
+    .initial_attenuation            = 0.0f,      // centibels, 0 to 1440 (0 = no attenuation)
+    .end_loop_addrs_coarse_offset   = 0,
+    .coarse_tune                    = 0.0f,      // semitones, -120 to 120
+    .fine_tune                      = 0.0f,      // cents, -99 to 99
+    .sample_id                      = 0,
+    .sample_modes                   = 0,         // 0 = continuous (no loop)
+    .scale_tuning                   = 100.0f,    // percent, 100 = equal temperament
+    .exclusive_class                = 0,         // 0 = not exclusive
+    .overriding_root_key            = 255,       // 255 = disabled (use sample's root key)
+};
+
 
 /*================================================================
  * load a soundfont file
@@ -567,7 +622,7 @@ static void load_bag(int size, SFBags *bagp, FILE *fp)
     int i;
 
     size      /= 4;
-    bagp->bag  = NEW(uint16, size);
+    bagp->bag  = NEW(u_short, size);
     for(i = 0; i < size; i++)
     {
         READW(&bagp->bag[i], fp);
@@ -585,8 +640,8 @@ static void load_gen(int size, SFBags *bagp, FILE *fp)
     bagp->gen  = NEW(SFGenRec, size);
     for(i = 0; i < size; i++)
     {
-        READW((uint16 *)&bagp->gen[i].oper, fp);
-        READW((uint16 *)&bagp->gen[i].amount, fp);
+        READW((u_short *)&bagp->gen[i].oper, fp);
+        READW((u_short *)&bagp->gen[i].amount, fp);
     }
     bagp->ngens = size;
 }
