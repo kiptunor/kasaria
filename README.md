@@ -11,6 +11,7 @@ This midi synth is based on Timidity and it aims to provide an easy to use C API
 - [ ] Custom API for sending MIDI events
 - [X] Playback Controls (Not Yet Tested)
 - [X] SF2 SoundFontFormat Support
+- [ ] Custom API for loading audio samples
 - [ ] SF2 Effects
 - [ ] SFZ Support
 - [ ] Audio Capture 
