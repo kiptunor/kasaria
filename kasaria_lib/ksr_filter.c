@@ -219,3 +219,61 @@ void antialiasing(Sample *sp, long output_rate)
 
     free(temp);
 }
+
+void audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length)
+{
+    /*
+    f32 *samples = (f32 *)buffer;
+    u32  count   = length / sizeof(f32);
+
+    for(u32 i = 0; i < count; ++i)
+    {
+        f32 input     = samples[i];
+        f32 abs_input = fabsf(input);
+
+        // Envelope detection
+        if(abs_input > compr_settings->envelope)
+            compr_settings->envelope = compr_settings->limiter_attack_coeff * compr_settings->envelope + (1.0f - compr_settings->limiter_attack_coeff) * abs_input;
+        else
+            compr_settings->envelope = compr_settings->limiter_release_coeff * compr_settings->envelope + (1.0f - compr_settings->limiter_release_coeff) * abs_input;
+
+        // Gain computation
+        f32 target_gain = 1.0f;
+        if(compr_settings->envelope > compr_settings->limiter_threshold)
+            target_gain = (compr_settings->limiter_threshold + (compr_settings->envelope - compr_settings->limiter_threshold) / compr_settings->limiter_ratio) / compr_settings->envelope;
+
+        // Apply gain (instant attack, smooth release)
+        if(target_gain < compr_settings->gain)
+            compr_settings->gain = target_gain;
+        else
+            //compr_settings->gain = compr_settings->limiter_release_coeff * compr_settings->gain + (1.0f - compr_settings->limiter_release_coeff) * target_gain;
+            compr_settings->gain = compr_settings->limiter_attack_coeff * compr_settings->gain + (1.0f - compr_settings->limiter_attack_coeff) * target_gain;
+
+        samples[i] = input * compr_settings->gain * compr_settings->limiter_makeup_gain;
+    }
+    */
+
+    
+    f32 *samples = (f32 *)buffer;
+    u32  count   = length / sizeof(f32);
+    
+    for(u32 i = 0; i < count; ++i)
+    {
+        f32 input     = samples[i];
+        f32 abs_input = fabsf(input);
+
+        // Envelope detection
+        f32 coeff = (abs_input > compr_settings->envelope) ? compr_settings->limiter_attack_coeff : compr_settings->limiter_release_coeff;
+        compr_settings->envelope = coeff * compr_settings->envelope + (1.0f - coeff) * abs_input;
+
+        // Gain computation
+        f32 target_gain = 1.0f;
+        if(compr_settings->envelope > compr_settings->limiter_threshold)
+            target_gain = compr_settings->limiter_threshold / compr_settings->envelope;
+
+        // Always smooth gain
+        compr_settings->gain = 0.001f * compr_settings->gain + 0.999f * target_gain;
+
+        samples[i] = input * compr_settings->gain;
+    }
+}

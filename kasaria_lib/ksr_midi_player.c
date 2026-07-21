@@ -667,6 +667,21 @@ static void do_compute_data(Kasaria *ksr, long count)
         if(ksr->voice[i].status != VOICE_FREE)
             mix_voice(ksr, ksr->buffer_pointer, i, count);
     }
+
+    /*
+    f32 max_val = 0.0f;
+    for(u32 i = 0; i < samples; i++)
+    {
+        f32 val = labs(ksr->buffer_pointer[i]);
+        if(val > max_val) max_val = val;
+    }
+    printf("Max sample: %f\n", max_val);
+    */
+
+    // printf("Size of buffer_pointer element: %zu\n", sizeof(ksr->buffer_pointer[0]));
+    // printf("First raw value: %ld\n", ((long *)ksr->buffer_pointer)[0]);
+
+    audio_compressor(&ksr->compressor_settings, (f32 *)ksr->buffer_pointer, samples * sizeof(f32));
 }
 static void play_midi(Kasaria *ksr, MidiEvent *e)
 {
@@ -1212,14 +1227,14 @@ void ksr_render_char(Kasaria *ksr, u_char *buffer, long count)
 
         for(i = 0; i < cursamples; i++)
         {
-            ksr->common_buffer[i] = ksr->common_buffer[i] >> (32 - 8 - GUARD_BITS);
-            if(ksr->common_buffer[i] > 127)
-                ksr->common_buffer[i] = 127;
-
-            else if(ksr->common_buffer[i] < -128)
-                ksr->common_buffer[i] = -128;
-
-            buffer[i] = (u_char)ksr->common_buffer[i] ^ 0x80;
+            f32 sample = ksr->common_buffer[i] * 127.0f;
+            if(sample > 127.0f)
+                sample = 127.0f;
+            
+            if(sample < -128.0f)
+                sample = -128.0f;
+            
+            buffer[i] = (u_char)((int)sample ^ 0x80);
         }
         buffer += cursamples;
         count  -= curframes;
@@ -1247,14 +1262,14 @@ void ksr_render_short(Kasaria *ksr, short *buffer, long count)
 
         for(i = 0; i < cursamples; i++)
         {
-            ksr->common_buffer[i] = ksr->common_buffer[i] >> (32 - 16 - GUARD_BITS);
-            if(ksr->common_buffer[i] > 32767)
-                ksr->common_buffer[i] = 32767;
-
-            else if(ksr->common_buffer[i] < -32768)
-                ksr->common_buffer[i] = -32768;
-
-            buffer[i] = (short)ksr->common_buffer[i];
+            f32 sample = ksr->common_buffer[i] * 32767.0f;
+            if(sample > 32767.0f)
+                sample = 32767.0f;
+            
+            if(sample < -32768.0f)
+                sample = -32768.0f;
+            
+            buffer[i] = (short)((int)sample);
         }
         buffer += cursamples;
         count  -= curframes;
@@ -1283,16 +1298,16 @@ void ksr_render_24(Kasaria *ksr, int24 *buffer, long count)
 
         for(i = 0; i < cursamples; i++)
         {
-            ksr->common_buffer[i] = ksr->common_buffer[i] >> (32 - 24 - GUARD_BITS);
-            if(ksr->common_buffer[i] > 8388607)
-                ksr->common_buffer[i] = 8388607;
-
-            else if(ksr->common_buffer[i] < -8388608)
-                ksr->common_buffer[i] = -8388608;
-
-            buffer[i].data[0] = ksr->common_buffer[i] & 0xff;
-            buffer[i].data[1] = (ksr->common_buffer[i] >> 8) & 0xff;
-            buffer[i].data[2] = (ksr->common_buffer[i] >> 16) & 0xff;
+            f32 sample = ksr->common_buffer[i] * 8388607.0f;
+            if(sample > 8388607.0f)
+                sample = 8388607.0f;
+            
+            if(sample < -8388608.0f)
+                sample = -8388608.0f;
+            
+            buffer[i].data[0] = (u_char)((int)sample & 0xff);
+            buffer[i].data[1] = (u_char)((int)sample >> 8) & 0xff;
+            buffer[i].data[2] = (u_char)((int)sample >> 16) & 0xff;
         }
         buffer += cursamples;
         count  -= curframes;
@@ -1302,7 +1317,7 @@ void ksr_render_24(Kasaria *ksr, int24 *buffer, long count)
 void ksr_render_long(Kasaria *ksr, long *buffer, long count)
 {
     int  curframes, cursamples, i;
-    long maxval = 1 << (31 - GUARD_BITS);
+    long maxval = 2147483647L;  // 2^31 - 1;
     if(!ksr || !buffer)
         return;
 
@@ -1321,13 +1336,12 @@ void ksr_render_long(Kasaria *ksr, long *buffer, long count)
 
         for(i = 0; i < cursamples; i++)
         {
-            if(ksr->common_buffer[i] > maxval - 1)
-                ksr->common_buffer[i] = maxval - 1;
-            else if(ksr->common_buffer[i] < maxval * -1)
-                ksr->common_buffer[i] = maxval * -1;
-
-            ksr->common_buffer[i] = ksr->common_buffer[i] << GUARD_BITS;
-            buffer[i]             = ksr->common_buffer[i];
+            f32 sample = ksr->common_buffer[i] * maxval;
+            if(sample > maxval - 1)
+                sample = maxval - 1;
+            else if(sample < maxval * -1)
+                sample = maxval * -1;
+            buffer[i] = (long)sample;
         }
         buffer += cursamples;
         count  -= curframes;
@@ -1424,13 +1438,12 @@ void ksr_render_ulaw(Kasaria *ksr, u_char *buffer, long count)
 
         for(i = 0; i < cursamples; i++)
         {
-            ksr->common_buffer[i] = ksr->common_buffer[i] >> (32 - 13 - GUARD_BITS);
-            if(ksr->common_buffer[i] > 4095)
-                ksr->common_buffer[i] = 4095;
-            else if(ksr->common_buffer[i] < -4096)
-                ksr->common_buffer[i] = -4096;
-
-            buffer[i] = _l2u[ksr->common_buffer[i]];
+            f32 sample = ksr->common_buffer[i] * 4095.0f;
+            if(sample > 4095.0f)
+                sample = 4095.0f;
+            else if(sample < -4096.0f)
+                sample = -4096.0f;
+            buffer[i] = _l2u[(int)sample];
         }
         buffer += cursamples;
         count  -= curframes;

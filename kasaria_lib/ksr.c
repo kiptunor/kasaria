@@ -29,6 +29,7 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -56,15 +57,27 @@ Kasaria *ksr_init(void)
 #else
     ksr->fast_decay = 0;
 #endif
-    ksr->dynamic_loading            = 0;
-    ksr->voices                     = DEFAULT_VOICES;
-    ksr->play_mode.rate             = DEFAULT_RATE;
-    ksr->play_mode.encoding         = 0;
-    ksr->control_rate               = CONTROLS_PER_SECOND;
-    ksr->control_ratio              = ksr->play_mode.rate / ksr->control_rate;
-    ksr->drumchannels               = DEFAULT_DRUMCHANNELS;
-    ksr->quietchannels              = 0;
-    ksr->adjust_panning_immediately = 1;
+    ksr->dynamic_loading                           = 0;
+    ksr->voices                                    = DEFAULT_VOICES;
+    ksr->play_mode.rate                            = DEFAULT_RATE;
+    ksr->play_mode.encoding                        = 0;
+    ksr->control_rate                              = CONTROLS_PER_SECOND;
+    ksr->control_ratio                             = ksr->play_mode.rate / ksr->control_rate;
+    ksr->drumchannels                              = DEFAULT_DRUMCHANNELS;
+    ksr->quietchannels                             = 0;
+    ksr->adjust_panning_immediately                = 1;
+
+    ksr->compressor_settings.envelope              = 0.0f;
+    ksr->compressor_settings.gain                  = 1.0f;
+    ksr->compressor_settings.limiter_attack_ms     = 2.0f;
+    ksr->compressor_settings.limiter_release_ms    = 80.0f;
+    ksr->compressor_settings.limiter_sample_rate   = ksr->play_mode.rate;
+    ksr->compressor_settings.limiter_attack_coeff  = expf(-1.0f / (ksr->compressor_settings.limiter_attack_ms * 0.001f * ksr->compressor_settings.limiter_sample_rate));
+    ksr->compressor_settings.limiter_release_coeff = expf(-1.0f / (ksr->compressor_settings.limiter_release_ms * 0.001f * ksr->compressor_settings.limiter_sample_rate));
+    ksr->compressor_settings.limiter_threshold     = 2000000.0f;
+    ksr->compressor_settings.limiter_ratio         = 4.0f;
+    ksr->compressor_settings.limiter_makeup_gain   = 1.0f;
+    
     init_tables(ksr);
     reset_midi(ksr);
     adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
@@ -153,7 +166,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, char *filename)
         printf("SFZ Support not implelented!\n");
         return 0;
     }
-    
+
     if(strcasecmp(ext, "sf2") != 0)
     {
         printf("Unsuported soundfont format!\n");

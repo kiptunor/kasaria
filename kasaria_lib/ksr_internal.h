@@ -244,6 +244,21 @@ typedef struct
     u16 overriding_root_key;
 } SoundFontEffects;
 
+
+typedef struct
+{
+    f32 envelope;
+    f32 gain;
+    f32 limiter_threshold;
+    f32 limiter_ratio;
+    f32 limiter_attack_coeff;
+    f32 limiter_release_coeff;
+    f32 limiter_makeup_gain;
+    f32 limiter_attack_ms;
+    f32 limiter_release_ms;
+    f32 limiter_sample_rate;
+}CompressorSettings;
+
 typedef struct
 {
     u_char           status;
@@ -341,8 +356,8 @@ struct Kasaria
     int            fast_decay;
     int            dynamic_loading;
     PlayMode       play_mode;
-    long           common_buffer[AUDIO_BUFFER_SIZE * 2]; /* stereo samples */
-    long          *buffer_pointer;
+    f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; /* stereo samples */
+    f32           *buffer_pointer;
     Channel        channel[16];
     Voice          voice[MAX_VOICES];
     long           control_rate;
@@ -387,6 +402,7 @@ struct Kasaria
     int    sf_loaded;
     SFInfo sf_info;
     char   sf_filename[1024];
+    CompressorSettings compressor_settings;
 };
 
 FILE       *open_file(Kasaria *tm, char *name, int decompress, int noise_mode);
@@ -400,7 +416,7 @@ int         load_missing_instruments(Kasaria *tm);
 void        free_instruments(Kasaria *tm);
 int         set_default_instrument(Kasaria *tm, char *name);
 void        free_default_instrument(Kasaria *tm);
-void        mix_voice(Kasaria *tm, long *buf, int v, long c);
+void        mix_voice(Kasaria *tm, f32 *buf, int v, long c);
 int         recompute_envelope(Kasaria *tm, int v);
 void        apply_envelope_to_amp(Kasaria *tm, int v);
 MidiEvent  *read_midi_file(Kasaria *tm, FILE *mfp, long *count, long *sp);
@@ -416,5 +432,6 @@ void        reset_voices(Kasaria *ksr);
 void        drop_sustain(Kasaria *ksr, int c);
 void        all_notes_off(Kasaria *ksr, int c);
 void        reset_controllers(Kasaria *ksr, int c);
+void audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
 
 #endif
