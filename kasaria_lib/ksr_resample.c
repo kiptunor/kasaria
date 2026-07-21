@@ -2,6 +2,7 @@
 
 TiMidity -- Experimental MIDI to WAVE converter
 Copyright (C) 1995 Tuukka Toivonen <toivonen@clinet.fi>
+Copyright (C) 2026 Kiptunor
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

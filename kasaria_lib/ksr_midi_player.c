@@ -2,6 +2,7 @@
 
 TiMidity -- Experimental MIDI to WAVE converter
 Copyright (C) 1995 Tuukka Toivonen <toivonen@clinet.fi>
+Copyright (C) 2026 Kiptunor
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -654,6 +655,9 @@ static void skip_to(Kasaria *ksr, long until_time)
 
 static void do_compute_data(Kasaria *ksr, long count)
 {
+    /*
+        Maybe this is where I can add the audio limiter ?
+    */
     int i, samples;
     samples = (ksr->play_mode.encoding & PE_MONO) ? count : (count * 2);
     for(i = 0; i < samples; i++)
