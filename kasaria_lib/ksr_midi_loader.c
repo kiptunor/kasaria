@@ -42,6 +42,71 @@ static void compute_sample_increment(Kasaria *ksr, long tempo, long divisions)
     ksr->sample_increment  = (long)(a) >> 16;
 }
 
+
+static int compare_events(const void *a, const void *b)
+{
+    const MidiEventList *ea = *(const MidiEventList * const *)a;
+    const MidiEventList *eb = *(const MidiEventList * const *)b;
+    long ta = ea->event.time;
+    long tb = eb->event.time;
+    return (ta > tb) - (ta < tb);
+}
+
+// ----------------
+
+static MidiEventList *merge_sorted(MidiEventList *a, MidiEventList *b)
+{
+    MidiEventList  dummy;
+    MidiEventList *tail = &dummy;
+    dummy.next = 0;
+
+    while(a && b)
+    {
+        if(a->event.time <= b->event.time)
+        {
+            tail->next = a;
+            a = (MidiEventList *)a->next;
+        }
+        else
+        {
+            tail->next = b;
+            b = (MidiEventList *)b->next;
+        }
+        tail = (MidiEventList *)tail->next;
+    }
+    tail->next = a ? a : b;
+    return (MidiEventList *)dummy.next;
+}
+
+static MidiEventList *merge_sort_events(MidiEventList *head)
+{
+    MidiEventList *slow, *fast, *second;
+
+    if(!head || !head->next)
+        return head;
+
+    slow = head;
+    fast = (MidiEventList *)head->next;
+    while(fast && fast->next)
+    {
+        slow = (MidiEventList *)slow->next;
+        fast = (MidiEventList *)((MidiEventList *)fast->next)->next;
+    }
+
+    second = (MidiEventList *)slow->next;
+    slow->next = 0;
+
+    head   = merge_sort_events(head);
+    second = merge_sort_events(second);
+
+    return merge_sorted(head, second);
+}
+
+static void sort_event_list(Kasaria *ksr)
+{
+    ksr->evlist = merge_sort_events(ksr->evlist);
+}
+
 /* Read variable-length number (7 bits per byte, MSB first) */
 static long getvl(Kasaria *ksr)
 {
@@ -97,190 +162,191 @@ be linked to the event list */
 static MidiEventList *read_midi_event(Kasaria *ksr)
 {
     static u_char  laststatus, lastchan;
-    static u_char  nrpn = 0, rpn_msb[16], rpn_lsb[16]; /* one per channel */
+    static u_char  nrpn = 0, rpn_msb[16], rpn_lsb[16];
     u_char         me, type, a, b, c;
     long           len;
     MidiEventList *newev;
-
+    
     for(;;)
     {
-
         ksr->at += getvl(ksr);
         if(fread(&me, 1, 1, ksr->fp) != 1)
             return 0;
-
-
-        if(me == 0xF0 || me == 0xF7) /* SysEx event */
-        {
-            len = getvl(ksr);
-            skip(ksr->fp, len);
-        }
-        else if(me == 0xFF) /* Meta event */
-        {
-            fread(&type, 1, 1, ksr->fp);
-            len = getvl(ksr);
-            if(type > 0 && type < 16)
+        
+        //if(me == 0xF0 || me == 0xF7)
+        //{
+        //    ksr->at += getvl(ksr);
+            //if(fread(&me, 1, 1, ksr->fp) != 1)
+            //    return 0;
+    
+            if(me == 0xF0 || me == 0xF7)
             {
-                static char *label[] = { "Text event: ", "Text: ", "Copyright: ", "Track name: ", "Instrument: ", "Lyric: ", "Marker: ", "Cue point: " };
-                dumpstring(ksr, len, label[(type > 7) ? 0 : type]);
+                len = getvl(ksr);
+                skip(ksr->fp, len);
             }
-            else
-                switch(type)
+            else if(me == 0xFF)
+            {
+                if(fread(&type, 1, 1, ksr->fp) != 1)
+                    return 0;
+                len = getvl(ksr);
+                if(type > 0 && type < 16)
                 {
-                case 0x2F: /* End of Track */
+                    static char *label[] = { "Text event: ", "Text: ", "Copyright: ",
+                        "Track name: ", "Instrument: ", "Lyric: ", "Marker: ", "Cue point: " };
+                    if(dumpstring(ksr, len, label[(type > 7) ? 0 : type]) < 0)
+                        return 0;
+                }
+                else switch(type)
+                {
+                case 0x2F:
                     return MAGIC_EOT;
-
-                case 0x51: /* Tempo */
-                    fread(&a, 1, 1, ksr->fp);
-                    fread(&b, 1, 1, ksr->fp);
-                    fread(&c, 1, 1, ksr->fp);
+    
+                case 0x51:
+                    if(len != 3)
+                    {
+                        skip(ksr->fp, len);
+                        break;
+                    }
+                    if(fread(&a, 1, 1, ksr->fp) != 1 ||
+                       fread(&b, 1, 1, ksr->fp) != 1 ||
+                       fread(&c, 1, 1, ksr->fp) != 1)
+                        return 0;
                     MIDIEVENT(ksr->at, ME_TEMPO, c, a, b);
-                    break;
-
-
+    
                 default:
                     skip(ksr->fp, len);
                     break;
                 }
-        }
-        else
-        {
-            a = me;
-            if(a & 0x80) /* status byte */
-            {
-                lastchan   = a & 0x0F;
-                laststatus = (a >> 4) & 0x07;
-                fread(&a, 1, 1, ksr->fp);
-                a &= 0x7F;
             }
-            switch(laststatus)
+            else
             {
-            case 0: /* Note off */
-                fread(&b, 1, 1, ksr->fp);
-                b &= 0x7F;
-                MIDIEVENT(ksr->at, ME_NOTEOFF, lastchan, a, b);
-
-            case 1: /* Note on */
-                fread(&b, 1, 1, ksr->fp);
-                b &= 0x7F;
-                MIDIEVENT(ksr->at, ME_NOTEON, lastchan, a, b);
-
-            case 2: /* Key Pressure */
-                fread(&b, 1, 1, ksr->fp);
-                b &= 0x7F;
-                MIDIEVENT(ksr->at, ME_KEYPRESSURE, lastchan, a, b);
-
-            case 3: /* Control change */
-                fread(&b, 1, 1, ksr->fp);
-                b &= 0x7F;
+                a = me;
+                if(a & 0x80)
                 {
-                    int control = 255;
-                    switch(a)
+                    lastchan   = a & 0x0F;
+                    laststatus = (a >> 4) & 0x07;
+                    if(fread(&a, 1, 1, ksr->fp) != 1)
+                        return 0;
+                    a &= 0x7F;
+                }
+                switch(laststatus)
+                {
+                case 0: /* Note off */
+                    if(fread(&b, 1, 1, ksr->fp) != 1)
+                        return 0;
+                    b &= 0x7F;
+                    MIDIEVENT(ksr->at, ME_NOTEOFF, lastchan, a, b);
+    
+                case 1: /* Note on */
+                    if(fread(&b, 1, 1, ksr->fp) != 1)
+                        return 0;
+                    b &= 0x7F;
+                    MIDIEVENT(ksr->at, ME_NOTEON, lastchan, a, b);
+    
+                case 2: /* Key Pressure */
+                    if(fread(&b, 1, 1, ksr->fp) != 1)
+                        return 0;
+                    b &= 0x7F;
+                    MIDIEVENT(ksr->at, ME_KEYPRESSURE, lastchan, a, b);
+    
+                case 3: /* Control change */
+                    if(fread(&b, 1, 1, ksr->fp) != 1)
+                        return 0;
+                    b &= 0x7F;
                     {
-                    case 7:
-                        control = ME_MAINVOLUME;
-                        break;
-                    case 10:
-                        control = ME_PAN;
-                        break;
-                    case 11:
-                        control = ME_EXPRESSION;
-                        break;
-                    case 64:
-                        control = ME_SUSTAIN;
-                        b       = (b >= 64);
-                        break;
-                    case 120:
-                        control = ME_ALL_SOUNDS_OFF;
-                        break;
-                    case 121:
-                        control = ME_RESET_CONTROLLERS;
-                        break;
-                    case 123:
-                        control = ME_ALL_NOTES_OFF;
-                        break;
-                    case 126:
-                        control = ME_MONO;
-                        break;
-                    case 127:
-                        control = ME_POLY;
-                        break;
-
-                        /* These should be the SCC-1 tone bank switch
-                        commands. I don't know why there are two, or
-                        why the latter only allows switching to bank 0.
-                        Also, some MIDI files use 0 as some sort of
-                        continuous controller. This will cause lots of
-                        warnings about undefined tone banks. */
-                    case 0:
-                        control = ME_TONE_BANK;
-                        break;
-                    case 32:
-                        break;
-                    case 100:
-                        nrpn              = 0;
-                        rpn_msb[lastchan] = b;
-                        break;
-                    case 101:
-                        nrpn              = 0;
-                        rpn_lsb[lastchan] = b;
-                        break;
-                    case 99:
-                        nrpn              = 1;
-                        rpn_msb[lastchan] = b;
-                        break;
-                    case 98:
-                        nrpn              = 1;
-                        rpn_lsb[lastchan] = b;
-                        break;
-
-                    case 6:
-                        if(nrpn)
+                        int control = 255;
+                        switch(a)
                         {
+                        case 7:
+                            control = ME_MAINVOLUME;
                             break;
-                        }
-
-                        switch((rpn_msb[lastchan] << 8) | rpn_lsb[lastchan])
-                        {
-                        case 0x0000: /* Pitch bend sensitivity */
-                            control = ME_PITCH_SENS;
+                        case 10:
+                            control = ME_PAN;
                             break;
-
-                        case 0x7F7F: /* RPN reset */
-                            /* reset pitch bend sensitivity to 2 */
-                            MIDIEVENT(ksr->at, ME_PITCH_SENS, lastchan, 2, 0);
-
+                        case 11:
+                            control = ME_EXPRESSION;
+                            break;
+                        case 64:
+                            control = ME_SUSTAIN;
+                            b       = (b >= 64);
+                            break;
+                        case 120:
+                            control = ME_ALL_SOUNDS_OFF;
+                            break;
+                        case 121:
+                            control = ME_RESET_CONTROLLERS;
+                            break;
+                        case 123:
+                            control = ME_ALL_NOTES_OFF;
+                            break;
+                        case 126:
+                            control = ME_MONO;
+                            break;
+                        case 127:
+                            control = ME_POLY;
+                            break;
+                        case 0:
+                            control = ME_TONE_BANK;
+                            break;
+                        case 32:
+                            break;
+                        case 100:
+                            nrpn              = 0;
+                            rpn_msb[lastchan] = b;
+                            break;
+                        case 101:
+                            nrpn              = 0;
+                            rpn_lsb[lastchan] = b;
+                            break;
+                        case 99:
+                            nrpn              = 1;
+                            rpn_msb[lastchan] = b;
+                            break;
+                        case 98:
+                            nrpn              = 1;
+                            rpn_lsb[lastchan] = b;
+                            break;
+                        case 6:
+                            if(nrpn)
+                                break;
+                            switch((rpn_msb[lastchan] << 8) | rpn_lsb[lastchan])
+                            {
+                            case 0x0000:
+                                control = ME_PITCH_SENS;
+                                break;
+                            case 0x7F7F:
+                                MIDIEVENT(ksr->at, ME_PITCH_SENS, lastchan, 2, 0);
+                            default:
+                                break;
+                            }
+                            break;
                         default:
                             break;
                         }
-                        break;
-
-                    default:
-                        break;
+                        if(control != 255)
+                            MIDIEVENT(ksr->at, control, lastchan, b, 0);
                     }
-                    if(control != 255)
-                        MIDIEVENT(ksr->at, control, lastchan, b, 0);
+                    break;
+    
+                case 4: /* Program change */
+                    a &= 0x7f;
+                    MIDIEVENT(ksr->at, ME_PROGRAM, lastchan, a, 0);
+    
+                case 5: /* Channel pressure */
+                    break;
+    
+                case 6: /* Pitch wheel */
+                    if(fread(&b, 1, 1, ksr->fp) != 1)
+                        return 0;
+                    b &= 0x7F;
+                    MIDIEVENT(ksr->at, ME_PITCHWHEEL, lastchan, a, b);
+    
+                default:
+                    break;
                 }
-                break;
-
-            case 4: /* Program change */
-                a &= 0x7f;
-                MIDIEVENT(ksr->at, ME_PROGRAM, lastchan, a, 0);
-
-            case 5: /* Channel pressure - NOT IMPLEMENTED */
-                break;
-
-            case 6: /* Pitch wheel */
-                fread(&b, 1, 1, ksr->fp);
-                b &= 0x7F;
-                MIDIEVENT(ksr->at, ME_PITCHWHEEL, lastchan, a, b);
-
-            default:
-                break;
             }
-        }
+        //}
     }
-
     return newev;
 }
 
@@ -288,17 +354,18 @@ static MidiEventList *read_midi_event(Kasaria *ksr)
 
 /* Read a midi track into the linked list, either merging with any previous
 tracks or appending to them. */
-static int read_track(Kasaria *ksr, int append)
+static int read_track(Kasaria *ksr, MidiEventList **tail, int append)
 {
+/*
     MidiEventList *meep;
     MidiEventList *next, *newev;
     long           len;
     char           tmp[4];
+    long           track_start, track_end;
 
     meep = ksr->evlist;
     if(append && meep)
     {
-        /* find the last event in the list */
         for(; meep->next; meep = (MidiEventList *)meep->next)
             ;
         ksr->at = meep->event.time;
@@ -306,7 +373,64 @@ static int read_track(Kasaria *ksr, int append)
     else
         ksr->at = 0;
 
-    /* Check the formalities */
+
+    printf("Fread 1 ,4\n");
+    if((fread(tmp, 1, 4, ksr->fp) != 4) || (fread(&len, 4, 1, ksr->fp) != 1))
+        return -1;
+
+    len = BE_LONG(len);
+    if(memcmp(tmp, "MTrk", 4))
+        return -2;
+
+    //printf("Ftell\n");
+    track_start = ftell(ksr->fp);
+    track_end   = track_start + len;
+    long track_bytes = len;
+
+    for(;;)
+    {
+        //if(ftell(ksr->fp) >= track_end)
+        //{
+        //    printf("Ftell track end\n");
+        //    free(newev);
+        //    return -2;
+        //}
+
+        //if(ftell(ksr->fp) - track_start >= track_bytes)
+        //        return -2;
+    
+        if(!(newev = read_midi_event(ksr)))
+            return -2;
+
+        printf("read midi event done\n");
+
+        if(newev == MAGIC_EOT)
+            return 0;
+
+        printf("No EOT\n");
+
+        next = (MidiEventList *)meep->next;
+        while(next && (next->event.time < newev->event.time))
+        {
+            meep = next;
+            next = (MidiEventList *)meep->next;
+        }
+    
+        newev->next = next;
+        meep->next  = newev;
+
+        ksr->event_count++;
+        meep = newev;
+    }
+    */
+MidiEventList *newev;
+    long           len;
+    char           tmp[4];
+
+    if(append && *tail)
+        ksr->at = (*tail)->event.time;
+    else
+        ksr->at = 0;
 
     if((fread(tmp, 1, 4, ksr->fp) != 4) || (fread(&len, 4, 1, ksr->fp) != 1))
         return -1;
@@ -315,32 +439,19 @@ static int read_track(Kasaria *ksr, int append)
     if(memcmp(tmp, "MTrk", 4))
         return -2;
 
-
     for(;;)
     {
-        if(!(newev = read_midi_event(ksr))) /* Some kind of error  */
-        {
+        if(!(newev = read_midi_event(ksr)))
             return -2;
-        }
 
-        if(newev == MAGIC_EOT) /* End-of-track Hack. */
-        {
+        if(newev == MAGIC_EOT)
             return 0;
-        }
 
+        newev->next  = 0;
+        (*tail)->next = newev;
+        *tail         = newev;
 
-        next = (MidiEventList *)meep->next;
-        while(next && (next->event.time < newev->event.time))
-        {
-            meep = next;
-            next = (MidiEventList *)meep->next;
-        }
-
-        newev->next = next;
-        meep->next  = newev;
-
-        ksr->event_count++; /* Count the event. (About one?) */
-        meep = newev;
+        ksr->event_count++;
     }
 }
 
@@ -392,10 +503,11 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
     st = at = sample_cum = 0;
     counting_time        = 2; /* We strip any silence before the first NOTE ON. */
 
-    for(i = 0; i < ksr->event_count; i++)
+    for(i = 0; i < ksr->event_count && meep != NULL; i++)
     {
         skip_this_event = 0;
 
+        // This now causes a seg fault
         if(meep->event.type == ME_TEMPO)
             skip_this_event = 1;
 
@@ -508,6 +620,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
 
 MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
 {
+    /*
     long  len, divisions;
     short format, tracks, divisions_tmp;
     int   i;
@@ -527,29 +640,32 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
         return 0;
 
 
-    fread(&format, 2, 1, ksr->fp);
-    fread(&tracks, 2, 1, ksr->fp);
-    fread(&divisions_tmp, 2, 1, ksr->fp);
+    //fread(&format, 2, 1, ksr->fp);
+    //fread(&tracks, 2, 1, ksr->fp);
+    //fread(&divisions_tmp, 2, 1, ksr->fp);
+    if(fread(&format, 2, 1, ksr->fp) != 1 || fread(&tracks, 2, 1, ksr->fp) != 1 || fread(&divisions_tmp, 2, 1, ksr->fp) != 1)
+        return 0;
+    
     format        = BE_SHORT(format);
     tracks        = BE_SHORT(tracks);
     divisions_tmp = BE_SHORT(divisions_tmp);
 
     if(divisions_tmp < 0)
     {
-        /* SMPTE time -- totally untested. Got a MIDI file that uses this? */
+        // SMPTE time -- totally untested. Got a MIDI file that uses this?
         divisions = (long)(-(divisions_tmp / 256)) * (long)(divisions_tmp & 0xFF);
     }
     else
         divisions = (long)(divisions_tmp);
 
     if(len > 6)
-        skip(ksr->fp, len - 6); /* skip the excess */
+        skip(ksr->fp, len - 6); // skip the excess
 
     if(format < 0 || format > 2)
         return 0;
 
 
-    /* Put a do-nothing event first in the list for easier processing */
+    // Put a do-nothing event first in the list for easier processing
     ksr->evlist             = (MidiEventList *)safe_malloc(sizeof(MidiEventList));
     ksr->evlist->event.time = 0;
     ksr->evlist->event.type = ME_NONE;
@@ -561,6 +677,7 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
     case 0:
         if(read_track(ksr, 0))
         {
+            printf("Read Track Case 0\n");
             free_midi_list(ksr);
             return 0;
         }
@@ -575,14 +692,96 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
             }
         break;
 
-    case 2: /* We simply play the tracks sequentially */
+    case 2: // We simply play the tracks sequentially
         for(i = 0; i < tracks; i++)
             if(read_track(ksr, 1))
             {
+                printf("Read Track Case 2\n");
                 free_midi_list(ksr);
                 return 0;
             }
         break;
     }
+    printf("Put groom list\n");
+
+    //sort_event_list(ksr);
+    sort_event_list(ksr);
     return groom_list(ksr, divisions, count, sp);
+
+    */
+    long  len, divisions;
+        short format, tracks, divisions_tmp;
+        int   i;
+        char  tmp[4];
+    
+        ksr->fp          = mfp;
+        ksr->event_count = 0;
+        ksr->at          = 0;
+        ksr->evlist      = 0;
+    
+        if((fread(tmp, 1, 4, ksr->fp) != 4) || (fread(&len, 4, 1, ksr->fp) != 1))
+            return 0;
+    
+        len = BE_LONG(len);
+    
+        if(memcmp(tmp, "MThd", 4) || len < 6)
+            return 0;
+    
+        if(fread(&format, 2, 1, ksr->fp) != 1 || fread(&tracks, 2, 1, ksr->fp) != 1 || fread(&divisions_tmp, 2, 1, ksr->fp) != 1)
+            return 0;
+    
+        format        = BE_SHORT(format);
+        tracks        = BE_SHORT(tracks);
+        divisions_tmp = BE_SHORT(divisions_tmp);
+    
+        if(divisions_tmp < 0)
+            divisions = (long)(-(divisions_tmp / 256)) * (long)(divisions_tmp & 0xFF);
+        else
+            divisions = (long)(divisions_tmp);
+    
+        if(len > 6)
+            skip(ksr->fp, len - 6);
+    
+        if(format < 0 || format > 2)
+            return 0;
+    
+        ksr->evlist             = (MidiEventList *)safe_malloc(sizeof(MidiEventList));
+        ksr->evlist->event.time = 0;
+        ksr->evlist->event.type = ME_NONE;
+        ksr->evlist->next       = 0;
+        ksr->event_count++;
+    
+        MidiEventList *tail = ksr->evlist;
+    
+        switch(format)
+        {
+        case 0:
+            if(read_track(ksr, &tail, 0))
+            {
+                free_midi_list(ksr);
+                return 0;
+            }
+            break;
+    
+        case 1:
+            for(i = 0; i < tracks; i++)
+                if(read_track(ksr, &tail, 0))
+                {
+                    free_midi_list(ksr);
+                    return 0;
+                }
+            break;
+    
+        case 2:
+            for(i = 0; i < tracks; i++)
+                if(read_track(ksr, &tail, 1))
+                {
+                    free_midi_list(ksr);
+                    return 0;
+                }
+            break;
+        }
+    
+        sort_event_list(ksr);
+        return groom_list(ksr, divisions, count, sp);
 }

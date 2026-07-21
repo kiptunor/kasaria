@@ -1,4 +1,6 @@
-add_rules("mode.debug", "mode.release", "plugin.compile_commands.autoupdate")
+add_rules("mode.debug", "mode.release", "plugin.compile_commands.autoupdate", "mode.asan")
+
+-- set_policy("build.sanitizer.address", true)
 
 
 set_toolchains("clang")
