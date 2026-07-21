@@ -410,5 +410,11 @@ void        init_tables(Kasaria *tm);
 void        free_tables(Kasaria *tm);
 Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filename, int bank, int program);
 int         read_config_file(Kasaria *tm, char *name);
+void        reset_midi(Kasaria *ksr);
+void        adjust_amplification(Kasaria *ksr, int amplification);
+void        reset_voices(Kasaria *ksr);
+void        drop_sustain(Kasaria *ksr, int c);
+void        all_notes_off(Kasaria *ksr, int c);
+void        reset_controllers(Kasaria *ksr, int c);
 
 #endif
