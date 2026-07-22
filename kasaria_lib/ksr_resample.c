@@ -35,8 +35,6 @@ resample.c
 
 
 #include <malloc.h>
-#include <math.h>
-#include <stdio.h>
 
 #include "ksr_internal.h"
 

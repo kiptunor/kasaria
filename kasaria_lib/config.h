@@ -233,13 +233,6 @@ typedef long  final_volume_t;
     #define MAX_AMP_VALUE   ((1 << (AMP_BITS + 1)) - 1)
 #endif
 
-#ifdef USE_LDEXP
-    #define FSCALE(a, b)    ldexp((double)(a), (b))
-    #define FSCALENEG(a, b) ldexp((double)(a), -(b))
-#else
-    #define FSCALE(a, b)    ((a) * (double)(1 << (b)))
-    #define FSCALENEG(a, b) ((a) * (1.0L / (double)(1 << (b))))
-#endif
 
 /* Vibrato and tremolo Choices of the Day */
 #define SWEEP_TUNING              38

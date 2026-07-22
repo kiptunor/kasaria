@@ -35,7 +35,6 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -1639,7 +1638,7 @@ int ksr_play_midi(Kasaria *ksr, long type, u_char *buffer, long count)
 
     while(count > 0)
     {
-        /* Handle all events that should happen at this time */
+        // Handle all events that should happen at this time
         while(ksr->current_event->time <= ksr->current_sample)
         {
             if(ksr->current_event->type == ME_EOT)
@@ -1649,7 +1648,7 @@ int ksr_play_midi(Kasaria *ksr, long type, u_char *buffer, long count)
             ksr->current_event++;
         }
         convert = ksr->current_event->time - ksr->current_sample;
-        if(convert > count || convert <= 0)
+        if(convert > count || convert <= 0) // I could prob count the number of events here ??
             convert = count;
 
         switch(type)

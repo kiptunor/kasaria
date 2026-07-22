@@ -31,8 +31,6 @@ tables were lifted from the rsynth-2.0 sources.  The README says:
 
 */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include "ksr_internal.h"
 
 // clang-format off

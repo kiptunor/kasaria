@@ -42,9 +42,7 @@ common.c
     #include <string.h>
 #endif
 
-#ifndef _WIN32_WCE
-    #include <errno.h>
-#endif
+
 
 #include "ksr_internal.h"
 

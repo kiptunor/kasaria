@@ -40,6 +40,7 @@
 
 
 #include <stdio.h>
+#include <math.h>
 
 #include "config.h"
 #include "kasaria.h"
@@ -77,6 +78,14 @@ typedef struct
 
 #ifndef PI
     #define PI 3.14159265
+#endif
+
+#ifdef USE_LDEXP
+    #define FSCALE(a, b)    ldexp((double)(a), (b))
+    #define FSCALENEG(a, b) ldexp((double)(a), -(b))
+#else
+    #define FSCALE(a, b)    ((a) * (double)(1 << (b)))
+    #define FSCALENEG(a, b) ((a) * (1.0L / (double)(1 << (b))))
 #endif
 
 typedef struct
