@@ -368,6 +368,7 @@ struct Kasaria
     f32           *buffer_pointer;
     Channel        channel[16];
     Voice          voice[MAX_VOICES];
+    Voice         *voice_by_channel_note[16][128][2];
     long           control_rate;
     long           control_ratio;
     f64            master_volume;
@@ -412,6 +413,8 @@ struct Kasaria
     SFInfo             sf_info;
     char               sf_filename[1024];
     CompressorSettings compressor_settings;
+    int                channel_voice_count[16];
+    int                channel_voice_list[16][MAX_VOICES * 2];
 };
 
 FILE       *open_file(Kasaria *tm, char *name, int decompress, int noise_mode);

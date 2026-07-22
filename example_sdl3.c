@@ -98,6 +98,7 @@ int main(int argc, char **argv)
         SDL_Quit();
         return 1;
     }
+    ksr_preload_instruments(synth);
 
     printf("Duration: %d ms\n", ksr_get_duration(synth));
 

@@ -22,6 +22,19 @@ playmidi.c -- random stuff in need of rearrangement
 
 */
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,6 +57,8 @@ void reset_voices(Kasaria *ksr)
     int i;
     for(i = 0; i < MAX_VOICES; i++)
         ksr->voice[i].status = VOICE_FREE;
+
+    memset(ksr->channel_voice_count, 0, sizeof(ksr->channel_voice_count));
 }
 
 // Process the Reset All Controllers event
@@ -74,6 +89,26 @@ void reset_midi(Kasaria *ksr)
     reset_voices(ksr);
     ksr->lost_notes = 0;
     ksr->cut_notes  = 0;
+}
+
+static void channel_voice_add(Kasaria *ksr, int ch, int vi)
+{
+    if(ksr->channel_voice_count[ch] < MAX_VOICES)
+        ksr->channel_voice_list[ch][ksr->channel_voice_count[ch]++] = vi;
+}
+
+static void channel_voice_remove(Kasaria *ksr, int ch, int vi)
+{
+    int n = ksr->channel_voice_count[ch];
+    for(int i = 0; i < n; i++)
+    {
+        if(ksr->channel_voice_list[ch][i] == vi)
+        {
+            ksr->channel_voice_list[ch][i] = ksr->channel_voice_list[ch][--n];
+            break;
+        }
+    }
+    ksr->channel_voice_count[ch] = n;
 }
 
 static void select_sample(Kasaria *ksr, int v, Instrument *ip)
@@ -221,6 +256,30 @@ static void recompute_amp(Kasaria *ksr, int v)
     }
 }
 
+void ksr_preload_instruments(Kasaria *ksr)
+{
+    MidiEvent *e = ksr->event_list;
+    int        i;
+    for(i = 0; i < ksr->events_midi; i++)
+    {
+        if(e[i].type == ME_PROGRAM)
+        {
+            int ch = e[i].channel;
+            if(!ISDRUMCHANNEL(ksr, ch))
+            {
+                int bank = ksr->channel[ch].bank;
+                int prog = e[i].a;
+                // trigger load if not already loaded
+                if(ksr->tonebank[bank] && ksr->tonebank[bank]->tone[prog].name && !ksr->tonebank[bank]->tone[prog].instrument)
+                {
+                    ksr->tonebank[bank]->tone[prog].instrument = MAGIC_LOAD_INSTRUMENT;
+                    load_missing_instruments(ksr);
+                }
+            }
+        }
+    }
+}
+
 static void start_note(Kasaria *ksr, MidiEvent *e, int i)
 {
     Instrument *ip;
@@ -230,18 +289,6 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
     {
         if(!ksr->drumset[ksr->channel[e->channel].bank] && !ksr->drumset[0])
             return; // No drumset? Then we can't play.
-
-        if(ksr->drumset[ksr->channel[e->channel].bank]->tone[e->a].name && !ksr->drumset[ksr->channel[e->channel].bank]->tone[e->a].instrument)
-        {
-            ksr->drumset[ksr->channel[e->channel].bank]->tone[e->a].instrument = MAGIC_LOAD_INSTRUMENT;
-            load_missing_instruments(ksr);
-        }
-
-        if(ksr->drumset[0]->tone[e->a].name && !ksr->drumset[0]->tone[e->a].instrument)
-        {
-            ksr->drumset[0]->tone[e->a].instrument = MAGIC_LOAD_INSTRUMENT;
-            load_missing_instruments(ksr);
-        }
 
         if(!(ip = ksr->drumset[ksr->channel[e->channel].bank]->tone[e->a].instrument))
         {
@@ -263,18 +310,8 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
             return; // No tonebank? Then we can't play.
 
         if(ksr->channel[e->channel].program != SPECIAL_PROGRAM)
-        {
-            if(ksr->tonebank[ksr->channel[e->channel].bank]->tone[ksr->channel[e->channel].program].name && !ksr->tonebank[ksr->channel[e->channel].bank]->tone[ksr->channel[e->channel].program].instrument)
-            {
-                ksr->tonebank[ksr->channel[e->channel].bank]->tone[ksr->channel[e->channel].program].instrument = MAGIC_LOAD_INSTRUMENT;
-                load_missing_instruments(ksr);
-            }
-            if(ksr->tonebank[0]->tone[ksr->channel[e->channel].program].name && !ksr->tonebank[0]->tone[ksr->channel[e->channel].program].instrument)
-            {
-                ksr->tonebank[0]->tone[ksr->channel[e->channel].program].instrument = MAGIC_LOAD_INSTRUMENT;
-                load_missing_instruments(ksr);
-            }
-        }
+            return; // No instruments available ? Too bad. Handle them yourself!
+
         if(ksr->channel[e->channel].program == SPECIAL_PROGRAM)
             ip = ksr->default_instrument;
         else if(!(ip = ksr->tonebank[ksr->channel[e->channel].bank]->tone[ksr->channel[e->channel].program].instrument))
@@ -293,21 +330,24 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
         select_sample(ksr, i, ip);
     }
 
-    ksr->voice[i].status                  = VOICE_ON;
-    ksr->voice[i].channel                 = e->channel;
-    ksr->voice[i].note                    = e->a;
-    ksr->voice[i].velocity                = e->b;
-    ksr->voice[i].sample_offset           = 0;
-    ksr->voice[i].sample_increment        = 0; // make sure it isn't negative
+    channel_voice_add(ksr, e->channel, i);
+    ksr->voice[i].status                            = VOICE_ON;
+    ksr->voice[i].channel                           = e->channel;
+    ksr->voice[i].note                              = e->a;
+    ksr->voice[i].velocity                          = e->b;
+    ksr->voice_by_channel_note[e->channel][e->a][0] = &ksr->voice[i];
+    ksr->voice_by_channel_note[e->channel][e->a][1] = NULL;
+    ksr->voice[i].sample_offset                     = 0;
+    ksr->voice[i].sample_increment                  = 0; // make sure it isn't negative
 
-    ksr->voice[i].tremolo_phase           = 0;
-    ksr->voice[i].tremolo_phase_increment = ksr->voice[i].sample->tremolo_phase_increment;
-    ksr->voice[i].tremolo_sweep           = ksr->voice[i].sample->tremolo_sweep_increment;
-    ksr->voice[i].tremolo_sweep_position  = 0;
+    ksr->voice[i].tremolo_phase                     = 0;
+    ksr->voice[i].tremolo_phase_increment           = ksr->voice[i].sample->tremolo_phase_increment;
+    ksr->voice[i].tremolo_sweep                     = ksr->voice[i].sample->tremolo_sweep_increment;
+    ksr->voice[i].tremolo_sweep_position            = 0;
 
-    ksr->voice[i].vibrato_sweep           = ksr->voice[i].sample->vibrato_sweep_increment;
-    ksr->voice[i].vibrato_sweep_position  = 0;
-    ksr->voice[i].vibrato_control_ratio   = ksr->voice[i].sample->vibrato_control_ratio;
+    ksr->voice[i].vibrato_sweep                     = ksr->voice[i].sample->vibrato_sweep_increment;
+    ksr->voice[i].vibrato_sweep_position            = 0;
+    ksr->voice[i].vibrato_control_ratio             = ksr->voice[i].sample->vibrato_control_ratio;
     ksr->voice[i].vibrato_control_counter = ksr->voice[i].vibrato_phase = 0;
     for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
         ksr->voice[i].vibrato_sample_increment[j] = 0;
@@ -351,25 +391,28 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
                         break;
                 if(stereo_v < ksr->voices)
                 {
-                    ksr->voice[stereo_v].status                  = VOICE_ON;
-                    ksr->voice[stereo_v].channel                 = e->channel;
-                    ksr->voice[stereo_v].note                    = e->a;
-                    ksr->voice[stereo_v].velocity                = e->b;
-                    ksr->voice[stereo_v].sample                  = candidate;
-                    ksr->voice[stereo_v].sample_offset           = 0;
-                    ksr->voice[stereo_v].sample_increment        = 0;
-                    ksr->voice[stereo_v].orig_frequency          = ksr->voice[i].orig_frequency;
+                    channel_voice_add(ksr, e->channel, stereo_v);
+                    ksr->voice[stereo_v].status                     = VOICE_ON;
+                    ksr->voice[stereo_v].channel                    = e->channel;
+                    ksr->voice[stereo_v].note                       = e->a;
+                    ksr->voice[stereo_v].velocity                   = e->b;
+                    // ksr->voice_by_channel_note[e->channel][e->a] = &ksr->voice[stereo_v];
+                    ksr->voice_by_channel_note[e->channel][e->a][1] = &ksr->voice[stereo_v];
+                    ksr->voice[stereo_v].sample                     = candidate;
+                    ksr->voice[stereo_v].sample_offset              = 0;
+                    ksr->voice[stereo_v].sample_increment           = 0;
+                    ksr->voice[stereo_v].orig_frequency             = ksr->voice[i].orig_frequency;
 
-                    ksr->voice[stereo_v].tremolo_phase           = 0;
-                    ksr->voice[stereo_v].tremolo_phase_increment = candidate->tremolo_phase_increment;
-                    ksr->voice[stereo_v].tremolo_sweep           = candidate->tremolo_sweep_increment;
-                    ksr->voice[stereo_v].tremolo_sweep_position  = 0;
+                    ksr->voice[stereo_v].tremolo_phase              = 0;
+                    ksr->voice[stereo_v].tremolo_phase_increment    = candidate->tremolo_phase_increment;
+                    ksr->voice[stereo_v].tremolo_sweep              = candidate->tremolo_sweep_increment;
+                    ksr->voice[stereo_v].tremolo_sweep_position     = 0;
 
-                    ksr->voice[stereo_v].vibrato_sweep           = candidate->vibrato_sweep_increment;
-                    ksr->voice[stereo_v].vibrato_sweep_position  = 0;
-                    ksr->voice[stereo_v].vibrato_control_ratio   = candidate->vibrato_control_ratio;
-                    ksr->voice[stereo_v].vibrato_control_counter = 0;
-                    ksr->voice[stereo_v].vibrato_phase           = 0;
+                    ksr->voice[stereo_v].vibrato_sweep              = candidate->vibrato_sweep_increment;
+                    ksr->voice[stereo_v].vibrato_sweep_position     = 0;
+                    ksr->voice[stereo_v].vibrato_control_ratio      = candidate->vibrato_control_ratio;
+                    ksr->voice[stereo_v].vibrato_control_counter    = 0;
+                    ksr->voice[stereo_v].vibrato_phase              = 0;
                     for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
                         ksr->voice[stereo_v].vibrato_sample_increment[j] = 0;
 
@@ -404,6 +447,7 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
 static void kill_note(Kasaria *ksr, int i)
 {
     ksr->voice[i].status = VOICE_DIE;
+    channel_voice_remove(ksr, ksr->voice[i].channel, i);
 }
 
 // Only one instance of a note can be playing on a single channel.
@@ -448,12 +492,12 @@ static void note_on(Kasaria *ksr, MidiEvent *e)
 
     if(lowest != -1)
     {
-        /*
-            This can still cause a click, but if we had a free voice to
-            spare for ramping down this note, we wouldn't need to kill it
-            in the first place... Still, this needs to be fixed. Perhaps
-            we could use a reserve of voices to play dying notes only.
-        */
+
+        // This can still cause a click, but if we had a free voice to
+        // spare for ramping down this note, we wouldn't need to kill it
+        // in the first place... Still, this needs to be fixed. Perhaps
+        // we could use a reserve of voices to play dying notes only.
+
 
         ksr->cut_notes++;
         ksr->voice[lowest].status = VOICE_FREE;
@@ -482,20 +526,26 @@ static void finish_note(Kasaria *ksr, int i)
         */
         ksr->voice[i].status = VOICE_OFF;
     }
+    channel_voice_remove(ksr, ksr->voice[i].channel, i);
 }
 
 // It's so unefficient under intense loads :skull:
 static void note_off(Kasaria *ksr, MidiEvent *e)
 {
-    int i = ksr->voices;
-    while(i--)
-        if(ksr->voice[i].status == VOICE_ON && ksr->voice[i].channel == e->channel && ksr->voice[i].note == e->a)
+    int k;
+    for(k = 0; k < 2; k++)
+    {
+        Voice *v = ksr->voice_by_channel_note[e->channel][e->a][k];
+        if(v && v->status == VOICE_ON && v->channel == e->channel && v->note == e->a)
         {
             if(ksr->channel[e->channel].sustain)
-                ksr->voice[i].status = VOICE_SUSTAINED;
+                v->status = VOICE_SUSTAINED;
             else
-                finish_note(ksr, i);
+                finish_note(ksr, (int)(v - ksr->voice));
         }
+    }
+    ksr->voice_by_channel_note[e->channel][e->a][0] = NULL;
+    ksr->voice_by_channel_note[e->channel][e->a][1] = NULL;
 }
 
 // Process the All Notes Off event
@@ -564,6 +614,7 @@ static void adjust_pitchbend(Kasaria *ksr, int c)
 
 static void adjust_volume(Kasaria *ksr, int c)
 {
+    /*
     int i = ksr->voices;
     while(i--)
         if(ksr->voice[i].channel == c && (ksr->voice[i].status == VOICE_ON || ksr->voice[i].status == VOICE_SUSTAINED))
@@ -571,6 +622,17 @@ static void adjust_volume(Kasaria *ksr, int c)
             recompute_amp(ksr, i);
             apply_envelope_to_amp(ksr, i);
         }
+    */
+    int n = ksr->channel_voice_count[c];
+    for(int i = 0; i < n; i++)
+    {
+        int vi = ksr->channel_voice_list[c][i];
+        if(ksr->voice[vi].status == VOICE_ON || ksr->voice[vi].status == VOICE_SUSTAINED)
+        {
+            recompute_amp(ksr, vi);
+            apply_envelope_to_amp(ksr, vi);
+        }
+    }
 }
 
 static void seek_forward(Kasaria *ksr, long until_time)
@@ -660,6 +722,7 @@ static void skip_to(Kasaria *ksr, long until_time)
 
 static void do_compute_data(Kasaria *ksr, long count)
 {
+
     int i;
     int samples;
 
