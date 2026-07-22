@@ -35,7 +35,7 @@ common.c
 
 #include "ksr_internal.h"
 
-/* I guess "rb" should be right for any libc */
+// I guess "rb" should be right for any libc
 #define OPEN_MODE "rb"
 
 /* Try to open a file for reading. If the filename ends in one of the
@@ -44,7 +44,7 @@ static FILE *try_to_open(char *name, int decompress, int noise_mode)
 {
     FILE *fp;
 
-    fp = fopen(name, OPEN_MODE); /* First just check that the file exists */
+    fp = fopen(name, OPEN_MODE); // First just check that the file exists
 
     if(!fp)
         return 0;
@@ -56,7 +56,7 @@ static FILE *try_to_open(char *name, int decompress, int noise_mode)
         static char *decompressor_list[] = DECOMPRESSOR_LIST, **dec;
         char         tmp[1024], tmp2[1024], *cp, *cp2;
 
-        /* Check if it's a compressed file */
+        // Check if it's a compressed file
         l = strlen(name);
 
         for(dec = decompressor_list; *dec; dec += 2)
@@ -65,10 +65,10 @@ static FILE *try_to_open(char *name, int decompress, int noise_mode)
             if((el >= l) || (strcmp(name + l - el, *dec)))
                 continue;
 
-            /* Yes. Close the file, open a pipe instead. */
+            // Yes. Close the file, open a pipe instead.
             fclose(fp);
 
-            /* Quote some special characters in the file name */
+            // Quote some special characters in the file name
             cp  = name;
             cp2 = tmp2;
             while(*cp)
@@ -99,8 +99,7 @@ static FILE *try_to_open(char *name, int decompress, int noise_mode)
     return fp;
 }
 
-/* This is meant to find and open files for reading, possibly piping
-them through a decompressor. */
+// This is meant to find and open files for reading, possibly piping them through a decompressor.
 FILE *open_file(Kasaria *ksr, char *name, int decompress, int noise_mode)
 {
     FILE     *fp;
@@ -111,7 +110,7 @@ FILE *open_file(Kasaria *ksr, char *name, int decompress, int noise_mode)
         return 0;
 
 
-    /* First try the given name */
+    // First try the given name
 
     strncpy(ksr->current_filename, name, 1023);
     ksr->current_filename[1023] = '\0';
@@ -121,7 +120,7 @@ FILE *open_file(Kasaria *ksr, char *name, int decompress, int noise_mode)
 
     if(name[0] != PATH_SEP)
     {
-        while(plp) /* Try along the path then */
+        while(plp) // Try along the path then
         {
             *ksr->current_filename = 0;
             l                      = strlen(plp->path);
@@ -139,23 +138,23 @@ FILE *open_file(Kasaria *ksr, char *name, int decompress, int noise_mode)
         }
     }
 
-    /* Nothing could be opened. */
+    // Nothing could be opened.
 
     *ksr->current_filename = 0;
 
     return 0;
 }
 
-/* This closes files opened with open_file */
+// This closes files opened with open_file
 void close_file(FILE *fp)
 {
 #ifdef DECOMPRESSOR_LIST
-    if(pclose(fp)) /* Any better ideas? */
+    if(pclose(fp)) // Any better ideas?
 #endif
         fclose(fp);
 }
 
-/* This is meant for skipping a few bytes in a file or fifo. */
+// This is meant for skipping a few bytes in a file or fifo.
 void skip(FILE *fp, size_t len)
 {
     size_t c;
@@ -170,7 +169,7 @@ void skip(FILE *fp, size_t len)
     }
 }
 
-/* This'll allocate memory or die. */
+// This'll allocate memory or die.
 void *safe_malloc(size_t count)
 {
     void *p;
@@ -180,7 +179,7 @@ void *safe_malloc(size_t count)
     return NULL;
 }
 
-/* This adds a directory to the path list */
+// This adds a directory to the path list
 void add_to_pathlist(Kasaria *ksr, char *s)
 {
     PathList *plp = (PathList *)safe_malloc(sizeof(PathList));

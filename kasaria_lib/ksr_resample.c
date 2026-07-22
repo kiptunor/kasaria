@@ -41,7 +41,7 @@ resample.c
     #endif
     #define INTERPVARS sample_t v1, v2
 #else
-    /* Earplugs recommended for maximum listening enjoyment */
+    // Earplugs recommended for maximum listening enjoyment
     #define RESAMPLATION *dest++ = src[ofs >> FRACTION_BITS];
     #define INTERPVARS
 #endif
@@ -49,14 +49,14 @@ resample.c
 #define FINALINTERP                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     if(ofs == le)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
         *dest++ = src[(ofs >> FRACTION_BITS) - 1] / 2;
-/* So it isn't interpolation. At least it's final. */
+// So it isn't interpolation. At least it's final.
 
 /*************** resampling with fixed increment *****************/
 
 static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
 {
 
-    /* Play sample until end, then free the voice. */
+    // Play sample until end, then free the voice.
 
     INTERPVARS;
     Voice    *vp    = &ksr->voice[v];
@@ -71,10 +71,12 @@ static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
     long i;
 
     if(incr < 0)
-        incr = -incr; /* In case we're coming out of a bidir loop */
+        incr = -incr; // In case we're coming out of a bidir loop
 
-    /* Precalc how many times we should go through the loop.
-    NOTE: Assumes that incr > 0 and that ofs <= le */
+
+    // Precalc how many times we should go through the loop.
+    // NOTE: Assumes that incr > 0 and that ofs <= le
+
     i = (le - ofs) / incr + 1;
 
     if(i > count)
@@ -98,7 +100,7 @@ static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
         *countptr  -= count + 1;
     }
 
-#else  /* PRECALC_LOOPS */
+#else  // PRECALC_LOOPS
     while(count--)
     {
         RESAMPLATION;
@@ -111,9 +113,9 @@ static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
             break;
         }
     }
-#endif /* PRECALC_LOOPS */
+#endif // PRECALC_LOOPS
 
-    vp->sample_offset = ofs; /* Update offset */
+    vp->sample_offset = ofs; // Update offset
     return ksr->resample_buffer;
 }
 
@@ -138,7 +140,7 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
         while(ofs >= le)
             ofs -= ll;
 
-        /* Precalc how many times we should go through the loop */
+        // Precalc how many times we should go through the loop
         i = (le - ofs) / incr + 1;
         if(i > count)
         {
@@ -160,11 +162,11 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
         RESAMPLATION;
         ofs += incr;
         if(ofs >= le)
-            ofs -= ll; /* Hopefully the loop is longer than an increment. */
+            ofs -= ll; // Hopefully the loop is longer than an increment.
     }
 #endif
 
-    vp->sample_offset = ofs; /* Update offset */
+    vp->sample_offset = ofs; // Update offset
     return ksr->resample_buffer;
 }
 
@@ -179,13 +181,15 @@ static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
 
 #ifdef PRECALC_LOOPS
     long le2 = le << 1, ls2 = ls << 1, i;
-    /* Play normally until inside the loop region */
+    // Play normally until inside the loop region
 
     if(ofs <= ls)
     {
-        /* NOTE: Assumes that incr > 0, which is NOT always the case
-        when doing bidirectional looping.  I have yet to see a case
-        where both ofs <= ls AND incr < 0, however. */
+        /*
+            NOTE: Assumes that incr > 0, which is NOT always the case
+            when doing bidirectional looping.  I have yet to see a case
+            where both ofs <= ls AND incr < 0, however.
+        */
         i = (ls - ofs) / incr + 1;
         if(i > count)
         {
@@ -201,11 +205,11 @@ static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
         }
     }
 
-    /* Then do the bidirectional looping */
+    // Then do the bidirectional looping
 
     while(count)
     {
-        /* Precalc how many times we should go through the loop */
+        // Precalc how many times we should go through the loop
         i = ((incr > 0 ? le : ls) - ofs) / incr + 1;
         if(i > count)
         {
@@ -222,7 +226,7 @@ static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
         }
         if(ofs >= le)
         {
-            /* fold the overshoot back in */
+            // fold the overshoot back in
             ofs   = le2 - ofs;
             incr *= -1;
         }
@@ -233,8 +237,8 @@ static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
         }
     }
 
-#else  /* PRECALC_LOOPS */
-    /* Play normally until inside the loop region */
+#else  // PRECALC_LOOPS
+    // Play normally until inside the loop region
 
     if(ofs < ls)
     {
@@ -247,7 +251,7 @@ static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
         }
     }
 
-    /* Then do the bidirectional looping */
+    // Then do the bidirectional looping
 
     if(count > 0)
         while(count--)
@@ -256,7 +260,7 @@ static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
             ofs += incr;
             if(ofs >= le)
             {
-                /* fold the overshoot back in */
+                // fold the overshoot back in
                 ofs  = le - (ofs - le);
                 incr = -incr;
             }
@@ -266,15 +270,15 @@ static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
                 incr = -incr;
             }
         }
-#endif /* PRECALC_LOOPS */
+#endif // PRECALC_LOOPS
     vp->sample_increment = incr;
-    vp->sample_offset    = ofs; /* Update offset */
+    vp->sample_offset    = ofs; // Update offset
     return ksr->resample_buffer;
 }
 
 /*********************** vibrato versions ***************************/
 
-/* We only need to compute one half of the vibrato sine cycle */
+// We only need to compute one half of the vibrato sine cycle
 static int vib_phase_to_inc_ptr(int phase)
 {
     if(phase < VIBRATO_SAMPLE_INCREMENTS / 2)
@@ -304,19 +308,19 @@ static long update_vibrato(Kasaria *ksr, Voice *vp, int sign)
             return vp->vibrato_sample_increment[phase];
     }
 
-    /* Need to compute this sample increment. */
+    // Need to compute this sample increment.
 
     depth = vp->sample->vibrato_depth << 7;
 
     if(vp->vibrato_sweep)
     {
-        /* Need to update sweep */
+        // Need to update sweep
         vp->vibrato_sweep_position += vp->vibrato_sweep;
         if(vp->vibrato_sweep_position >= (1 << SWEEP_SHIFT))
             vp->vibrato_sweep = 0;
         else
         {
-            /* Adjust depth */
+            // Adjust depth
             depth  *= vp->vibrato_sweep_position;
             depth >>= SWEEP_SHIFT;
         }
@@ -334,12 +338,12 @@ static long update_vibrato(Kasaria *ksr, Voice *vp, int sign)
     else
         a *= bend_fine[(pb >> 5) & 0xFF] * bend_coarse[pb >> 13];
 
-    /* If the sweep's over, we can store the newly computed sample_increment */
+    // If the sweep's over, we can store the newly computed sample_increment
     if(!vp->vibrato_sweep)
         vp->vibrato_sample_increment[phase] = (long)a;
 
     if(sign)
-        a = -a; /* need to preserve the loop direction */
+        a = -a; // need to preserve the loop direction
 
     return (long)a;
 }
@@ -347,7 +351,7 @@ static long update_vibrato(Kasaria *ksr, Voice *vp, int sign)
 static sample_t *rs_vib_plain(Kasaria *ksr, int v, long *countptr)
 {
 
-    /* Play sample until end, then free the voice. */
+    // Play sample until end, then free the voice.
 
     INTERPVARS;
     Voice    *vp    = &ksr->voice[v];
@@ -359,10 +363,10 @@ static sample_t *rs_vib_plain(Kasaria *ksr, int v, long *countptr)
     long      count = *countptr;
     int       cc    = vp->vibrato_control_counter;
 
-    /* This has never been tested */
+    // This has never been tested
 
     if(incr < 0)
-        incr = -incr; /* In case we're coming out of a bidir loop */
+        incr = -incr; // In case we're coming out of a bidir loop
 
     while(count--)
     {
@@ -384,7 +388,7 @@ static sample_t *rs_vib_plain(Kasaria *ksr, int v, long *countptr)
 
     vp->vibrato_control_counter = cc;
     vp->sample_increment        = incr;
-    vp->sample_offset           = ofs; /* Update offset */
+    vp->sample_offset           = ofs; // Update offset
 
     return ksr->resample_buffer;
 }
@@ -392,7 +396,7 @@ static sample_t *rs_vib_plain(Kasaria *ksr, int v, long *countptr)
 static sample_t *rs_vib_loop(Kasaria *ksr, Voice *vp, long count)
 {
 
-    /* Play sample until end-of-loop, skip back and continue. */
+    // Play sample until end-of-loop, skip back and continue.
 
     INTERPVARS;
     long      ofs  = vp->sample_offset;
@@ -409,14 +413,16 @@ static sample_t *rs_vib_loop(Kasaria *ksr, Voice *vp, long count)
 
     while(count)
     {
-        /* Hopefully the loop is longer than an increment */
+        // Hopefully the loop is longer than an increment
         while(ofs >= le)
             ofs -= ll;
-        /* Precalc how many times to go through the loop, taking
-        the vibrato control ratio into account this time. */
+
+        // Precalc how many times to go through the loop, taking the vibrato control ratio into account this time.
         i = (le - ofs) / incr + 1;
+
         if(i > count)
             i = count;
+
         if(i > cc)
         {
             i       = cc;
@@ -424,7 +430,9 @@ static sample_t *rs_vib_loop(Kasaria *ksr, Voice *vp, long count)
         }
         else
             cc -= i;
+
         count -= i;
+
         while(i--)
         {
             RESAMPLATION;
@@ -438,7 +446,7 @@ static sample_t *rs_vib_loop(Kasaria *ksr, Voice *vp, long count)
         }
     }
 
-#else  /* PRECALC_LOOPS */
+#else  // PRECALC_LOOPS
     while(count--)
     {
         if(!cc--)
@@ -448,14 +456,15 @@ static sample_t *rs_vib_loop(Kasaria *ksr, Voice *vp, long count)
         }
         RESAMPLATION;
         ofs += incr;
+
         if(ofs >= le)
-            ofs -= ll; /* Hopefully the loop is longer than an increment. */
+            ofs -= ll; // Hopefully the loop is longer than an increment.
     }
-#endif /* PRECALC_LOOPS */
+#endif // PRECALC_LOOPS
 
     vp->vibrato_control_counter = cc;
     vp->sample_increment        = incr;
-    vp->sample_offset           = ofs; /* Update offset */
+    vp->sample_offset           = ofs; // Update offset
     return ksr->resample_buffer;
 }
 
@@ -476,10 +485,11 @@ static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
     long i;
     int  vibflag = 0;
 
-    /* Play normally until inside the loop region */
+    // Play normally until inside the loop region
     while(count && (ofs <= ls))
     {
         i = (ls - ofs) / incr + 1;
+
         if(i > count)
             i = count;
 
@@ -506,14 +516,15 @@ static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
         }
     }
 
-    /* Then do the bidirectional looping */
+    // Then do the bidirectional looping
 
     while(count)
     {
-        /* Precalc how many times we should go through the loop */
+        // Precalc how many times we should go through the loop
         i = ((incr > 0 ? le : ls) - ofs) / incr + 1;
         if(i > count)
             i = count;
+
         if(i > cc)
         {
             i       = cc;
@@ -523,6 +534,7 @@ static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
             cc -= i;
 
         count -= i;
+
         while(i--)
         {
             RESAMPLATION;
@@ -536,7 +548,7 @@ static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
         }
         if(ofs >= le)
         {
-            /* fold the overshoot back in */
+            // fold the overshoot back in
             ofs   = le2 - ofs;
             incr *= -1;
         }
@@ -547,8 +559,8 @@ static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
         }
     }
 
-#else  /* PRECALC_LOOPS */
-    /* Play normally until inside the loop region */
+#else  // PRECALC_LOOPS
+    // Play normally until inside the loop region
 
     if(ofs < ls)
     {
@@ -566,7 +578,7 @@ static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
         }
     }
 
-    /* Then do the bidirectional looping */
+    // Then do the bidirectional looping
 
     if(count > 0)
         while(count--)
@@ -580,7 +592,7 @@ static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
             ofs += incr;
             if(ofs >= le)
             {
-                /* fold the overshoot back in */
+                // fold the overshoot back in
                 ofs  = le - (ofs - le);
                 incr = -incr;
             }
@@ -590,11 +602,11 @@ static sample_t *rs_vib_bidir(Kasaria *ksr, Voice *vp, long count)
                 incr = -incr;
             }
         }
-#endif /* PRECALC_LOOPS */
+#endif // PRECALC_LOOPS
 
     vp->vibrato_control_counter = cc;
     vp->sample_increment        = incr;
-    vp->sample_offset           = ofs; /* Update offset */
+    vp->sample_offset           = ofs; // Update offset
 
     return ksr->resample_buffer;
 }
@@ -607,16 +619,15 @@ sample_t *resample_voice(Kasaria *ksr, int v, long *countptr)
 
     if(!(vp->sample->sample_rate))
     {
-        /* Pre-resampled data -- just update the offset and check if
-        we're out of data. */
-        ofs = vp->sample_offset >> FRACTION_BITS; /* Kind of silly to use
-          FRACTION_BITS here... */
+        // Pre-resampled data -- just update the offset and check if we're out of data.
+        ofs = vp->sample_offset >> FRACTION_BITS; // Kind of silly to use FRACTION_BITS here...
+
         if(*countptr >= (vp->sample->data_length >> FRACTION_BITS) - ofs)
         {
-            /* Note finished. Free the voice. */
+            // Note finished. Free the voice.
             vp->status = VOICE_FREE;
 
-            /* Let the caller know how much data we had left */
+            // Let the caller know how much data we had left
             *countptr  = (vp->sample->data_length >> FRACTION_BITS) - ofs;
         }
         else
@@ -625,7 +636,7 @@ sample_t *resample_voice(Kasaria *ksr, int v, long *countptr)
         return vp->sample->data + ofs;
     }
 
-    /* Need to resample. Use the proper function. */
+    // Need to resample. Use the proper function.
     modes = vp->sample->modes;
 
     if(vp->vibrato_control_ratio)
@@ -679,7 +690,7 @@ void pre_resample(Kasaria *ksr, Sample *sp)
 
     if(sp->data_length / a >= 0x7fffffffL)
     {
-        /* Too large to compute */
+        // Too large to compute
         return;
     }
     newlen = (long)(sp->data_length / a);
@@ -691,8 +702,10 @@ void pre_resample(Kasaria *ksr, Sample *sp)
     if(--count)
         *dest++ = src[0];
 
-    /* Since we're pre-processing and this doesn't have to be done in
-    real-time, we go ahead and do the full sliding cubic interpolation. */
+    /*
+        Since we're pre-processing and this doesn't have to be done in
+        real-time, we go ahead and do the full sliding cubic interpolation.
+    */
     count--;
     for(i = 0; i < count; i++)
     {

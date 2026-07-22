@@ -165,7 +165,7 @@
    got done. */
 #define USE_LDEXP
 
-//#define FLOAT_T           double
+// #define FLOAT_T           double
 
 /**************************************************************************/
 /* Anything below this shouldn't need to be changed unless you're porting
@@ -228,7 +228,7 @@ typedef uint8 final_volume_t;
     #define MAX_AMP_VALUE   4095
 #else
 typedef short sample_t;
-typedef long final_volume_t;
+typedef long  final_volume_t;
     #define FINAL_VOLUME(v) (v)
     #define MAX_AMP_VALUE   ((1 << (AMP_BITS + 1)) - 1)
 #endif

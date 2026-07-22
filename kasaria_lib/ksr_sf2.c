@@ -161,16 +161,16 @@ static void free_layer(SFHeader *hdr);
 
 enum
 {
-    /* level 0; chunk */
+    // level 0; chunk
     UNKN_ID,
     RIFF_ID,
     LIST_ID,
     SFBK_ID,
-    /* level 1; id only */
+    // level 1; id only
     INFO_ID,
     SDTA_ID,
     PDTA_ID,
-    /* info stuff; chunk */
+    // info stuff; chunk
     IFIL_ID,
     ISNG_ID,
     IROM_ID,
@@ -182,20 +182,20 @@ enum
     IENG_ID,
     ISFT_ID,
     ICMT_ID,
-    /* sample data stuff; chunk */
+    // sample data stuff; chunk
     SNAM_ID,
     SMPL_ID,
-    /* preset stuff; chunk */
+    // preset stuff; chunk
     PHDR_ID,
     PBAG_ID,
     PMOD_ID,
     PGEN_ID,
-    /* inst stuff; chunk */
+    // inst stuff; chunk
     INST_ID,
     IBAG_ID,
     IMOD_ID,
     IGEN_ID,
-    /* sample header; chunk */
+    // sample header; chunk
     SHDR_ID
 };
 
@@ -279,7 +279,7 @@ int load_soundfont(SFInfo *sf, const char *filename)
         return -1;
     }
 
-    /* check RIFF file header */
+    // check RIFF file header
     READCHUNK(&chunk, fp);
     if(chunkid(chunk.id) != RIFF_ID)
     {
@@ -287,7 +287,7 @@ int load_soundfont(SFInfo *sf, const char *filename)
         fclose(fp);
         return -1;
     }
-    /* check file id */
+    // check file id
     READID(chunk.id, fp);
     if(chunkid(chunk.id) != SFBK_ID)
     {
@@ -314,10 +314,10 @@ int load_soundfont(SFInfo *sf, const char *filename)
 
     fclose(fp);
 
-    /* parse layer structure */
+    // parse layer structure
     convert_layers(sf);
 
-    /* free private tables */
+    // free private tables
     if(prbags.bag)
         free(prbags.bag);
 
@@ -779,7 +779,7 @@ static void free_layer(SFHeader *hdr)
         free(hdr->layer);
 }
 
-/* add blank loop for each data */
+// add blank loop for each data
 const static int auto_add_blank = 0;
 void             correct_samples(SFInfo *sf)
 {
@@ -790,14 +790,14 @@ void             correct_samples(SFInfo *sf)
     prev_end = 0;
     for(sp = sf->sample, i = 0; i < sf->nsamples; i++, sp++)
     {
-        /* correct sample positions for SBK file */
+        // correct sample positions for SBK file
         if(sf->version == 1)
         {
             sp->startloop++;
             sp->endloop += 2;
         }
 
-        /* calculate sample data size */
+        // calculate sample data size
         if(sp->sampletype & 0x8000)
             sp->size = 0;
         else if(sp->startsample < prev_end && sp->startsample != 0)
@@ -813,7 +813,7 @@ void             correct_samples(SFInfo *sf)
         }
         prev_end = sp->endsample;
 
-        /* calculate short-shot loop size */
+        // calculate short-shot loop size
         if(auto_add_blank || i == sf->nsamples - 1)
             sp->loopshot = 48;
         else

@@ -83,7 +83,7 @@ long freq_table[128]=
     10548082, 11175303, 11839822, 12543854
 };
 
-/* v=2.^((x/127-1) * 6) */
+// v=2.^((x/127-1) * 6)
 f64 vol_table[128] =
 {
     0.015625, 0.016145143728351113, 0.016682602624583379, 0.017237953096759438,
@@ -294,15 +294,13 @@ static f64 sine_table[257]=
 };
 // clang-format on
 
-/*
-looks up sin(2 * Pi * x / 1024)
-*/
+// looks up sin(2 * Pi * x / 1024)
 f64 sine(int x)
 {
     int xx = x & 0xFF;
     switch ((x>>8) & 0x03)
     {
-    default: /* just to shut gcc up. */
+    default: // just to shut gcc up.
     case 0:
         return sine_table[xx];
     case 1:
@@ -313,7 +311,7 @@ f64 sine(int x)
         return -sine_table[0x100 - xx];
     }
 }
-#endif /* LOOKUP_SINE */
+#endif // LOOKUP_SINE
 
 #ifdef LOOKUP_HACK
 // clang-format off
@@ -360,7 +358,7 @@ void init_tables(Kasaria *ksr)
 {
 #ifdef LOOKUP_HACK
     int i,j,v;
-    ksr->mixup=(int32 *)safe_malloc(1<<(7+8+2)); /* Give your cache a workout! */
+    ksr->mixup=(int32 *)safe_malloc(1<<(7+8+2)); // Give your cache a workout!
 
     for(i=0; i<128; i++)
     {
@@ -377,7 +375,7 @@ void init_tables(Kasaria *ksr)
     for(i=-256; i<256; i++)
         for(j=0; j<32; j++)
             ksr->iplookup[((i<<5) & 0x3FE0) | j] = (i * j)>>5;
-    /* I don't know. Quantum bits? Magick? */
+    // I don't know. Quantum bits? Magick?
 #endif
 
 #endif

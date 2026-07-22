@@ -53,12 +53,12 @@ typedef struct
     void *next;
 } PathList;
 
-/* Noise modes for open_file */
+// Noise modes for open_file
 #define OF_SILENT  0
 #define OF_NORMAL  1
 #define OF_VERBOSE 2
 
-/* Order of the FIR filter = 20 should be enough ! */
+// Order of the FIR filter = 20 should be enough !
 #define ORDER      20
 #define ORDER2     ORDER / 2
 
@@ -91,7 +91,7 @@ typedef struct
     long      data_alloced;
 } Sample;
 
-/* Bits in modes: */
+// Bits in modes:
 #define MODES_16BIT    (1 << 0)
 #define MODES_UNSIGNED (1 << 1)
 #define MODES_LOOPING  (1 << 2)
@@ -113,8 +113,7 @@ typedef struct
     int         note, amp, pan, strip_loop, strip_envelope, strip_tail;
 } ToneBankElement;
 
-/* A hack to delay instrument loading until after reading the
-   entire MIDI file. */
+// A hack to delay instrument loading until after reading the entire MIDI file.
 #define MAGIC_LOAD_INSTRUMENT ((Instrument *)(-1))
 
 typedef struct
@@ -124,7 +123,7 @@ typedef struct
 
 #define SPECIAL_PROGRAM -1
 
-/* Data format encoding bits */
+// Data format encoding bits
 
 #define PE_MONO         0x01 /* versus stereo */
 #define PE_SIGNED       0x02 /* versus unsigned */
@@ -147,7 +146,7 @@ typedef struct
     u_char a;
 } MidiEvent;
 
-/* Midi events */
+// Midi events
 #define ME_NONE              0
 #define ME_NOTEON            1
 #define ME_NOTEOFF           2
@@ -177,14 +176,13 @@ typedef struct
     int panning;
     int pitchbend;
     int expression;
-    int mono; /* one note only on this channel */
+    int mono; // one note only on this channel
     int pitchsens;
-    /* chorus, reverb... Coming soon to a 300-MHz, eight-way superscalar
-        processor near you */
-    f64 pitchfactor; /* precomputed pitch bend factor to save some fdiv's */
+    // chorus, reverb... Coming soon to a 300-MHz, eight-way superscalar processor near you
+    f64 pitchfactor; // precomputed pitch bend factor to save some fdiv's
 } Channel;
 
-/* Causes the instrument's default panning to be used. */
+// Causes the instrument's default panning to be used.
 #define NO_PANNING -1
 
 typedef struct
@@ -257,7 +255,7 @@ typedef struct
     f32 limiter_attack_ms;
     f32 limiter_release_ms;
     f32 limiter_sample_rate;
-}CompressorSettings;
+} CompressorSettings;
 
 typedef struct
 {
@@ -299,19 +297,19 @@ typedef struct
     SoundFontEffects sf2_effects;
 } Voice;
 
-/* Voice status options: */
+// Voice status options:
 #define VOICE_FREE            0
 #define VOICE_ON              1
 #define VOICE_SUSTAINED       2
 #define VOICE_OFF             3
 #define VOICE_DIE             4
 
-/* Voice panned options: */
+// Voice panned options:
 #define PANNED_MYSTERY        0
 #define PANNED_LEFT           1
 #define PANNED_RIGHT          2
 #define PANNED_CENTER         3
-/* Anything but PANNED_MYSTERY only uses the left volume */
+// Anything but PANNED_MYSTERY only uses the left volume
 
 #define ISDRUMCHANNEL(tm, c)  ((tm->drumchannels & (1 << (c))))
 #define ISQUIETCHANNEL(tm, c) ((tm->quietchannels & (1 << (c))))
@@ -334,8 +332,8 @@ extern long    freq_table[];
 extern f64     vol_table[];
 extern f64     bend_fine[];
 extern f64     bend_coarse[];
-extern u_char *_l2u;    /* 13-bit PCM to 8-bit u-law */
-extern u_char  _l2u_[]; /* used in LOOKUP_HACK */
+extern u_char *_l2u;    // 13-bit PCM to 8-bit u-law
+extern u_char  _l2u_[]; // used in LOOKUP_HACK
 #ifdef LOOKUP_HACK
 extern int16 _u2l[];
 #endif
@@ -343,14 +341,11 @@ extern int16 _u2l[];
 struct Kasaria
 {
     char           current_filename[1024];
-    /* The paths in this list will be tried whenever we're reading a file */
-    PathList      *pathlist;
+    PathList      *pathlist; // The paths in this list will be tried whenever we're reading a file
     ToneBank      *tonebank[128];
     ToneBank      *drumset[128];
-    /* This is a special instrument, used for all melodic programs */
-    Instrument    *default_instrument;
-    /* This is only used for tracks that don't specify a program */
-    int            default_program;
+    Instrument    *default_instrument; // This is only used for tracks that don't specify a program
+    int            default_program;    // This is a special instrument, used for all melodic programs
     int            antialiasing_allowed;
     int            pre_resampling_allowed;
     int            fast_decay;
@@ -380,14 +375,15 @@ struct Kasaria
     char           song_title[256];
     char           song_copyright[256];
     char           last_smf[1024];
-    /* to avoid some unnecessary parameter passing */
+    // to avoid some unnecessary parameter passing
     MidiEventList *evlist;
     long           event_count;
     FILE          *fp;
     long           at;
-    /* These would both fit into 32 bits, but they are often added in
+    /*
+        These would both fit into 32 bits, but they are often added in
         large multiples, so it's simpler to have two roomy ints */
-    /* samples per MIDI delta-t */
+    // samples per MIDI delta-t
     long           sample_increment;
     long           sample_correction;
     sample_t       resample_buffer[AUDIO_BUFFER_SIZE];
@@ -397,11 +393,11 @@ struct Kasaria
     int8 *iplookup;
     #endif
 #endif
-    char   def_instr_name[256];
-    char   last_config[1024];
-    int    sf_loaded;
-    SFInfo sf_info;
-    char   sf_filename[1024];
+    char               def_instr_name[256];
+    char               last_config[1024];
+    int                sf_loaded;
+    SFInfo             sf_info;
+    char               sf_filename[1024];
     CompressorSettings compressor_settings;
 };
 
@@ -432,6 +428,6 @@ void        reset_voices(Kasaria *ksr);
 void        drop_sustain(Kasaria *ksr, int c);
 void        all_notes_off(Kasaria *ksr, int c);
 void        reset_controllers(Kasaria *ksr, int c);
-void audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
+void        audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
 
 #endif

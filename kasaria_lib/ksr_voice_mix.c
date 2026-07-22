@@ -28,7 +28,7 @@ mix.c */
 
 #include "ksr_internal.h"
 
-/* Returns 1 if envelope runs out */
+// Returns 1 if envelope runs out
 int recompute_envelope(Kasaria *ksr, int v)
 {
     int stage;
@@ -37,7 +37,7 @@ int recompute_envelope(Kasaria *ksr, int v)
 
     if(stage > 5)
     {
-        /* Envelope ran out. */
+        // Envelope ran out.
         int tmp              = (ksr->voice[v].status == VOICE_DIE); /* Already displayed as dead */
         ksr->voice[v].status = VOICE_FREE;
         if(!tmp)
@@ -50,7 +50,7 @@ int recompute_envelope(Kasaria *ksr, int v)
         {
             if(stage > 2)
             {
-                /* Freeze envelope until note turns off. Trumpets want this. */
+                // Freeze envelope until note turns off. Trumpets want this.
                 ksr->voice[v].envelope_increment = 0;
                 return 0;
             }
@@ -118,7 +118,7 @@ void apply_envelope_to_amp(Kasaria *ksr, int v)
 static int update_envelope(Kasaria *ksr, int v)
 {
     ksr->voice[v].envelope_volume += ksr->voice[v].envelope_increment;
-    /* Why is there no ^^ operator?? */
+    // Why is there no ^^ operator??
     if(((ksr->voice[v].envelope_increment < 0) && (ksr->voice[v].envelope_volume <= ksr->voice[v].envelope_target)) || ((ksr->voice[v].envelope_increment > 0) && (ksr->voice[v].envelope_volume >= ksr->voice[v].envelope_target)))
     {
         ksr->voice[v].envelope_volume = ksr->voice[v].envelope_target;
@@ -134,14 +134,14 @@ static void update_tremolo(Kasaria *ksr, int v)
 
     if(ksr->voice[v].tremolo_sweep)
     {
-        /* Update sweep position */
+        // Update sweep position
 
         ksr->voice[v].tremolo_sweep_position += ksr->voice[v].tremolo_sweep;
         if(ksr->voice[v].tremolo_sweep_position >= (1 << SWEEP_SHIFT))
             ksr->voice[v].tremolo_sweep = 0; /* Swept to max amplitude */
         else
         {
-            /* Need to adjust depth */
+            // Need to adjust depth
             depth  *= ksr->voice[v].tremolo_sweep_position;
             depth >>= SWEEP_SHIFT;
         }
@@ -149,16 +149,15 @@ static void update_tremolo(Kasaria *ksr, int v)
 
     ksr->voice[v].tremolo_phase  += ksr->voice[v].tremolo_phase_increment;
 
-    /* if (tm->voice[v].tremolo_phase >= (SINE_CYCLE_LENGTH<<RATE_SHIFT))
-    tm->voice[v].tremolo_phase -= SINE_CYCLE_LENGTH<<RATE_SHIFT;  */
+    // if(tm->voice[v].tremolo_phase >= (SINE_CYCLE_LENGTH<<RATE_SHIFT))
+    //     tm->voice[v].tremolo_phase -= SINE_CYCLE_LENGTH<<RATE_SHIFT;
 
     ksr->voice[v].tremolo_volume  = 1.0 - FSCALENEG((sine(ksr->voice[v].tremolo_phase >> RATE_SHIFT) + 1.0) * depth * TREMOLO_AMPLITUDE_TUNING, 17);
 
-    /* I'm not sure about the +1.0 there -- it makes tremoloed voices'
-    volumes on average the lower the higher the tremolo amplitude. */
+    // I'm not sure about the +1.0 there -- it makes tremoloed voices' volumes on average the lower the higher the tremolo amplitude.
 }
 
-/* Returns 1 if the note died */
+// Returns 1 if the note died
 static int update_signal(Kasaria *ksr, int v)
 {
     if(ksr->voice[v].envelope_increment && update_envelope(ksr, v))
@@ -188,7 +187,7 @@ static void mix_mystery_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int c
     {
         cc = ksr->control_ratio;
         if(update_signal(ksr, v))
-            return; /* Envelope ran out */
+            return; // Envelope ran out
 
         left  = vp->left_mix;
         right = vp->right_mix;
@@ -206,7 +205,7 @@ static void mix_mystery_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int c
             }
             cc = ksr->control_ratio;
             if(update_signal(ksr, v))
-                return; /* Envelope ran out */
+                return; // Envelope ran out
 
             left  = vp->left_mix;
             right = vp->right_mix;
@@ -235,7 +234,7 @@ static void mix_center_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int co
     {
         cc = ksr->control_ratio;
         if(update_signal(ksr, v))
-            return; /* Envelope ran out */
+            return; // Envelope ran out
 
         left = vp->left_mix;
     }
@@ -252,7 +251,7 @@ static void mix_center_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int co
             }
             cc = ksr->control_ratio;
             if(update_signal(ksr, v))
-                return; /* Envelope ran out */
+                return; // Envelope ran out
 
             left = vp->left_mix;
         }
@@ -280,7 +279,7 @@ static void mix_single_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int co
     {
         cc = ksr->control_ratio;
         if(update_signal(ksr, v))
-            return; /* Envelope ran out */
+            return; // Envelope ran out
 
         left = vp->left_mix;
     }
@@ -297,7 +296,7 @@ static void mix_single_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int co
             }
             cc = ksr->control_ratio;
             if(update_signal(ksr, v))
-                return; /* Envelope ran out */
+                return; // Envelope ran out
 
             left = vp->left_mix;
         }
@@ -325,7 +324,7 @@ static void mix_mono_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int coun
     {
         cc = ksr->control_ratio;
         if(update_signal(ksr, v))
-            return; /* Envelope ran out */
+            return; // Envelope ran out
 
         left = vp->left_mix;
     }
@@ -341,7 +340,7 @@ static void mix_mono_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int coun
             }
             cc = ksr->control_ratio;
             if(update_signal(ksr, v))
-                return; /* Envelope ran out */
+                return; // Envelope ran out
 
             left = vp->left_mix;
         }
@@ -409,21 +408,22 @@ static void mix_mono(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
     }
 }
 
-/* Ramp a note out in c samples */
+// Ramp a note out in c samples
 static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
 {
 
-    /* should be final_volume_t, but uint8 gives trouble. */
-    long     left, right, li, ri;
+    // should be final_volume_t, but uint8 gives trouble.
+    long     left;
+    long     right;
+    long     li;
+    long     ri;
 
-    sample_t s = 0; /* silly warning about uninitialized s */
+    sample_t s = 0; // silly warning about uninitialized s
 
     left       = ksr->voice[v].left_mix;
     li         = -(left / c);
     if(!li)
         li = -1;
-
-    /* printf("Ramping out: left=%d, c=%d, li=%d\n", left, c, li); */
 
     if(!(ksr->play_mode.encoding & PE_MONO))
     {
@@ -491,7 +491,7 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
     }
     else
     {
-        /* Mono output.  */
+        // Mono output.
         while(c--)
         {
             left += li;
@@ -510,9 +510,7 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
 
 void mix_voice(Kasaria *ksr, f32 *buf, int v, long c)
 {
-    /*
-    Prob this is where I have to handle SF2 effects
-    */
+    // Prob this is where I have to handle SF2 effects
     Voice    *vp = ksr->voice + v;
     sample_t *sp;
     if(vp->status == VOICE_DIE)

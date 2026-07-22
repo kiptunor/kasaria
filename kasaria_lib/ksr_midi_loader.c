@@ -44,7 +44,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 
 // clang-format off
-static char *label[] = 
+static char *label[] =
 {
     "Text event: ",
     "Text: ",
@@ -65,7 +65,7 @@ static char *label[] =
 
 
 
-/* Computes how many (fractional) samples one MIDI delta-time unit contains */
+// Computes how many (fractional) samples one MIDI delta-time unit contains
 static void compute_sample_increment(Kasaria *ksr, long tempo, long divisions)
 {
     f64 a;
@@ -78,10 +78,10 @@ static void compute_sample_increment(Kasaria *ksr, long tempo, long divisions)
 
 static int compare_events(const void *a, const void *b)
 {
-    const MidiEventList *ea = *(const MidiEventList * const *)a;
-    const MidiEventList *eb = *(const MidiEventList * const *)b;
-    long ta = ea->event.time;
-    long tb = eb->event.time;
+    const MidiEventList *ea = *(const MidiEventList *const *)a;
+    const MidiEventList *eb = *(const MidiEventList *const *)b;
+    long                 ta = ea->event.time;
+    long                 tb = eb->event.time;
     return (ta > tb) - (ta < tb);
 }
 
@@ -93,19 +93,19 @@ static MidiEventList *merge_sorted(MidiEventList *a, MidiEventList *b)
 {
     MidiEventList  dummy;
     MidiEventList *tail = &dummy;
-    dummy.next = 0;
+    dummy.next          = 0;
 
     while(a && b)
     {
         if(a->event.time <= b->event.time)
         {
             tail->next = a;
-            a = (MidiEventList *)a->next;
+            a          = (MidiEventList *)a->next;
         }
         else
         {
             tail->next = b;
-            b = (MidiEventList *)b->next;
+            b          = (MidiEventList *)b->next;
         }
         tail = (MidiEventList *)tail->next;
     }
@@ -128,11 +128,11 @@ static MidiEventList *merge_sort_events(MidiEventList *head)
         fast = (MidiEventList *)((MidiEventList *)fast->next)->next;
     }
 
-    second = (MidiEventList *)slow->next;
+    second     = (MidiEventList *)slow->next;
     slow->next = 0;
 
-    head   = merge_sort_events(head);
-    second = merge_sort_events(second);
+    head       = merge_sort_events(head);
+    second     = merge_sort_events(second);
 
     return merge_sorted(head, second);
 }
@@ -142,7 +142,7 @@ static void sort_event_list(Kasaria *ksr)
     ksr->evlist = merge_sort_events(ksr->evlist);
 }
 
-/* Read variable-length number (7 bits per byte, MSB first) */
+// Read variable-length number (7 bits per byte, MSB first)
 static long getvl(Kasaria *ksr)
 {
     long   l = 0;
@@ -160,8 +160,10 @@ static long getvl(Kasaria *ksr)
     }
 }
 
-/* Print a string from the file, followed by a newline. Any non-ASCII
-or unprintable characters will be converted to periods. */
+/*
+    Print a string from the file, followed by a newline. Any non-ASCII
+    or unprintable characters will be converted to periods.
+*/
 static int dumpstring(Kasaria *ksr, long len, char *label)
 {
     signed char *s = (signed char *)safe_malloc(len + 1);
@@ -194,11 +196,11 @@ static int dumpstring(Kasaria *ksr, long len, char *label)
 // clang-format on
 
 #define MAGIC_EOT ((MidiEventList *)(-1))
-/* State for MIDI event parsing, reset between tracks */
-static u_char  midi_laststatus, midi_lastchan;
-static u_char  midi_nrpn = 0, midi_rpn_msb[16], midi_rpn_lsb[16];
+// State for MIDI event parsing, reset between tracks
+static u_char midi_laststatus, midi_lastchan;
+static u_char midi_nrpn = 0, midi_rpn_msb[16], midi_rpn_lsb[16];
 
-static void reset_midi_event_state(void)
+static void   reset_midi_event_state(void)
 {
     midi_laststatus = 0;
     midi_lastchan   = 0;
@@ -208,21 +210,23 @@ static void reset_midi_event_state(void)
 }
 
 
-/* Read a MIDI event, returning a freshly allocated element that can
-be linked to the event list */
+/*
+    Read a MIDI event, returning a freshly allocated element that can
+    be linked to the event list
+*/
 static MidiEventList *read_midi_event(Kasaria *ksr)
 {
     u_char         me, type, a, b, c;
     long           len;
     MidiEventList *newev;
 
-    
+
     for(;;)
     {
         ksr->at += getvl(ksr);
         if(fread(&me, 1, 1, ksr->fp) != 1)
             return 0;
-    
+
         if(me == 0xF0 || me == 0xF7)
         {
             len = getvl(ksr);
@@ -238,28 +242,27 @@ static MidiEventList *read_midi_event(Kasaria *ksr)
                 if(dumpstring(ksr, len, label[(type > 7) ? 0 : type]) < 0)
                     return 0;
             }
-            else switch(type)
-            {
-            case 0x2F:
-                return MAGIC_EOT;
-
-            case 0x51:
-                if(len != 3)
+            else
+                switch(type)
                 {
+                case 0x2F:
+                    return MAGIC_EOT;
+
+                case 0x51:
+                    if(len != 3)
+                    {
+                        skip(ksr->fp, len);
+                        break;
+                    }
+                    if(fread(&a, 1, 1, ksr->fp) != 1 || fread(&b, 1, 1, ksr->fp) != 1 || fread(&c, 1, 1, ksr->fp) != 1)
+                        return 0;
+                    MIDIEVENT(ksr->at, ME_TEMPO, c, a, b);
+                    break;
+
+                default:
                     skip(ksr->fp, len);
                     break;
                 }
-                if(fread(&a, 1, 1, ksr->fp) != 1 ||
-                   fread(&b, 1, 1, ksr->fp) != 1 ||
-                   fread(&c, 1, 1, ksr->fp) != 1)
-                    return 0;
-                MIDIEVENT(ksr->at, ME_TEMPO, c, a, b);
-                break;
-
-            default:
-                skip(ksr->fp, len);
-                break;
-            }
         }
         else
         {
@@ -274,25 +277,25 @@ static MidiEventList *read_midi_event(Kasaria *ksr)
             }
             switch(midi_laststatus)
             {
-            case 0: /* Note off */
+            case 0: // Note off
                 if(fread(&b, 1, 1, ksr->fp) != 1)
                     return 0;
                 b &= 0x7F;
                 MIDIEVENT(ksr->at, ME_NOTEOFF, midi_lastchan, a, b);
 
-            case 1: /* Note on */
+            case 1: // Note on
                 if(fread(&b, 1, 1, ksr->fp) != 1)
                     return 0;
                 b &= 0x7F;
                 MIDIEVENT(ksr->at, ME_NOTEON, midi_lastchan, a, b);
 
-            case 2: /* Key Pressure */
+            case 2: // Key Pressure
                 if(fread(&b, 1, 1, ksr->fp) != 1)
                     return 0;
                 b &= 0x7F;
                 MIDIEVENT(ksr->at, ME_KEYPRESSURE, midi_lastchan, a, b);
 
-            case 3: /* Control change */
+            case 3: // Control change
                 if(fread(&b, 1, 1, ksr->fp) != 1)
                     return 0;
                 b &= 0x7F;
@@ -334,19 +337,19 @@ static MidiEventList *read_midi_event(Kasaria *ksr)
                     case 32:
                         break;
                     case 100:
-                        midi_nrpn              = 0;
+                        midi_nrpn                   = 0;
                         midi_rpn_msb[midi_lastchan] = b;
                         break;
                     case 101:
-                        midi_nrpn              = 0;
+                        midi_nrpn                   = 0;
                         midi_rpn_lsb[midi_lastchan] = b;
                         break;
                     case 99:
-                        midi_nrpn              = 1;
+                        midi_nrpn                   = 1;
                         midi_rpn_msb[midi_lastchan] = b;
                         break;
                     case 98:
-                        midi_nrpn              = 1;
+                        midi_nrpn                   = 1;
                         midi_rpn_lsb[midi_lastchan] = b;
                         break;
                     case 6:
@@ -374,15 +377,15 @@ static MidiEventList *read_midi_event(Kasaria *ksr)
                 }
                 break;
 
-            case 4: /* Program change */
+            case 4: // Program change
                 a &= 0x7f;
                 MIDIEVENT(ksr->at, ME_PROGRAM, midi_lastchan, a, 0);
                 break;
 
-            case 5: /* Channel pressure */
+            case 5: // Channel pressure
                 break;
 
-            case 6: /* Pitch wheel */
+            case 6: // Pitch wheel
                 if(fread(&b, 1, 1, ksr->fp) != 1)
                     return 0;
                 b &= 0x7F;
@@ -398,8 +401,10 @@ static MidiEventList *read_midi_event(Kasaria *ksr)
 
 #undef MIDIEVENT
 
-/* Read a midi track into the linked list, either merging with any previous
-tracks or appending to them. */
+/*
+    Read a midi track into the linked list, either merging with any previous
+    tracks or appending to them.
+*/
 static int read_track(Kasaria *ksr, MidiEventList **tail, int append)
 {
     MidiEventList *newev;
@@ -431,10 +436,10 @@ static int read_track(Kasaria *ksr, MidiEventList **tail, int append)
 
         if(!(newev = read_midi_event(ksr)))
             return -2;
-    
+
         if(newev == MAGIC_EOT)
             return 0;
-    
+
         newev->next   = 0;
         (*tail)->next = newev;
         *tail         = newev;
@@ -443,7 +448,7 @@ static int read_track(Kasaria *ksr, MidiEventList **tail, int append)
     }
 }
 
-/* Free the linked event list from memory. */
+// Free the linked event list from memory.
 static void free_midi_list(Kasaria *ksr)
 {
     MidiEventList *meep, *next;
@@ -470,22 +475,22 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
     MidiEvent     *groomed_list, *lp;
     MidiEventList *meep;
     long           i;
-    long our_event_count;
-    long tempo;
-    long skip_this_event;
-    long new_value;
-    long sample_cum;
-    long samples_to_do;
-    long at;
-    long st;
-    long dt;
-    long counting_time;
+    long           our_event_count;
+    long           tempo;
+    long           skip_this_event;
+    long           new_value;
+    long           sample_cum;
+    long           samples_to_do;
+    long           at;
+    long           st;
+    long           dt;
+    long           counting_time;
 
-    int current_bank[16];
-    int current_set[16];
-    int current_program[16];
-    
-    /* Or should each bank have its own current program? */
+    int            current_bank[16];
+    int            current_set[16];
+    int            current_program[16];
+
+    // Or should each bank have its own current program?
 
     for(i = 0; i < 16; i++)
     {
@@ -497,18 +502,18 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
     tempo = 500000;
     compute_sample_increment(ksr, tempo, divisions);
 
-    /* This may allocate a bit more than we need */
+    // This may allocate a bit more than we need
     groomed_list = lp = (MidiEvent *)safe_malloc(sizeof(MidiEvent) * (ksr->event_count + 1));
     if(!groomed_list)
     {
         free_midi_list(ksr);
         return 0;
     }
-    meep              = ksr->evlist;
+    meep            = ksr->evlist;
 
-    our_event_count   = 0;
+    our_event_count = 0;
     st = at = sample_cum = 0;
-    counting_time        = 2; /* We strip any silence before the first NOTE ON. */
+    counting_time        = 2; // We strip any silence before the first NOTE ON.
 
     for(i = 0; i < ksr->event_count && meep != NULL; i++)
     {
@@ -525,7 +530,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
             case ME_PROGRAM:
                 if(ISDRUMCHANNEL(ksr, meep->event.channel))
                 {
-                    if(ksr->drumset[meep->event.a]) /* Is this a defined drumset? */
+                    if(ksr->drumset[meep->event.a]) // Is this a defined drumset?
                         new_value = meep->event.a;
                     else
                         new_value = meep->event.a = 0;
@@ -550,7 +555,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
                     counting_time = 1;
                 if(ISDRUMCHANNEL(ksr, meep->event.channel) && ksr->drumset[current_set[meep->event.channel]])
                 {
-                    /* Mark this instrument to be loaded */
+                    // Mark this instrument to be loaded
                     if(!(ksr->drumset[current_set[meep->event.channel]]->tone[meep->event.a].instrument))
                         ksr->drumset[current_set[meep->event.channel]]->tone[meep->event.a].instrument = MAGIC_LOAD_INSTRUMENT;
                 }
@@ -558,7 +563,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
                 {
                     if(current_program[meep->event.channel] == SPECIAL_PROGRAM)
                         break;
-                    /* Mark this instrument to be loaded */
+                    // Mark this instrument to be loaded
                     if(!(ksr->tonebank[current_bank[meep->event.channel]]->tone[current_program[meep->event.channel]].instrument))
                         ksr->tonebank[current_bank[meep->event.channel]]->tone[current_program[meep->event.channel]].instrument = MAGIC_LOAD_INSTRUMENT;
                 }
@@ -570,7 +575,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
                     skip_this_event = 1;
                     break;
                 }
-                if(ksr->tonebank[meep->event.a]) /* Is this a defined tone bank? */
+                if(ksr->tonebank[meep->event.a]) // Is this a defined tone bank?
                     new_value = meep->event.a;
                 else
                     new_value = meep->event.a = 0;
@@ -582,7 +587,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
                 break;
             }
 
-        /* Recompute time in samples*/
+        // Recompute time in samples
         if((dt = meep->event.time - at) && !counting_time)
         {
             samples_to_do  = ksr->sample_increment * dt;
@@ -604,7 +609,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
         }
         if(!skip_this_event)
         {
-            /* Add the event to the list */
+            // Add the event to the list
             *lp      = meep->event;
             lp->time = st;
             lp++;
@@ -613,7 +618,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
         at   = meep->event.time;
         meep = (MidiEventList *)meep->next;
     }
-    /* Add an End-of-Track event */
+    // Add an End-of-Track event
     lp->time = st;
     lp->type = ME_EOT;
     our_event_count++;
@@ -662,18 +667,18 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
     if(format < 0 || format > 2)
         return 0;
 
-    ksr->evlist             = (MidiEventList *)safe_malloc(sizeof(MidiEventList));
-    
+    ksr->evlist = (MidiEventList *)safe_malloc(sizeof(MidiEventList));
+
     if(!ksr->evlist)
         return 0;
-    
+
     ksr->evlist->event.time = 0;
     ksr->evlist->event.type = ME_NONE;
     ksr->evlist->next       = 0;
     ksr->event_count++;
-    
+
     MidiEventList *tail = ksr->evlist;
-    
+
     switch(format)
     {
     case 0:

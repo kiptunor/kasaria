@@ -46,15 +46,15 @@ void reset_voices(Kasaria *ksr)
         ksr->voice[i].status = VOICE_FREE;
 }
 
-/* Process the Reset All Controllers event */
+// Process the Reset All Controllers event
 void reset_controllers(Kasaria *ksr, int c)
 {
-    ksr->channel[c].volume      = 90;  /* Some standard says, although the SCC docs say 0. */
-    ksr->channel[c].expression  = 127; /* SCC-1 does this. */
+    ksr->channel[c].volume      = 90;  // Some standard says, although the SCC docs say 0.
+    ksr->channel[c].expression  = 127; // SCC-1 does this.
     ksr->channel[c].sustain     = 0;
     ksr->channel[c].mono        = 0;
     ksr->channel[c].pitchbend   = 0x2000;
-    ksr->channel[c].pitchfactor = 0; /* to be computed */
+    ksr->channel[c].pitchfactor = 0; // to be computed
 }
 
 void reset_midi(Kasaria *ksr)
@@ -63,11 +63,11 @@ void reset_midi(Kasaria *ksr)
     for(i = 0; i < 16; i++)
     {
         reset_controllers(ksr, i);
-        /* The rest of these are unaffected by the Reset All Controllers event */
+        // The rest of these are unaffected by the Reset All Controllers event
         ksr->channel[i].program   = ksr->default_program;
         ksr->channel[i].panning   = NO_PANNING;
         ksr->channel[i].pitchsens = 2;
-        ksr->channel[i].bank      = 0; /* tone bank or drum set */
+        ksr->channel[i].bank      = 0; // tone bank or drum set
         ksr->rpn_msb[i]           = 0xff;
         ksr->rpn_lsb[i]           = 0xff;
     }
@@ -103,10 +103,11 @@ static void select_sample(Kasaria *ksr, int v, Instrument *ip)
     }
 
     /*
-    No suitable sample found! We'll select the sample whose root
-    frequency is closest to the one we want. (Actually we should
-    probably convert the low, high, and root frequencies to MIDI note
-    values and compare those.) */
+        No suitable sample found! We'll select the sample whose root
+        frequency is closest to the one we want. (Actually we should
+        probably convert the low, high, and root frequencies to MIDI note
+        values and compare those.)
+    */
 
     cdiff   = 0x7FFFFFFF;
     closest = sp = ip->sample;
@@ -138,8 +139,7 @@ static void recompute_freq(Kasaria *ksr, int v)
 
     if(ksr->voice[v].vibrato_control_ratio)
     {
-        /* This instrument has vibrato. Invalidate any precomputed
-        sample_increments. */
+        // This instrument has vibrato. Invalidate any precomputed sample_increments.
 
         int i = VIBRATO_SAMPLE_INCREMENTS;
         while(i--)
@@ -153,7 +153,7 @@ static void recompute_freq(Kasaria *ksr, int v)
         pb -= 0x2000;
         if(!(ksr->channel[ksr->voice[v].channel].pitchfactor))
         {
-            /* Damn. Somebody bent the pitch. */
+            // Damn. Somebody bent the pitch.
             long i = pb * ksr->channel[ksr->voice[v].channel].pitchsens;
             if(pb < 0)
                 i = -i;
@@ -170,7 +170,7 @@ static void recompute_freq(Kasaria *ksr, int v)
     a = FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
 
     if(sign)
-        a = -a; /* need to preserve the loop direction */
+        a = -a; // need to preserve the loop direction
 
     ksr->voice[v].sample_increment = (long)(a);
 }
@@ -179,7 +179,7 @@ static void recompute_amp(Kasaria *ksr, int v)
 {
     long tempamp;
 
-    /* TODO: use fscale */
+    // TODO: use fscale
 
     tempamp = (ksr->voice[v].velocity * ksr->channel[ksr->voice[v].channel].volume * ksr->channel[ksr->voice[v].channel].expression); /* 21 bits */
 
@@ -201,7 +201,7 @@ static void recompute_amp(Kasaria *ksr, int v)
         {
             ksr->voice[v].panned   = PANNED_RIGHT;
 
-            /* left_amp will be used */
+            // left_amp will be used
             ksr->voice[v].left_amp = FSCALENEG((f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 20);
         }
         else
@@ -229,7 +229,7 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
     if(ISDRUMCHANNEL(ksr, e->channel))
     {
         if(!ksr->drumset[ksr->channel[e->channel].bank] && !ksr->drumset[0])
-            return; /* No drumset? Then we can't play. */
+            return; // No drumset? Then we can't play.
 
         if(ksr->drumset[ksr->channel[e->channel].bank]->tone[e->a].name && !ksr->drumset[ksr->channel[e->channel].bank]->tone[e->a].instrument)
         {
@@ -246,21 +246,21 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
         if(!(ip = ksr->drumset[ksr->channel[e->channel].bank]->tone[e->a].instrument))
         {
             if(!(ip = ksr->drumset[0]->tone[e->a].instrument))
-                return; /* No instrument? Then we can't play. */
+                return; // No instrument? Then we can't play.
         }
 
-        if(ip->sample->note_to_use) /* Do we have a fixed pitch? */
+        if(ip->sample->note_to_use) // Do we have a fixed pitch?
             ksr->voice[i].orig_frequency = freq_table[(int)(ip->sample->note_to_use)];
         else
             ksr->voice[i].orig_frequency = freq_table[e->a & 0x7F];
 
-        /* drums are supposed to have only one sample */
+        // drums are supposed to have only one sample
         ksr->voice[i].sample = ip->sample;
     }
     else
     {
         if(!ksr->tonebank[ksr->channel[e->channel].bank] && !ksr->tonebank[0] && ksr->channel[e->channel].program != SPECIAL_PROGRAM)
-            return; /* No tonebank? Then we can't play. */
+            return; // No tonebank? Then we can't play.
 
         if(ksr->channel[e->channel].program != SPECIAL_PROGRAM)
         {
@@ -280,13 +280,13 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
         else if(!(ip = ksr->tonebank[ksr->channel[e->channel].bank]->tone[ksr->channel[e->channel].program].instrument))
         {
             if(!(ip = ksr->tonebank[0]->tone[ksr->channel[e->channel].program].instrument))
-                return; /* No instrument? Then we can't play. */
+                return; // No instrument? Then we can't play.
         }
 
         if(!ip)
             return;
 
-        if(ip->sample->note_to_use) /* Fixed-pitch instrument? */
+        if(ip->sample->note_to_use) // Fixed-pitch instrument?
             ksr->voice[i].orig_frequency = freq_table[(int)(ip->sample->note_to_use)];
         else
             ksr->voice[i].orig_frequency = freq_table[e->a & 0x7F];
@@ -298,7 +298,7 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
     ksr->voice[i].note                    = e->a;
     ksr->voice[i].velocity                = e->b;
     ksr->voice[i].sample_offset           = 0;
-    ksr->voice[i].sample_increment        = 0; /* make sure it isn't negative */
+    ksr->voice[i].sample_increment        = 0; // make sure it isn't negative
 
     ksr->voice[i].tremolo_phase           = 0;
     ksr->voice[i].tremolo_phase_increment = ksr->voice[i].sample->tremolo_phase_increment;
@@ -333,7 +333,7 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
         ksr->voice[i].envelope_increment = 0;
         apply_envelope_to_amp(ksr, i);
     }
-    /* SF2 stereo support: start partner voice for stereo samples */
+    // SF2 stereo support: start partner voice for stereo samples
     if(!ISDRUMCHANNEL(ksr, e->channel) && ip && ip->samples > 1)
     {
         Sample *primary = ksr->voice[i].sample;
@@ -406,7 +406,7 @@ static void kill_note(Kasaria *ksr, int i)
     ksr->voice[i].status = VOICE_DIE;
 }
 
-/* Only one instance of a note can be playing on a single channel. */
+// Only one instance of a note can be playing on a single channel.
 static void note_on(Kasaria *ksr, MidiEvent *e)
 {
     int  i = ksr->voices, lowest = -1;
@@ -415,7 +415,7 @@ static void note_on(Kasaria *ksr, MidiEvent *e)
     while(i--)
     {
         if(ksr->voice[i].status == VOICE_FREE)
-            lowest = i; /* Can't get a lower volume than silence */
+            lowest = i; // Can't get a lower volume than silence
 
         else if(ksr->voice[i].channel == e->channel && (ksr->voice[i].note == e->a || ksr->channel[ksr->voice[i].channel].mono))
             kill_note(ksr, i);
@@ -423,12 +423,12 @@ static void note_on(Kasaria *ksr, MidiEvent *e)
 
     if(lowest != -1)
     {
-        /* Found a free voice. */
+        // Found a free voice.
         start_note(ksr, e, lowest);
         return;
     }
 
-    /* Look for the decaying note with the lowest volume */
+    // Look for the decaying note with the lowest volume
     i = ksr->voices;
     while(i--)
     {
@@ -448,10 +448,12 @@ static void note_on(Kasaria *ksr, MidiEvent *e)
 
     if(lowest != -1)
     {
-        /* This can still cause a click, but if we had a free voice to
-        spare for ramping down this note, we wouldn't need to kill it
-        in the first place... Still, this needs to be fixed. Perhaps
-        we could use a reserve of voices to play dying notes only. */
+        /*
+            This can still cause a click, but if we had a free voice to
+            spare for ramping down this note, we wouldn't need to kill it
+            in the first place... Still, this needs to be fixed. Perhaps
+            we could use a reserve of voices to play dying notes only.
+        */
 
         ksr->cut_notes++;
         ksr->voice[lowest].status = VOICE_FREE;
@@ -473,9 +475,11 @@ static void finish_note(Kasaria *ksr, int i)
     }
     else
     {
-        /* Set status to OFF so resample_voice() will let this voice out
-        of its loop, if any. In any case, this voice dies when it
-        hits the end of its data (ofs>=data_length). */
+        /*
+            Set status to OFF so resample_voice() will let this voice out
+            of its loop, if any. In any case, this voice dies when it
+            hits the end of its data (ofs>=data_length).
+        */
         ksr->voice[i].status = VOICE_OFF;
     }
 }
@@ -493,7 +497,7 @@ static void note_off(Kasaria *ksr, MidiEvent *e)
         }
 }
 
-/* Process the All Notes Off event */
+// Process the All Notes Off event
 void all_notes_off(Kasaria *ksr, int c)
 {
     int i = ksr->voices;
@@ -507,7 +511,7 @@ void all_notes_off(Kasaria *ksr, int c)
         }
 }
 
-/* Process the All Sounds Off event */
+// Process the All Sounds Off event
 static void all_sounds_off(Kasaria *ksr, int c)
 {
     int i = ksr->voices;
@@ -575,7 +579,7 @@ static void seek_forward(Kasaria *ksr, long until_time)
     {
         switch(ksr->current_event->type)
         {
-            /* All notes stay off. Just handle the parameter changes. */
+            // All notes stay off. Just handle the parameter changes.
 
         case ME_PITCH_SENS:
             ksr->channel[ksr->current_event->channel].pitchsens   = ksr->current_event->a;
@@ -601,7 +605,7 @@ static void seek_forward(Kasaria *ksr, long until_time)
 
         case ME_PROGRAM:
             if(ISDRUMCHANNEL(ksr, ksr->current_event->channel))
-                /* Change drum set */
+                // Change drum set
                 ksr->channel[ksr->current_event->channel].bank = ksr->current_event->a;
             else
                 ksr->channel[ksr->current_event->channel].program = ksr->current_event->a;
@@ -634,7 +638,7 @@ static void seek_forward(Kasaria *ksr, long until_time)
         }
         ksr->current_event++;
     }
-    /*current_sample=current_event->time;*/
+    // current_sample=current_event->time;
     if(ksr->current_event != ksr->event_list)
         ksr->current_event--;
 
@@ -655,31 +659,19 @@ static void skip_to(Kasaria *ksr, long until_time)
 
 static void do_compute_data(Kasaria *ksr, long count)
 {
-    /*
-        Maybe this is where I can add the audio limiter ?
-    */
-    int i, samples;
+    int i;
+    int samples;
+
     samples = (ksr->play_mode.encoding & PE_MONO) ? count : (count * 2);
+
     for(i = 0; i < samples; i++)
         ksr->buffer_pointer[i] = 0;
+
     for(i = 0; i < ksr->voices; i++)
     {
         if(ksr->voice[i].status != VOICE_FREE)
             mix_voice(ksr, ksr->buffer_pointer, i, count);
     }
-
-    /*
-    f32 max_val = 0.0f;
-    for(u32 i = 0; i < samples; i++)
-    {
-        f32 val = labs(ksr->buffer_pointer[i]);
-        if(val > max_val) max_val = val;
-    }
-    printf("Max sample: %f\n", max_val);
-    */
-
-    // printf("Size of buffer_pointer element: %zu\n", sizeof(ksr->buffer_pointer[0]));
-    // printf("First raw value: %ld\n", ((long *)ksr->buffer_pointer)[0]);
 
     audio_compressor(&ksr->compressor_settings, (f32 *)ksr->buffer_pointer, samples * sizeof(f32));
 }
@@ -710,7 +702,7 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
             adjust_pressure(ksr, e);
             break;
 
-            /* Effects affecting a single channel */
+            // Effects affecting a single channel
 
         case ME_PITCH_SENS:
             ksr->channel[e->channel].pitchsens   = e->a;
@@ -720,7 +712,7 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
         case ME_PITCHWHEEL:
             ksr->channel[e->channel].pitchbend   = e->a + e->b * 128;
             ksr->channel[e->channel].pitchfactor = 0;
-            /* Adjust pitch for notes already playing */
+            // Adjust pitch for notes already playing
             adjust_pitchbend(ksr, e->channel);
             break;
 
@@ -744,7 +736,7 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
         case ME_PROGRAM:
             if(ISDRUMCHANNEL(ksr, e->channel))
             {
-                /* Change drum set */
+                // Change drum set
                 if(ksr->drumset[e->a])
                     ksr->channel[e->channel].bank = e->a;
             }
@@ -1230,10 +1222,10 @@ void ksr_render_char(Kasaria *ksr, u_char *buffer, long count)
             f32 sample = ksr->common_buffer[i] * 127.0f;
             if(sample > 127.0f)
                 sample = 127.0f;
-            
+
             if(sample < -128.0f)
                 sample = -128.0f;
-            
+
             buffer[i] = (u_char)((int)sample ^ 0x80);
         }
         buffer += cursamples;
@@ -1265,10 +1257,10 @@ void ksr_render_short(Kasaria *ksr, short *buffer, long count)
             f32 sample = ksr->common_buffer[i] * 32767.0f;
             if(sample > 32767.0f)
                 sample = 32767.0f;
-            
+
             if(sample < -32768.0f)
                 sample = -32768.0f;
-            
+
             buffer[i] = (short)((int)sample);
         }
         buffer += cursamples;
@@ -1301,10 +1293,10 @@ void ksr_render_24(Kasaria *ksr, int24 *buffer, long count)
             f32 sample = ksr->common_buffer[i] * 8388607.0f;
             if(sample > 8388607.0f)
                 sample = 8388607.0f;
-            
+
             if(sample < -8388608.0f)
                 sample = -8388608.0f;
-            
+
             buffer[i].data[0] = (u_char)((int)sample & 0xff);
             buffer[i].data[1] = (u_char)((int)sample >> 8) & 0xff;
             buffer[i].data[2] = (u_char)((int)sample >> 16) & 0xff;
@@ -1317,7 +1309,7 @@ void ksr_render_24(Kasaria *ksr, int24 *buffer, long count)
 void ksr_render_long(Kasaria *ksr, long *buffer, long count)
 {
     int  curframes, cursamples, i;
-    long maxval = 2147483647L;  // 2^31 - 1;
+    long maxval = 2147483647L; // 2^31 - 1;
     if(!ksr || !buffer)
         return;
 

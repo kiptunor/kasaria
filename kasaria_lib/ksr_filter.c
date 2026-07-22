@@ -36,7 +36,7 @@ April 95
 #include <stdlib.h>
 #include <string.h>
 
-/*  bessel  function   */
+// bessel  function
 static f64 ino(f32 x)
 {
     f64 y, de, e, sde;
@@ -56,7 +56,7 @@ static f64 ino(f32 x)
     return (e);
 }
 
-/* Kaiser Window (symetric) */
+// Kaiser Window (symetric)
 static void kaiser(f64 *w, int n, f64 beta)
 {
     f64 xind;
@@ -94,7 +94,7 @@ static void designfir(f64 *g, f64 fc)
     beta = (f64)exp(log((f64)0.58417 * (att - 20.96)) * 0.4) + 0.07886 * (att - 20.96);
     kaiser(w, ORDER2, beta);
 
-    /* Matrix product */
+    // Matrix product
     for(i = 0; i < ORDER2; i++)
         g[i] = g[i] * w[i];
 }
@@ -105,7 +105,7 @@ static void designfir(f64 *g, f64 fc)
  * data buffer
  */
 
-/* This is quick hack for antialiasing filter's bug fix. */
+// This is quick hack for antialiasing filter's bug fix.
 #define sample_t short
 
 static void filter(sample_t *result, sample_t *data, long length, f64 coef[])
@@ -114,7 +114,7 @@ static void filter(sample_t *result, sample_t *data, long length, f64 coef[])
     short peak = 0;
     f64   sum;
 
-    /* Simulate leading 0 at the begining of the buffer */
+    // Simulate leading 0 at the begining of the buffer
     for(sample = 0; sample < ORDER2; sample++)
     {
         sum           = 0.0;
@@ -123,7 +123,7 @@ static void filter(sample_t *result, sample_t *data, long length, f64 coef[])
         for(i = 0; i < ORDER; i++)
             sum += coef[i] * ((sample_window < 0) ? 0.0 : data[sample_window++]);
 
-        /* Saturation ??? */
+        // Saturation ???
         if(sum > 32767.)
         {
             sum = 32767.;
@@ -138,7 +138,7 @@ static void filter(sample_t *result, sample_t *data, long length, f64 coef[])
         result[sample] = (sample_t)sum;
     }
 
-    /* The core of the buffer  */
+    // The core of the buffer
     for(sample = ORDER2; sample < length - ORDER + ORDER2; sample++)
     {
         sum           = 0.0;
@@ -147,7 +147,7 @@ static void filter(sample_t *result, sample_t *data, long length, f64 coef[])
         for(i = 0; i < ORDER; i++)
             sum += data[sample_window++] * coef[i];
 
-        /* Saturation ??? */
+        // Saturation ???
         if(sum > 32767.)
         {
             sum = 32767.;
@@ -161,7 +161,7 @@ static void filter(sample_t *result, sample_t *data, long length, f64 coef[])
         result[sample] = (sample_t)sum;
     }
 
-    /* Simulate 0 at the end of the buffer */
+    // Simulate 0 at the end of the buffer
     for(sample = length - ORDER + ORDER2; sample < length; sample++)
     {
         sum           = 0.0;
@@ -170,7 +170,7 @@ static void filter(sample_t *result, sample_t *data, long length, f64 coef[])
         for(i = 0; i < ORDER; i++)
             sum += coef[i] * ((sample_window >= length) ? 0.0 : data[sample_window++]);
 
-        /* Saturation ??? */
+        // Saturation ???
         if(sum > 32767.)
         {
             sum = 32767.;
@@ -197,9 +197,9 @@ void antialiasing(Sample *sp, long output_rate)
     int       i;
     f64       fir_symetric[ORDER];
     f64       fir_coef[ORDER2];
-    f64       freq_cut; /* cutoff frequency [0..1.0] FREQ_CUT/SAMP_FREQ*/
+    f64       freq_cut; // cutoff frequency [0..1.0] FREQ_CUT/SAMP_FREQ
 
-    /* No oversampling  */
+    // No oversampling
     if(output_rate >= sp->sample_rate)
         return;
 
@@ -207,11 +207,11 @@ void antialiasing(Sample *sp, long output_rate)
 
     designfir(fir_coef, freq_cut);
 
-    /* Make the filter symetric */
+    // Make the filter symetric
     for(i = 0; i < ORDER2; i++)
         fir_symetric[ORDER - 1 - i] = fir_symetric[i] = fir_coef[ORDER2 - 1 - i];
 
-    /* We apply the filter we have designed on a copy of the patch */
+    // We apply the filter we have designed on a copy of the patch
     temp = (sample_t *)safe_malloc(sp->data_length);
     memcpy(temp, sp->data, sp->data_length);
 
@@ -222,58 +222,26 @@ void antialiasing(Sample *sp, long output_rate)
 
 void audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length)
 {
-    /*
     f32 *samples = (f32 *)buffer;
     u32  count   = length / sizeof(f32);
 
     for(u32 i = 0; i < count; ++i)
     {
-        f32 input     = samples[i];
-        f32 abs_input = fabsf(input);
+        f32 input                = samples[i];
+        f32 abs_input            = fabsf(input);
 
         // Envelope detection
-        if(abs_input > compr_settings->envelope)
-            compr_settings->envelope = compr_settings->limiter_attack_coeff * compr_settings->envelope + (1.0f - compr_settings->limiter_attack_coeff) * abs_input;
-        else
-            compr_settings->envelope = compr_settings->limiter_release_coeff * compr_settings->envelope + (1.0f - compr_settings->limiter_release_coeff) * abs_input;
-
-        // Gain computation
-        f32 target_gain = 1.0f;
-        if(compr_settings->envelope > compr_settings->limiter_threshold)
-            target_gain = (compr_settings->limiter_threshold + (compr_settings->envelope - compr_settings->limiter_threshold) / compr_settings->limiter_ratio) / compr_settings->envelope;
-
-        // Apply gain (instant attack, smooth release)
-        if(target_gain < compr_settings->gain)
-            compr_settings->gain = target_gain;
-        else
-            //compr_settings->gain = compr_settings->limiter_release_coeff * compr_settings->gain + (1.0f - compr_settings->limiter_release_coeff) * target_gain;
-            compr_settings->gain = compr_settings->limiter_attack_coeff * compr_settings->gain + (1.0f - compr_settings->limiter_attack_coeff) * target_gain;
-
-        samples[i] = input * compr_settings->gain * compr_settings->limiter_makeup_gain;
-    }
-    */
-
-    
-    f32 *samples = (f32 *)buffer;
-    u32  count   = length / sizeof(f32);
-    
-    for(u32 i = 0; i < count; ++i)
-    {
-        f32 input     = samples[i];
-        f32 abs_input = fabsf(input);
-
-        // Envelope detection
-        f32 coeff = (abs_input > compr_settings->envelope) ? compr_settings->limiter_attack_coeff : compr_settings->limiter_release_coeff;
+        f32 coeff                = (abs_input > compr_settings->envelope) ? compr_settings->limiter_attack_coeff : compr_settings->limiter_release_coeff;
         compr_settings->envelope = coeff * compr_settings->envelope + (1.0f - coeff) * abs_input;
 
         // Gain computation
-        f32 target_gain = 1.0f;
+        f32 target_gain          = 1.0f;
         if(compr_settings->envelope > compr_settings->limiter_threshold)
             target_gain = compr_settings->limiter_threshold / compr_settings->envelope;
 
         // Always smooth gain
         compr_settings->gain = 0.001f * compr_settings->gain + 0.999f * target_gain;
 
-        samples[i] = input * compr_settings->gain;
+        samples[i]           = input * compr_settings->gain;
     }
 }

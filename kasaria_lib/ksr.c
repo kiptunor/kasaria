@@ -77,7 +77,7 @@ Kasaria *ksr_init(void)
     ksr->compressor_settings.limiter_threshold     = 2000000.0f;
     ksr->compressor_settings.limiter_ratio         = 4.0f;
     ksr->compressor_settings.limiter_makeup_gain   = 1.0f;
-    
+
     init_tables(ksr);
     reset_midi(ksr);
     adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
