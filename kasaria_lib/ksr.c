@@ -42,6 +42,22 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
+
+void default_compressor_settings(Kasaria *ksr)
+{
+    ksr->compressor_settings.envelope              = 0.0f;
+    ksr->compressor_settings.gain                  = 1.0f;
+    ksr->compressor_settings.limiter_attack_ms     = 2.0f;
+    ksr->compressor_settings.limiter_release_ms    = 80.0f;
+    ksr->compressor_settings.limiter_sample_rate   = ksr->play_mode.rate;
+    ksr->compressor_settings.limiter_attack_coeff  = expf(-1.0f / (ksr->compressor_settings.limiter_attack_ms * 0.001f * ksr->compressor_settings.limiter_sample_rate));
+    ksr->compressor_settings.limiter_release_coeff = expf(-1.0f / (ksr->compressor_settings.limiter_release_ms * 0.001f * ksr->compressor_settings.limiter_sample_rate));
+    ksr->compressor_settings.limiter_threshold     = 2000000.0f;
+    ksr->compressor_settings.limiter_ratio         = 4.0f;
+    ksr->compressor_settings.limiter_makeup_gain   = 1.0f;
+}
+
+
 Kasaria *ksr_init(void)
 {
     Kasaria *ksr = (Kasaria *)safe_malloc(sizeof(Kasaria));
@@ -67,16 +83,7 @@ Kasaria *ksr_init(void)
     ksr->quietchannels                             = 0;
     ksr->adjust_panning_immediately                = 1;
 
-    ksr->compressor_settings.envelope              = 0.0f;
-    ksr->compressor_settings.gain                  = 1.0f;
-    ksr->compressor_settings.limiter_attack_ms     = 2.0f;
-    ksr->compressor_settings.limiter_release_ms    = 80.0f;
-    ksr->compressor_settings.limiter_sample_rate   = ksr->play_mode.rate;
-    ksr->compressor_settings.limiter_attack_coeff  = expf(-1.0f / (ksr->compressor_settings.limiter_attack_ms * 0.001f * ksr->compressor_settings.limiter_sample_rate));
-    ksr->compressor_settings.limiter_release_coeff = expf(-1.0f / (ksr->compressor_settings.limiter_release_ms * 0.001f * ksr->compressor_settings.limiter_sample_rate));
-    ksr->compressor_settings.limiter_threshold     = 2000000.0f;
-    ksr->compressor_settings.limiter_ratio         = 4.0f;
-    ksr->compressor_settings.limiter_makeup_gain   = 1.0f;
+    default_compressor_settings(ksr);
 
     init_tables(ksr);
     reset_midi(ksr);
@@ -84,6 +91,35 @@ Kasaria *ksr_init(void)
     return ksr;
 }
 
+void ksr_restore_defaults(Kasaria *ksr)
+{
+    if(!ksr)
+        return;
+
+    reset_voices(ksr);
+    ksr->default_program        = DEFAULT_PROGRAM;
+    ksr->antialiasing_allowed   = 1;
+    ksr->pre_resampling_allowed = 1;
+#ifdef FAST_DECAY
+    ksr->fast_decay = 1;
+#else
+    ksr->fast_decay = 0;
+#endif
+    ksr->dynamic_loading            = 0;
+    ksr->voices                     = DEFAULT_VOICES;
+    ksr->play_mode.rate             = DEFAULT_RATE;
+    ksr->play_mode.encoding         = 0;
+    ksr->control_rate               = CONTROLS_PER_SECOND;
+    ksr->control_ratio              = ksr->play_mode.rate / ksr->control_rate;
+    ksr->drumchannels               = DEFAULT_DRUMCHANNELS;
+    ksr->quietchannels              = 0;
+    ksr->adjust_panning_immediately = 1;
+
+    default_compressor_settings(ksr);
+    
+    adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
+    ksr_reload_config(ksr);
+}
 
 int ksr_load_config(Kasaria *ksr, char *filename)
 {
@@ -365,33 +401,6 @@ void ksr_set_quiet_channel(Kasaria *ksr, int channel, int enable)
         ksr->quietchannels |= (1 << channel);
     else
         ksr->quietchannels &= ~(1 << channel);
-}
-
-void ksr_restore_defaults(Kasaria *ksr)
-{
-    if(!ksr)
-        return;
-
-    reset_voices(ksr);
-    ksr->default_program        = DEFAULT_PROGRAM;
-    ksr->antialiasing_allowed   = 1;
-    ksr->pre_resampling_allowed = 1;
-#ifdef FAST_DECAY
-    ksr->fast_decay = 1;
-#else
-    ksr->fast_decay = 0;
-#endif
-    ksr->dynamic_loading            = 0;
-    ksr->voices                     = DEFAULT_VOICES;
-    ksr->play_mode.rate             = DEFAULT_RATE;
-    ksr->play_mode.encoding         = 0;
-    ksr->control_rate               = CONTROLS_PER_SECOND;
-    ksr->control_ratio              = ksr->play_mode.rate / ksr->control_rate;
-    ksr->drumchannels               = DEFAULT_DRUMCHANNELS;
-    ksr->quietchannels              = 0;
-    ksr->adjust_panning_immediately = 1;
-    adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
-    ksr_reload_config(ksr);
 }
 
 int ksr_force_instrument_load(Kasaria *ksr)

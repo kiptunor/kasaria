@@ -484,6 +484,7 @@ static void finish_note(Kasaria *ksr, int i)
     }
 }
 
+// It's so unefficient under intense loads :skull:
 static void note_off(Kasaria *ksr, MidiEvent *e)
 {
     int i = ksr->voices;
@@ -685,10 +686,10 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
         switch(e->type)
         {
 
-            /* Effects affecting a single note */
+            // Effects affecting a single note
 
         case ME_NOTEON:
-            if(!(e->b)) /* Velocity 0? */
+            if(!(e->b)) // Velocity 0?
                 note_off(ksr, e);
             else
                 note_on(ksr, e);
