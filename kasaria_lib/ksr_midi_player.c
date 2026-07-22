@@ -796,7 +796,7 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
 // Adapted from ReadMidiText function in gspmidi.cpp
 static void read_midi_text(Kasaria *ksr)
 {
-    u_long buff;
+    u_long buff = 0;
     u_long read;
 
     if(!ksr->fp_midi)

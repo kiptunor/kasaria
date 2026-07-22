@@ -1,6 +1,9 @@
 add_rules("mode.debug", "mode.release", "plugin.compile_commands.autoupdate", "mode.asan")
 
 -- set_policy("build.sanitizer.address", true)
+-- add_cflags("-O0", "-g")
+
+
 
 
 set_toolchains("clang")
