@@ -162,7 +162,7 @@ KSR_API int  ksr_reload_config(Kasaria *ksr);
 
 KSR_API int  ksr_load_soundfont_file(Kasaria *ksr, char *filename); // Currently supports only SF2 format (SFZ Support is also planned)
 KSR_API int  ksr_force_instrument_load(Kasaria *ksr);               // Force all instruments to be loaded
-KSR_API void ksr_preload_instruments(Kasaria *ksr);                // Preload all instruments
+KSR_API void ksr_preload_instruments(Kasaria *ksr);                 // Preload all instruments
 
 // Manage default instruments. These functions take effect on the next MIDI reset
 KSR_API int  ksr_set_default_instrument(Kasaria *ksr, char *filename);

@@ -308,8 +308,13 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
         if(!ksr->tonebank[ksr->channel[e->channel].bank] && !ksr->tonebank[0] && ksr->channel[e->channel].program != SPECIAL_PROGRAM)
             return; // No tonebank? Then we can't play.
 
-        //if(ksr->channel[e->channel].program != SPECIAL_PROGRAM)
-        //    return; // No instruments available ? Too bad. Handle them yourself!
+        if(ksr->channel[e->channel].program == SPECIAL_PROGRAM)
+            ip = ksr->default_instrument;
+        else if(!(ip = ksr->tonebank[ksr->channel[e->channel].bank]->tone[ksr->channel[e->channel].program].instrument))
+        {
+            if(!(ip = ksr->tonebank[0]->tone[ksr->channel[e->channel].program].instrument))
+                return; // No instruments available ? Too bad. Handle them yourself!
+        }
 
         if(ksr->channel[e->channel].program == SPECIAL_PROGRAM)
             ip = ksr->default_instrument;
