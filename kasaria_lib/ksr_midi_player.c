@@ -315,14 +315,6 @@ static void start_note(Kasaria *ksr, MidiEvent *e, int i)
                 return; // No instruments available ? Too bad. Handle them yourself!
         }
 
-        if(ksr->channel[e->channel].program == SPECIAL_PROGRAM)
-            ip = ksr->default_instrument;
-        else if(!(ip = ksr->tonebank[ksr->channel[e->channel].bank]->tone[ksr->channel[e->channel].program].instrument))
-        {
-            if(!(ip = ksr->tonebank[0]->tone[ksr->channel[e->channel].program].instrument))
-                return; // No instrument? Then we can't play.
-        }
-
         if(!ip)
             return;
 
@@ -501,10 +493,15 @@ static void note_on(Kasaria *ksr, MidiEvent *e)
         // in the first place... Still, this needs to be fixed. Perhaps
         // we could use a reserve of voices to play dying notes only.
 
-
+/* 
         ksr->cut_notes++;
         ksr->voice[lowest].status = VOICE_FREE;
         start_note(ksr, e, lowest);
+*/
+       ksr->cut_notes++;
+       channel_voice_remove(ksr, ksr->voice[lowest].channel, lowest);
+       ksr->voice[lowest].status = VOICE_FREE;
+       start_note(ksr, e, lowest);
     }
     else
         ksr->lost_notes++;
