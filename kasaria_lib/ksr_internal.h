@@ -357,7 +357,7 @@ extern f64     bend_coarse[];
 extern u_char *_l2u;    // 13-bit PCM to 8-bit u-law
 extern u_char  _l2u_[]; // used in LOOKUP_HACK
 #ifdef LOOKUP_HACK
-extern int16 _u2l[];
+extern short _u2l[];
 #endif
 
 struct Kasaria
@@ -411,9 +411,9 @@ struct Kasaria
     long           sample_correction;
     sample_t       resample_buffer[AUDIO_BUFFER_SIZE];
 #ifdef LOOKUP_HACK
-    int32 *mixup;
+    long *mixup;
     #ifdef LOOKUP_INTERPOLATION
-    int8 *iplookup;
+    char *iplookup;
     #endif
 #endif
     char               def_instr_name[256];

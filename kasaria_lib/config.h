@@ -62,7 +62,7 @@
 
 /* In percent. */
 // #define DEFAULT_AMPLIFICATION 	70
-#define DEFAULT_AMPLIFICATION 50
+#define DEFAULT_AMPLIFICATION 70
 
 /* Default sampling rate, default polyphony, and maximum polyphony.
    All but the last can be overridden from the command line. */
@@ -111,13 +111,13 @@
    Defining LOOKUP_HACK should save ~20% of CPU on an Intel machine.
    LOOKUP_INTERPOLATION might give another ~5% */
 
-// #define LOOKUP_HACK
-// #define LOOKUP_INTERPOLATION
+//#define LOOKUP_HACK
+#define LOOKUP_INTERPOLATION
 
 /* Make envelopes twice as fast. Saves ~20% CPU time (notes decay
    faster) and sounds more like a GUS. There is now a command line
    option to toggle this as well. */
-// #define FAST_DECAY
+#define FAST_DECAY
 
 /* How many bits to use for the fractional part of sample positions.
    This affects tonal accuracy. The entire position counter must fit
@@ -222,7 +222,7 @@
 
 #ifdef LOOKUP_HACK
 typedef char  sample_t;
-typedef uint8 final_volume_t;
+typedef unsigned char final_volume_t;
     #define FINAL_VOLUME(v) (~_l2u[v])
     #define MIXUP_SHIFT     5
     #define MAX_AMP_VALUE   4095

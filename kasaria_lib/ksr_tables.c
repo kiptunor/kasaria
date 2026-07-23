@@ -31,6 +31,24 @@ tables were lifted from the rsynth-2.0 sources.  The README says:
 
 */
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <stdlib.h>
+
+
+
 #include "ksr_internal.h"
 
 // clang-format off
@@ -313,7 +331,7 @@ f64 sine(int x)
 
 #ifdef LOOKUP_HACK
 // clang-format off
-int16 _u2l[] =
+short _u2l[] =
 {
     -32256, -31228, -30200, -29172, -28143, -27115, -26087, -25059,
     -24031, -23002, -21974, -20946, -19918, -18889, -17861, -16833,
@@ -356,20 +374,20 @@ void init_tables(Kasaria *ksr)
 {
 #ifdef LOOKUP_HACK
     int i,j,v;
-    ksr->mixup=(int32 *)safe_malloc(1<<(7+8+2)); // Give your cache a workout!
+    ksr->mixup=(long *)safe_malloc(1<<(7+8+2)); // Give your cache a workout!
 
     for(i=0; i<128; i++)
     {
         v=_u2l[255-i];
         for(j=-128; j<128; j++)
         {
-            ksr->mixup[ ((i & 0x7F)<<8) | (j & 0xFF)] =
-            (v * j) << MIXUP_SHIFT;
+            //ksr->mixup[ ((i & 0x7F)<<8) | (j & 0xFF)] = (v * j) << MIXUP_SHIFT; // Works only on 32 bit
+            ksr->mixup=(long *)safe_malloc((1<<(7+8+1))*sizeof(long));
         }
     }
 
 #ifdef LOOKUP_INTERPOLATION
-    ksr->iplookup=(int8 *)safe_malloc(1<<(9+5));
+    ksr->iplookup=(char *)safe_malloc(1<<(9+5));
     for(i=-256; i<256; i++)
         for(j=0; j<32; j++)
             ksr->iplookup[((i<<5) & 0x3FE0) | j] = (i * j)>>5;

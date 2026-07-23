@@ -481,11 +481,11 @@ static Instrument *load_instrument(Kasaria *ksr, char *name, int percussion, int
 #ifdef LOOKUP_HACK
         // Squash the 16-bit data into 8 bits.
         {
-            uint8 *gulp, *ulp;
-            int16 *swp;
+            u_char *gulp, *ulp;
+            short *swp;
             int    l = sp->data_length >> FRACTION_BITS;
-            gulp = ulp = (uint8 *)safe_malloc(l + 1);
-            swp        = (int16 *)sp->data;
+            gulp = ulp = (u_char *)safe_malloc(l + 1);
+            swp        = (short *)sp->data;
             while(l--)
                 *ulp++ = (*swp++ >> 8) & 0xFF;
             free(sp->data);

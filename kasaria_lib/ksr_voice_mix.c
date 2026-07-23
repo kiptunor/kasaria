@@ -182,7 +182,7 @@ static int update_signal(Kasaria *ksr, int v)
 }
 
 #ifdef LOOKUP_HACK
-    #define MIXATION(a) *lp++ += ksr->mixup[(a << 8) | (uint8)s];
+    #define MIXATION(a) *lp++ += ksr->mixup[(a << 8) | (u_char)s];
 #else
     #define MIXATION(a) *lp++ += (a) * s;
 #endif
