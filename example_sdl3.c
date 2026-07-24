@@ -88,7 +88,8 @@ int main(int argc, char **argv)
         SDL_Quit();
         return 1;
     }
-    ksr_preload_instruments(synth); // Preload instruments when needed (This avoids disk I/O on note events)
+    //ksr_preload_instruments(synth); // Preload instruments when needed (This avoids disk I/O on note events)
+    ksr_preload_soundfont_instruments(synth);
 
     printf("Duration: %d ms\n", ksr_get_duration(synth)); // As a small info you can get the time it took to load a midi file
 

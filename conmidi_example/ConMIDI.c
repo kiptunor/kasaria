@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     title = concat("ConMIDI ", version);
     prgTitle = title;
     // Check for sound engines
-    Sound_Setup();
+    //Sound_Setup();
     // Start sound selection if more than one sound engine is available otherwise auto load only available engine
 
     Sound_Init();

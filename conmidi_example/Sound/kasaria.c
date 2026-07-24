@@ -33,10 +33,10 @@ static ma_device device;
 
 void audio_callback(ma_device *dev, void *out, const void *in, ma_uint32 frames)
 {
-    pthread_mutex_lock(&ksr_mutex);
+    //pthread_mutex_lock(&ksr_mutex);
     //printf("Audio callback\n");
     ksr_render_float(ksr_inst, out, frames);  // stereo
-    pthread_mutex_unlock(&ksr_mutex);
+    //pthread_mutex_unlock(&ksr_mutex);
 }
 
 
@@ -67,15 +67,15 @@ void KSR_CreateAudioThread()
 
 void KSR_SendDirectData(unsigned long int data)
 {
-    pthread_mutex_lock(&ksr_mutex);
-        printf("MIDI event: 0x%lX\n", data);
-        ksr_write_midi_packed(ksr_inst, data);
-        pthread_mutex_unlock(&ksr_mutex);
+    //pthread_mutex_lock(&ksr_mutex);
+    //printf("MIDI event: 0x%lX\n", data);
+    ksr_write_midi_packed(ksr_inst, data);
+    //pthread_mutex_unlock(&ksr_mutex);
 }
 
 int KSR_SendDirectDataLong(MIDIHDR *mid_ev, unsigned int size)
 {
-    pthread_mutex_lock(&ksr_mutex);
+    //pthread_mutex_lock(&ksr_mutex);
     unsigned char *data = mid_ev->lpData;
     unsigned int len = mid_ev->dwBytesRecorded;
     unsigned int i;
@@ -95,7 +95,7 @@ int KSR_SendDirectDataLong(MIDIHDR *mid_ev, unsigned int size)
         ksr_write_midi(ksr_inst, pad[0], pad[1], pad[2]);
     }
 
-    pthread_mutex_unlock(&ksr_mutex);
+    //pthread_mutex_unlock(&ksr_mutex);
     return 0;
 }
 
@@ -120,12 +120,13 @@ void KSR_Init()
     printf("KSR_Init\n");
 
     ksr_set_amplification(ksr_inst, 100);
-        ksr_set_sample_rate(ksr_inst, SAMPLE_RATE);
-        ksr_set_control_rate(ksr_inst, SAMPLE_RATE / 4);
-        ksr_set_max_voices(ksr_inst, 5000);
-        ksr_set_antialiasing(ksr_inst, 1);
-        ksr_load_soundfont_file(ksr_inst, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2");
-        ksr_force_instrument_load(ksr_inst);
+    ksr_set_sample_rate(ksr_inst, SAMPLE_RATE);
+    ksr_set_control_rate(ksr_inst, SAMPLE_RATE / 4);
+    ksr_set_max_voices(ksr_inst, 5000);
+    ksr_set_antialiasing(ksr_inst, 1);
+    ksr_load_soundfont_file(ksr_inst, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2");
+    ksr_force_instrument_load(ksr_inst);
+    ksr_preload_soundfont_instruments(ksr_inst);
 }
 
 void KSR_Shutdown()

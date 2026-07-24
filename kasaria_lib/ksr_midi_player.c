@@ -281,6 +281,37 @@ void ksr_preload_instruments(Kasaria *ksr)
     }
 }
 
+int ksr_preload_soundfont_instruments(Kasaria *ksr)
+{
+    int i, b, p;
+
+    if(!ksr->sf_loaded)
+        return 0;
+
+    for(i = 0; i < ksr->sf_info.npresets; i++)
+    {
+        b = ksr->sf_info.preset[i].bank;
+        p = ksr->sf_info.preset[i].preset;
+
+        if(b < 0 || b > 127 || p < 0 || p > 127)
+            continue;
+
+        if(!ksr->tonebank[b])
+        {
+            ksr->tonebank[b] = (ToneBank *)safe_malloc(sizeof(ToneBank));
+            memset(ksr->tonebank[b], 0, sizeof(ToneBank));
+        }
+
+        if(!ksr->tonebank[b]->tone[p].instrument)
+        {
+            ksr->tonebank[b]->tone[p].instrument =
+                load_soundfont_instrument(ksr, &ksr->sf_info, ksr->sf_filename, b, p);
+        }
+    }
+
+    return 1;
+}
+
 static void start_note(Kasaria *ksr, MidiEvent *e, int i)
 {
     Instrument *ip;
