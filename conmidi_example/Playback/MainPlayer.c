@@ -1,10 +1,24 @@
 #include <stdio.h>
+
+#include <pthread.h>
 #define __USE_XOPEN_EXTENDED
 #include <unistd.h>
+#include <termios.h>
+
+
 #include "MIDIClock.h"
 #include "../Sound/Sound.h"
 #include "../MIDI/DataStorage.h"
 #include "../Essentials.h"
+#include "../Sound/kasaria.h"
+
+
+
+
+
+
+struct termios oldt, newt;
+
 unsigned long long sentEvents = 0;
 unsigned long totalFrames = 0;
 double startTime1 = 0;
@@ -24,6 +38,25 @@ unsigned char *eventType;
 byte *prevEvent;
 unsigned long long *trackPosition;
 
+
+
+void* HandleTermKeys(void* arg)
+{
+    while(1)
+    {
+        char ch;
+        if(read(STDIN_FILENO, &ch, 1) == 1)
+        {
+            //printf("Pressed key: %c\n", ch);
+            if(ch == 'q')
+            {
+                KSR_Shutdown();
+                exit(0);
+            }
+        }
+    }
+}
+
 char *AddCommas(const char *num)
 {
     int len = strlen(num);
@@ -34,13 +67,13 @@ char *AddCommas(const char *num)
     int i = len - 1;
     int j = len2 - 1;
     int k = 0;
-    while (i >= 0)
+    while(i >= 0)
     {
         newnum[j] = num[i];
         i--;
         j--;
         k++;
-        if (k == 3 && i >= 0)
+        if(k == 3 && i >= 0)
         {
             newnum[j] = ',';
             j--;
@@ -53,21 +86,18 @@ char *AddCommas(const char *num)
 void StartTimeCheck()
 {
     double tempT = getTimeMsec();
-    if ((long)(tempT - startTime1) >= 16)
+    if((long)(tempT - startTime1) >= 16)
     {
-        if ((long)(tempT - startTime2) >= 1000)
+        if((long)(tempT - startTime2) >= 1000)
         {
             float calc = (float)1 / ((float)(tempT - startTime2) / (float)1000 / (float)totalFrames);
-            if (showFpsOutsideLag)
+            if(showFpsOutsideLag)
             {
-                printf("\nFPS: %.10g", calc);
-            }
-            else
-            {
-                if (calc < 60)
-                {
-                    printf("\nLag detected, FPS: %.10g", calc);
-                }
+                if(calc < 60)
+                    printf("\n\x1b[31mLag detected! FPS: %.10g\x1b[0m", calc);
+                else
+                    printf("\nFPS: %.10g", calc);
+                
             }
             // printf("\nFPS: %.10g",);
             totalFrames = 0;
@@ -91,7 +121,7 @@ void StartTimeCheck()
 
 void metaPrint(byte meta)
 {
-    switch (meta)
+    switch(meta)
     {
     case 0x01:
         printf("\nText: ");
@@ -123,11 +153,10 @@ int (*UnprepareLongData)(MIDIHDR *a, unsigned int b);
 unsigned char *tR;
 void handleSysEx(unsigned char *trackBounds)
 {
-    while (tR < trackBounds)
-    {
-        if (*(tR++) == 0xF7)
+    while(tR < trackBounds)
+        if(*(tR++) == 0xF7)
             break;
-    }
+    
 }
 unsigned long int *cEv;
 BOOL *pStep;
@@ -135,16 +164,27 @@ unsigned char *eT;
 byte *prevE;
 void StartPlayback()
 {
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);  // disable buffering and echo
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    char ch;
+
+    pthread_t kb_handler;
+    pthread_create(&kb_handler, NULL, HandleTermKeys, NULL);
+
+    
     double clock = 0;
     BOOL trackFinished[realTracks];
     unsigned int aliveTracks = realTracks;
     currEvent = (unsigned long int *)calloc(realTracks, sizeof(unsigned long int));
     trackReadOffset = (unsigned long int *)calloc(realTracks, sizeof(unsigned long int));
     trackReads = (unsigned char **)malloc(realTracks * sizeof(unsigned char *));
-    for (int i = 0; i < realTracks; i++)
-    {
+    
+    for(int i = 0; i < realTracks; i++)
         trackReads[i] = &tracks[i][0];
-    }
+    
     trackPosition = (unsigned long long *)calloc(realTracks, sizeof(unsigned long long));
     prevEvent = (byte *)calloc(realTracks, sizeof(byte));
     prepareStep = (BOOL *)calloc(realTracks, sizeof(BOOL));
@@ -159,11 +199,18 @@ void StartPlayback()
     SendDirectLongData = SendDirectLongDataPtr;
     PrepareLongData = PrepareLongDataPtr;
     UnprepareLongData = UnprepareLongDataPtr;
-    while (TRUE)
+    while(TRUE)
     {
+        //if(read(STDIN_FILENO, &ch, 1) == 1) {
+            //    // ch has the keypress
+            //    printf("Pressed Key: %c\n", ch);
+            //}
+            //else
+            //    continue;
+        
         StartTimeCheck();
         double newClock = Clock_GetTick();
-        if (newClock != clock)
+        if(newClock != clock)
         {
             totalFrames++;
             clock = newClock;
@@ -174,22 +221,22 @@ void StartPlayback()
             prevE = &prevEvent[0];
             unsigned long long clockUInt64 = (unsigned long long)clock;
             BOOL *tF1 = &trackFinished[0];
-            for (unsigned int i = 0; i < realTracks; i++)
+            for(unsigned int i = 0; i < realTracks; i++)
             {
-                if (*tF1 == FALSE)
+                if(*tF1 == FALSE)
                 {
                     tR = trackReads[i];
                     unsigned long long tempPos = *tPos;
                     BOOL doloop = TRUE;
                     BOOL doloop2 = TRUE;
                     BOOL tempstep = *pStep;
-                    while (doloop2)
+                    while(doloop2)
                     {
-                        if (tempstep)
+                        if(tempstep)
                         {
                             unsigned long int event = 0;
                             byte tempPrev = *prevE;
-                            while (doloop)
+                            while(doloop)
                             {
                                 unsigned long int val = 0;
                                 byte temp = 0;
@@ -197,19 +244,19 @@ void StartPlayback()
                                 {
                                     temp = *(tR++);
                                     val = (val << 7) | (temp & 0x7F);
-                                } while (temp & 0x80);
+                                }while(temp & 0x80);
                                 tempPos += val;
                                 byte readEvent = *(tR++);
-                                if (readEvent < 0x80)
+                                if(readEvent < 0x80)
                                 {
                                     tR--;
                                     readEvent = tempPrev;
                                 }
                                 tempPrev = readEvent;
                                 byte trackEvent = readEvent & 0b11110000;
-                                if (trackEvent == 0x90 || trackEvent == 0x80 || trackEvent == 0xA0 || trackEvent == 0xE0 || trackEvent == 0xB0)
+                                if(trackEvent == 0x90 || trackEvent == 0x80 || trackEvent == 0xA0 || trackEvent == 0xE0 || trackEvent == 0xB0)
                                 {
-                                    if (tempPos <= clockUInt64)
+                                    if(tempPos <= clockUInt64)
                                     {
                                         SendDirectData((readEvent | (*(tR++) << 8) | (*(tR++) << 16)));
                                         sentEvents++;
@@ -223,9 +270,9 @@ void StartPlayback()
                                         break;
                                     }
                                 }
-                                else if (trackEvent == 0xC0 || trackEvent == 0xD0)
+                                else if(trackEvent == 0xC0 || trackEvent == 0xD0)
                                 {
-                                    if (tempPos <= clockUInt64)
+                                    if(tempPos <= clockUInt64)
                                     {
                                         SendDirectData((readEvent | (*(tR++) << 8)));
                                         sentEvents++;
@@ -239,7 +286,7 @@ void StartPlayback()
                                         break;
                                     }
                                 }
-                                else if (readEvent == 0)
+                                else if(readEvent == 0)
                                 {
                                     doloop = FALSE;
                                     break;
@@ -250,10 +297,8 @@ void StartPlayback()
                                     {
                                     case 0b11110000:
                                     {
-                                        if (tempPos <= clockUInt64)
-                                        {
+                                        if(tempPos <= clockUInt64)
                                             handleSysEx(tR);
-                                        }
                                         else
                                         {
                                             doloop = FALSE;
@@ -272,18 +317,18 @@ void StartPlayback()
                                     case 0xFF:
                                     {
                                         readEvent = *(tR++);
-                                        switch (readEvent)
+                                        switch(readEvent)
                                         {
                                         case 0x51:
                                         {
                                             tR++;
                                             event = 0;
-                                            for (int i = 0; i != 3; i++)
+                                            for(int i = 0; i != 3; i++)
                                             {
                                                 byte temp = *(tR++);
                                                 event = (event << 8) | temp;
                                             }
-                                            if (tempPos <= clockUInt64)
+                                            if(tempPos <= clockUInt64)
                                             {
                                                 Clock_SubmitBPM(tempPos, event);
                                             }
@@ -311,9 +356,9 @@ void StartPlayback()
                                         case 0x07:
                                         case 0x08:
                                         {
-                                            if (metaAllow[readEvent])
+                                            if(metaAllow[readEvent])
                                             {
-                                                if (tempPos <= clockUInt64)
+                                                if(tempPos <= clockUInt64)
                                                 {
                                                     unsigned long int len = 0;
                                                     byte temp = 0;
@@ -321,18 +366,16 @@ void StartPlayback()
                                                     {
                                                         temp = *(tR++);
                                                         len = (len << 7) | (temp & 0x7F);
-                                                    } while (temp & 0x80);
+                                                    }while(temp & 0x80);
                                                     unsigned char *range = malloc(len + 1);
-                                                    for (int i = 0; i < len; i++)
-                                                    {
+                                                    for(int i = 0; i < len; i++)
                                                         *(range + i) = *(tR++);
-                                                    }
+                                                    
                                                     range[len] = '\0';
                                                     metaPrint(readEvent);
-                                                    for (int i = 0; i < len; i++)
-                                                    {
+                                                    for(int i = 0; i < len; i++)
                                                         printf("%c", range[i]);
-                                                    }
+                                                    
                                                     free(range);
                                                 }
                                                 else
@@ -351,7 +394,7 @@ void StartPlayback()
                                                 {
                                                     temp = *(tR++);
                                                     len = (len << 7) | (temp & 0x7F);
-                                                } while (temp & 0x80);
+                                                }while(temp & 0x80);
                                                 tR += len;
                                             }
                                             break;
@@ -367,17 +410,16 @@ void StartPlayback()
                             }
                             *tPos = tempPos;
                             *prevE = tempPrev;
-                            if (!doloop)
-                            {
+                            if(!doloop)
                                 break;
-                            }
+                            
                         }
                         else
                         {
-                            if (tempPos <= clockUInt64)
+                            if(tempPos <= clockUInt64)
                             {
                                 tempstep = TRUE;
-                                switch (*eT)
+                                switch(*eT)
                                 {
                                 case 0:
                                     SendDirectData(*cEv);
@@ -396,18 +438,16 @@ void StartPlayback()
                                     {
                                         temp = *(tR++);
                                         len = (len << 7) | (temp & 0x7F);
-                                    } while (temp & 0x80);
+                                    }while(temp & 0x80);
                                     unsigned char *range = malloc(len + 1);
-                                    for (int i = 0; i < len; i++)
-                                    {
+                                    for(int i = 0; i < len; i++)
                                         *(range + i) = *(tR++);
-                                    }
+                                    
                                     range[len] = '\0';
                                     metaPrint(metaType);
-                                    for (int i = 0; i < len; i++)
-                                    {
+                                    for(int i = 0; i < len; i++)
                                         printf("%c", range[i]);
-                                    }
+                                    
                                     free(range);
                                     break;
                                 }
@@ -419,9 +459,8 @@ void StartPlayback()
                                 }
                             }
                             else
-                            {
                                 break;
-                            }
+                            
                         }
                     }
                     *pStep = tempstep;
@@ -437,13 +476,15 @@ void StartPlayback()
             }
         }
         else
-        {
             usleep(1000);
-        }
-        if (aliveTracks == 0)
+        
+        if(aliveTracks == 0)
         {
             printf("\nRan out of events, playback finished.");
-            sleep(3);
+            // Restore when done
+            tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+            sleep(1);
+            KSR_Shutdown();
             exit(0);
         }
     }

@@ -1,4 +1,3 @@
-#include <pthread.h>
 #include <stdio.h>
 
 #include "Sound.h"
@@ -8,7 +7,7 @@
 #include "../../miniaudio.h"
 
 
-static pthread_mutex_t ksr_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 
 
@@ -33,10 +32,8 @@ static ma_device device;
 
 void audio_callback(ma_device *dev, void *out, const void *in, ma_uint32 frames)
 {
-    //pthread_mutex_lock(&ksr_mutex);
-    //printf("Audio callback\n");
-    ksr_render_float(ksr_inst, out, frames);  // stereo
-    //pthread_mutex_unlock(&ksr_mutex);
+    // This is how easy it can get
+    ksr_render_float(ksr_inst, out, frames);
 }
 
 
@@ -46,36 +43,32 @@ void KSR_CreateAudioThread()
 {
     printf("Audio thread created\n");
         
-        ma_device_config config = ma_device_config_init(ma_device_type_playback);
-        config.playback.format    = ma_format_f32;
-        config.playback.channels  = 2;
-        config.sampleRate         = SAMPLE_RATE;
-        config.dataCallback       = audio_callback;
-        config.periodSizeInFrames = BUFFER_FRAMES;
+    ma_device_config config = ma_device_config_init(ma_device_type_playback);
+    config.playback.format    = ma_format_f32;
+    config.playback.channels  = 2;
+    config.sampleRate         = SAMPLE_RATE;
+    config.dataCallback       = audio_callback;
+    config.periodSizeInFrames = BUFFER_FRAMES;
     
-        if(ma_device_init(NULL, &config, &device) != MA_SUCCESS)
-        {
-            printf("Failed to open playback device.\n");
-            ksr_shutdown(ksr_inst);
-            return;
-        }
+    if(ma_device_init(NULL, &config, &device) != MA_SUCCESS)
+    {
+        printf("Failed to open playback device.\n");
+        ksr_shutdown(ksr_inst);
+        return;
+    }
     
-        ma_device_start(&device);
-        printf("Audio device started\n");
+    ma_device_start(&device);
+    printf("Audio device started\n");
 }
 
 
 void KSR_SendDirectData(unsigned long int data)
 {
-    //pthread_mutex_lock(&ksr_mutex);
-    //printf("MIDI event: 0x%lX\n", data);
     ksr_write_midi_packed(ksr_inst, data);
-    //pthread_mutex_unlock(&ksr_mutex);
 }
 
 int KSR_SendDirectDataLong(MIDIHDR *mid_ev, unsigned int size)
 {
-    //pthread_mutex_lock(&ksr_mutex);
     unsigned char *data = mid_ev->lpData;
     unsigned int len = mid_ev->dwBytesRecorded;
     unsigned int i;
@@ -84,7 +77,7 @@ int KSR_SendDirectDataLong(MIDIHDR *mid_ev, unsigned int size)
         ksr_write_midi(ksr_inst, data[i], data[i+1], data[i+2]);
     
     
-    if (i < len)
+    if(i < len)
     {
         unsigned char pad[3] = {0xF7, 0xF7, 0xF7};
         unsigned int remaining = len - i;
@@ -94,8 +87,6 @@ int KSR_SendDirectDataLong(MIDIHDR *mid_ev, unsigned int size)
         
         ksr_write_midi(ksr_inst, pad[0], pad[1], pad[2]);
     }
-
-    //pthread_mutex_unlock(&ksr_mutex);
     return 0;
 }
 

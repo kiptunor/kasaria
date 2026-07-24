@@ -1,4 +1,12 @@
 #include "BufferFile.h"
+
+
+
+
+
+
+
+
 typedef int BOOL;
 
 FILE *midi;
@@ -13,6 +21,12 @@ typedef int BOOL;
 #define FALSE 0
 #define TRUE 1
 BOOL fileEnded = FALSE;
+
+
+
+
+
+
 
 void BufferInit(char path[], unsigned long seek, unsigned int bufSizee)
 {
@@ -53,16 +67,14 @@ void Seek(long long pos)
 int Pushback = -1;
 void Skip(unsigned long int count)
 {
-    for (unsigned long int i = 0; i < count; i++)
+    for(unsigned long int i = 0; i < count; i++)
     {
-        if (Pushback != -1)
-        {
+        if(Pushback != -1)
             Pushback = -1;
-        }
-        if (bufPos >= bufRange)
-        {
+        
+        if(bufPos >= bufRange)
             UpdateBuffer();
-        }
+        
         bufPos++;
     }
 }
@@ -75,38 +87,33 @@ void ResizeBuffer(unsigned long int size)
 }
 unsigned char ReadFast()
 {
-    if (bufPos >= bufRange)
-    {
+    if(bufPos >= bufRange)
         UpdateBuffer();
-    }
+    
     bufPos++;
     return buffer[bufPos - 1];
 }
 unsigned char *ReadRange(int size)
 {
-    if (bufPos + size >= bufRange)
-    {
+    if(bufPos + size >= bufRange)
         UpdateBuffer();
-    }
+    
     unsigned char *range = malloc(size + 1);
-    for (int i = 0; i < size; i++)
-    {
+    for(int i = 0; i < size; i++)
         *(range + i) = *(buffer + bufPos + i);
-    }
+    
     range[size] = '\0';
     bufPos += size;
     return range;
 }
 void Copy(unsigned char *target, unsigned long int offset, unsigned long int size)
 {
-    if (bufPos + size >= bufRange)
-    {
+    if(bufPos + size >= bufRange)
         UpdateBuffer();
-    }
-    if (size == 0)
-    {
+    
+    if(size == 0)
         size = bufSize;
-    }
+    
     memcpy(target + offset, buffer + bufPos, size);
     bufPos += size;
 }

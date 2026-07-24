@@ -3,8 +3,23 @@
 #include <sys/time.h>
 #include "Essentials.h"
 
+
+
+
+
+
+
+
+
+
 char ntdllAvailable = 0;
 signed long long start = 0;
+
+
+
+
+
+
 
 int intInput(char *text)
 {
@@ -36,19 +51,16 @@ char *concat(const char *str1, const char *str2)
     size_t len1 = strlen(str1);
     size_t len2 = strlen(str2);
     char *result = malloc(len1 + len2 + 1);
-    if (result == NULL)
-    {
+    if(result == NULL)
         return NULL;
-    }
+    
     strcpy(result, str1);
     strcat(result, str2);
     return result;
 }
 double getTimeMsec(void)
 {
-
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        return (((long long)tv.tv_sec) * 1000) + (tv.tv_usec / 1000);
-    
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (((long long)tv.tv_sec) * 1000) + (tv.tv_usec / 1000);
 }

@@ -5,51 +5,68 @@
 #include "MIDI/LoadMIDI.h"
 #include "Playback/MIDIClock.h"
 #include "Playback/MainPlayer.h"
+
+
+
+
+
+
 #define FALSE 0
 #define TRUE 1
 
 FILE *file_ptr;
 char version[] = "v2.0.9";
 char *title;
+
+
+
+
+
+
+
+
+
+
+
 int main(int argc, char *argv[])
 {
-    if (argc > 1)
+    if(argc > 1)
     {
         int mode = 0;
-        for (int i = 1; i < argc; i++)
+        for(int i = 1; i < argc; i++)
         {
-            switch (mode)
+            switch(mode)
             {
             case 0:
             {
                 char *read = argv[i];
-                if (strcmp(read, "-cp") == 0)
+                if(strcmp(read, "-cp") == 0)
                 {
                     mode = 1;
                 }
-                else if (strcmp(read, "-hm") == 0 || strcmp(read, "-hidemeta") == 0)
+                else if(strcmp(read, "-hm") == 0 || strcmp(read, "-hidemeta") == 0)
                 {
-                    for (int a = 0; a < 10; a++)
+                    for(int a = 0; a < 10; a++)
                     {
                         metaAllow[a] = FALSE;
                     }
                 }
-                else if (strcmp(read, "-sm") == 0 || strcmp(read, "-showmeta") == 0)
+                else if(strcmp(read, "-sm") == 0 || strcmp(read, "-showmeta") == 0)
                 {
-                    for (int a = 0; a < 10; a++)
+                    for(int a = 0; a < 10; a++)
                     {
                         metaAllow[a] = TRUE;
                     }
                 }
-                else if (strcmp(read, "-em") == 0)
+                else if(strcmp(read, "-em") == 0)
                 {
                     mode = 2;
                 }
-                else if (strcmp(read, "-dm") == 0)
+                else if(strcmp(read, "-dm") == 0)
                 {
                     mode = 3;
                 }
-                else if (strcmp(read, "-fps") == 0)
+                else if(strcmp(read, "-fps") == 0)
                 {
                     showFpsOutsideLag = TRUE;
                 }
@@ -66,7 +83,7 @@ int main(int argc, char *argv[])
             {
                 unsigned int b;
                 sscanf(argv[i], "%u", &b);
-                if (b > 9)
+                if(b > 9)
                 {
                     printf("\nCommand line error, -em parameter above 9 (set to %u)", b);
                     exit(0);
@@ -79,7 +96,7 @@ int main(int argc, char *argv[])
             {
                 unsigned int b;
                 sscanf(argv[i], "%u", &b);
-                if (b > 9)
+                if(b > 9)
                 {
                     printf("\nCommand line error, -dm parameter above 9 (set to %u)", b);
                     exit(0);

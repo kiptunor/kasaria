@@ -3,6 +3,13 @@
 #include "Sound.h"
 #include "kasaria.h"
 
+
+
+
+
+
+
+
 void (*SendDirectDataPtr)(unsigned long int a);
 int (*SendDirectLongDataPtr)(MIDIHDR *a, unsigned int b);
 int (*PrepareLongDataPtr)(MIDIHDR *a, unsigned int b);
@@ -10,17 +17,20 @@ int (*UnprepareLongDataPtr)(MIDIHDR *a, unsigned int b);
 
 int usable = 0;
 
+
+
+
+
+
 void Sound_Setup()
 {
-    if (KDMAPI_Setup() == 1)
+    if(KDMAPI_Setup() == 1)
     {
         usable = 1;
         printf("KDMAPI available\n");
     }
-    else
-    {
+    else    
         printf("No sound system available\n");
-    }
 }
 
 int Sound_Init()

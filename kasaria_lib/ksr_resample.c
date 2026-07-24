@@ -88,6 +88,13 @@ static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
     // Precalc how many times we should go through the loop.
     // NOTE: Assumes that incr > 0 and that ofs <= le
 
+    if(incr == 0)
+    {
+        vp->status = VOICE_FREE;
+        *countptr = 0;
+        return ksr->resample_buffer;
+    }
+
     i = (le - ofs) / incr + 1;
 
     if(i > count)

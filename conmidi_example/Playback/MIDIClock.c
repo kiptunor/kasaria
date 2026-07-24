@@ -32,9 +32,9 @@ double Clock_GetPassedTime()
 double Clock_GetElapsed()
 {
     double temp = ((double)Clock_GetPassedTime());
-    if (throttle == TRUE)
+    if(throttle == TRUE)
     {
-        if (temp - last > (double)0.0166666)
+        if(temp - last > (double)0.0166666)
         {
             timeLost += (temp - last) - (double)0.0166666;
             last = temp;

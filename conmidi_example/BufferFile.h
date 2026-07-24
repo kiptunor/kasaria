@@ -5,12 +5,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+
+
+
+
+
+
 extern FILE* midi;
 extern char* buffer;
 
 extern unsigned long int bufSize;
 extern long long bufPos;
 extern long long filePos;
+
+
+
+
+
+
+
 
 void BufferInit(char path[], unsigned long seek, unsigned int bufSizee);
 
