@@ -86,6 +86,9 @@ Kasaria *ksr_init(void)
 
     default_compressor_settings(ksr);
 
+    ksr->low_vel_treshold  = 0;
+    ksr->high_vel_treshold = 32;
+
     // This might be temporary
     if(!ksr->tonebank[0])
     {
@@ -341,6 +344,15 @@ void ksr_set_quiet_channel(Kasaria *ksr, int channel, bool enable)
         ksr->quietchannels |= (1 << channel);
     else
         ksr->quietchannels &= ~(1 << channel);
+}
+
+void ksr_set_note_velocity_skipping(Kasaria *ksr, uint8_t low_vel, uint8_t high_vel)
+{
+    if(!ksr)
+        return;
+    
+    ksr->low_vel_treshold = low_vel;
+    ksr->high_vel_treshold = high_vel;
 }
 
 int ksr_force_instrument_load(Kasaria *ksr)
@@ -791,7 +803,7 @@ void ksr_preload_instruments(Kasaria *ksr)
             if(!ISDRUMCHANNEL(ksr, ch))
             {
                 int bank = ksr->channel[ch].bank;
-                int prog = e[i].a;
+                int prog = e[i].key;
                 // trigger load if not already loaded
                 if(ksr->tonebank[bank] && ksr->tonebank[bank]->tone[prog].name && !ksr->tonebank[bank]->tone[prog].instrument)
                 {

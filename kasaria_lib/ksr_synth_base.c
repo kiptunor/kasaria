@@ -222,16 +222,16 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         if(!ksr->drumset[ksr->channel[e->channel].bank] && !ksr->drumset[0])
             return; // No drumset? Then we can't play.
 
-        if(!(ip = ksr->drumset[ksr->channel[e->channel].bank]->tone[e->a].instrument))
+        if(!(ip = ksr->drumset[ksr->channel[e->channel].bank]->tone[e->key].instrument))
         {
-            if(!(ip = ksr->drumset[0]->tone[e->a].instrument))
+            if(!(ip = ksr->drumset[0]->tone[e->key].instrument))
                 return; // No instrument? Then we can't play.
         }
 
         if(ip->sample->note_to_use) // Do we have a fixed pitch?
             ksr->voice[i].orig_frequency = freq_table[(int)(ip->sample->note_to_use)];
         else
-            ksr->voice[i].orig_frequency = freq_table[e->a & 0x7F];
+            ksr->voice[i].orig_frequency = freq_table[e->key & 0x7F];
 
         // drums are supposed to have only one sample
         ksr->voice[i].sample = ip->sample;
@@ -255,17 +255,17 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         if(ip->sample->note_to_use) // Fixed-pitch instrument?
             ksr->voice[i].orig_frequency = freq_table[(int)(ip->sample->note_to_use)];
         else
-            ksr->voice[i].orig_frequency = freq_table[e->a & 0x7F];
+            ksr->voice[i].orig_frequency = freq_table[e->key & 0x7F];
         select_sample(ksr, i, ip);
     }
 
     channel_voice_add(ksr, e->channel, i);
     ksr->voice[i].status                            = VOICE_ON;
     ksr->voice[i].channel                           = e->channel;
-    ksr->voice[i].note                              = e->a;
-    ksr->voice[i].velocity                          = e->b;
-    ksr->voice_by_channel_note[e->channel][e->a][0] = &ksr->voice[i];
-    ksr->voice_by_channel_note[e->channel][e->a][1] = NULL;
+    ksr->voice[i].note                              = e->key;
+    ksr->voice[i].velocity                          = e->vel;
+    ksr->voice_by_channel_note[e->channel][e->key][0] = &ksr->voice[i];
+    ksr->voice_by_channel_note[e->channel][e->key][1] = NULL;
     ksr->voice[i].sample_offset                     = 0;
     ksr->voice[i].sample_increment                  = 0; // make sure it isn't negative
 
@@ -323,10 +323,10 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                     channel_voice_add(ksr, e->channel, stereo_v);
                     ksr->voice[stereo_v].status                     = VOICE_ON;
                     ksr->voice[stereo_v].channel                    = e->channel;
-                    ksr->voice[stereo_v].note                       = e->a;
-                    ksr->voice[stereo_v].velocity                   = e->b;
+                    ksr->voice[stereo_v].note                       = e->key;
+                    ksr->voice[stereo_v].velocity                   = e->vel;
                     // ksr->voice_by_channel_note[e->channel][e->a] = &ksr->voice[stereo_v];
-                    ksr->voice_by_channel_note[e->channel][e->a][1] = &ksr->voice[stereo_v];
+                    ksr->voice_by_channel_note[e->channel][e->key][1] = &ksr->voice[stereo_v];
                     ksr->voice[stereo_v].sample                     = candidate;
                     ksr->voice[stereo_v].sample_offset              = 0;
                     ksr->voice[stereo_v].sample_increment           = 0;
@@ -386,12 +386,16 @@ void note_on(Kasaria *ksr, MidiEvent *e)
     int  i = ksr->voices, lowest = -1;
     long lv = 0x7FFFFFFF, v;
 
+    // Skip notes below the low velocity threshold or above the high velocity threshold (Sligtly faster ? idfk)
+    if(e->vel >= ksr->low_vel_treshold && e->vel <= ksr->high_vel_treshold)
+        return;
+
     while(i--)
     {
         if(ksr->voice[i].status == VOICE_FREE)
             lowest = i; // Can't get a lower volume than silence
 
-        else if(ksr->voice[i].channel == e->channel && (ksr->voice[i].note == e->a || ksr->channel[ksr->voice[i].channel].mono))
+        else if(ksr->voice[i].channel == e->channel && (ksr->voice[i].note == e->key || ksr->channel[ksr->voice[i].channel].mono))
             kill_note(ksr, i);
     }
 
@@ -469,8 +473,8 @@ void note_off(Kasaria *ksr, MidiEvent *e)
     int k;
     for(k = 0; k < 2; k++)
     {
-        Voice *v = ksr->voice_by_channel_note[e->channel][e->a][k];
-        if(v && v->status == VOICE_ON && v->channel == e->channel && v->note == e->a)
+        Voice *v = ksr->voice_by_channel_note[e->channel][e->key][k];
+        if(v && v->status == VOICE_ON && v->channel == e->channel && v->note == e->key)
         {
             if(ksr->channel[e->channel].sustain)
                 v->status = VOICE_SUSTAINED;
@@ -478,8 +482,8 @@ void note_off(Kasaria *ksr, MidiEvent *e)
                 finish_note(ksr, (int)(v - ksr->voice));
         }
     }
-    ksr->voice_by_channel_note[e->channel][e->a][0] = NULL;
-    ksr->voice_by_channel_note[e->channel][e->a][1] = NULL;
+    ksr->voice_by_channel_note[e->channel][e->key][0] = NULL;
+    ksr->voice_by_channel_note[e->channel][e->key][1] = NULL;
 }
 
 // Process the All Notes Off event
@@ -522,9 +526,9 @@ void adjust_pressure(Kasaria *ksr, MidiEvent *e)
 {
     int i = ksr->voices;
     while(i--)
-        if(ksr->voice[i].status == VOICE_ON && ksr->voice[i].channel == e->channel && ksr->voice[i].note == e->a)
+        if(ksr->voice[i].status == VOICE_ON && ksr->voice[i].channel == e->channel && ksr->voice[i].note == e->key)
         {
-            ksr->voice[i].velocity = e->b;
+            ksr->voice[i].velocity = e->vel;
             recompute_amp(ksr, i);
             apply_envelope_to_amp(ksr, i);
             return;

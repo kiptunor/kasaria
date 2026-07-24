@@ -263,8 +263,8 @@ typedef struct
     long   time;
     u_char channel;
     u_char type;
-    u_char b;
-    u_char a;
+    u_char vel;
+    u_char key;
 } MidiEvent;
 
 typedef struct
@@ -418,6 +418,8 @@ struct Kasaria
     long           cut_notes;
     bool           adjust_panning_immediately;
     int            voices;
+    u8             low_vel_treshold;
+    u8             high_vel_treshold;
     u_char         rpn_msb[16];
     u_char         rpn_lsb[16];
     MidiEvent     *event_list;

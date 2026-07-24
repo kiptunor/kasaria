@@ -26,6 +26,7 @@
 #define TIMID_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 
 
@@ -102,12 +103,13 @@ KSR_API void ksr_set_mono(Kasaria *ksr, bool value);                 // Renders 
 KSR_API void ksr_set_fast_decay(Kasaria *ksr, bool value);
 KSR_API void ksr_set_antialiasing(Kasaria *ksr, bool value);
 KSR_API void ksr_set_pre_resample(Kasaria *ksr, bool value);
-// KSR_API void ksr_set_dynamic_instrument_load(Kasaria *ksr, int value);  // Unused
-KSR_API void ksr_set_sample_rate(Kasaria *ksr, int rate);                  // The sample rate is clamped between MIN_OUTPUT_RATE and MAX_OUTPUT_RATE
-KSR_API void ksr_set_control_rate(Kasaria *ksr, int rate);                 // The control rate is clamped between current sample rate / MAX_CONTROL_RATIO and current sample rate
-KSR_API void ksr_set_default_program(Kasaria *ksr, int program);           // Sets the default MIDI program, takes effect on next MIDI reset
+// KSR_API void ksr_set_dynamic_instrument_load(Kasaria *ksr, int value);   // Unused
+KSR_API void ksr_set_sample_rate(Kasaria *ksr, int rate);                   // The sample rate is clamped between MIN_OUTPUT_RATE and MAX_OUTPUT_RATE
+KSR_API void ksr_set_control_rate(Kasaria *ksr, int rate);                  // The control rate is clamped between current sample rate / MAX_CONTROL_RATIO and current sample rate
+KSR_API void ksr_set_default_program(Kasaria *ksr, int program);            // Sets the default MIDI program, takes effect on next MIDI reset
 KSR_API void ksr_set_drum_channel(Kasaria *ksr, int channel, bool enable);
 KSR_API void ksr_set_quiet_channel(Kasaria *ksr, int channel, bool enable);
+KSR_API void ksr_set_note_velocity_skipping(Kasaria *ksr, uint8_t low_vel, uint8_t high_vel);
 
 
 // --------------------------- Parameters Reading API ---------------------------

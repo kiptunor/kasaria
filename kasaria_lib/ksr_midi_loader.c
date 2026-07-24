@@ -200,8 +200,8 @@ static int dumpstring(Kasaria *ksr, long len, char *label)
     newev->event.time    = at; \
     newev->event.type    = t; \
     newev->event.channel = ch; \
-    newev->event.a       = pa; \
-    newev->event.b       = pb; \
+    newev->event.key     = pa; \
+    newev->event.vel     = pb; \
     newev->next          = 0; \
     return newev;
 // clang-format on
@@ -541,10 +541,10 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
             case ME_PROGRAM:
                 if(ISDRUMCHANNEL(ksr, meep->event.channel))
                 {
-                    if(ksr->drumset[meep->event.a]) // Is this a defined drumset?
-                        new_value = meep->event.a;
+                    if(ksr->drumset[meep->event.key]) // Is this a defined drumset?
+                        new_value = meep->event.key;
                     else
-                        new_value = meep->event.a = 0;
+                        new_value = meep->event.key = 0;
 
                     if(current_set[meep->event.channel] != new_value)
                         current_set[meep->event.channel] = new_value;
@@ -553,7 +553,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
                 }
                 else
                 {
-                    new_value = meep->event.a;
+                    new_value = meep->event.key;
                     if((current_program[meep->event.channel] != SPECIAL_PROGRAM) && (current_program[meep->event.channel] != new_value))
                         current_program[meep->event.channel] = new_value;
                     else
@@ -567,8 +567,8 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
                 if(ISDRUMCHANNEL(ksr, meep->event.channel) && ksr->drumset[current_set[meep->event.channel]])
                 {
                     // Mark this instrument to be loaded
-                    if(!(ksr->drumset[current_set[meep->event.channel]]->tone[meep->event.a].instrument))
-                        ksr->drumset[current_set[meep->event.channel]]->tone[meep->event.a].instrument = MAGIC_LOAD_INSTRUMENT;
+                    if(!(ksr->drumset[current_set[meep->event.channel]]->tone[meep->event.key].instrument))
+                        ksr->drumset[current_set[meep->event.channel]]->tone[meep->event.key].instrument = MAGIC_LOAD_INSTRUMENT;
                 }
                 else if(ksr->tonebank[current_bank[meep->event.channel]])
                 {
@@ -586,10 +586,10 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
                     skip_this_event = 1;
                     break;
                 }
-                if(ksr->tonebank[meep->event.a]) // Is this a defined tone bank?
-                    new_value = meep->event.a;
+                if(ksr->tonebank[meep->event.key]) // Is this a defined tone bank?
+                    new_value = meep->event.key;
                 else
-                    new_value = meep->event.a = 0;
+                    new_value = meep->event.key = 0;
 
                 if(current_bank[meep->event.channel] != new_value)
                     current_bank[meep->event.channel] = new_value;
@@ -615,7 +615,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
 
         if(meep->event.type == ME_TEMPO)
         {
-            tempo = meep->event.channel + meep->event.b * 256 + meep->event.a * 65536;
+            tempo = meep->event.channel + meep->event.vel * 256 + meep->event.key * 65536;
             compute_sample_increment(ksr, tempo, divisions);
         }
         if(!skip_this_event)

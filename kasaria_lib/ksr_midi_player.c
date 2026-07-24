@@ -68,37 +68,37 @@ static void seek_forward(Kasaria *ksr, long until_time)
             // All notes stay off. Just handle the parameter changes.
 
         case ME_PITCH_SENS:
-            ksr->channel[ksr->current_event->channel].pitchsens   = ksr->current_event->a;
+            ksr->channel[ksr->current_event->channel].pitchsens   = ksr->current_event->key;
             ksr->channel[ksr->current_event->channel].pitchfactor = 0;
             break;
 
         case ME_PITCHWHEEL:
-            ksr->channel[ksr->current_event->channel].pitchbend   = ksr->current_event->a + ksr->current_event->b * 128;
+            ksr->channel[ksr->current_event->channel].pitchbend   = ksr->current_event->key + ksr->current_event->vel * 128;
             ksr->channel[ksr->current_event->channel].pitchfactor = 0;
             break;
 
         case ME_MAINVOLUME:
-            ksr->channel[ksr->current_event->channel].volume = ksr->current_event->a;
+            ksr->channel[ksr->current_event->channel].volume = ksr->current_event->key;
             break;
 
         case ME_PAN:
-            ksr->channel[ksr->current_event->channel].panning = ksr->current_event->a;
+            ksr->channel[ksr->current_event->channel].panning = ksr->current_event->key;
             break;
 
         case ME_EXPRESSION:
-            ksr->channel[ksr->current_event->channel].expression = ksr->current_event->a;
+            ksr->channel[ksr->current_event->channel].expression = ksr->current_event->key;
             break;
 
         case ME_PROGRAM:
             if(ISDRUMCHANNEL(ksr, ksr->current_event->channel))
                 // Change drum set
-                ksr->channel[ksr->current_event->channel].bank = ksr->current_event->a;
+                ksr->channel[ksr->current_event->channel].bank = ksr->current_event->key;
             else
-                ksr->channel[ksr->current_event->channel].program = ksr->current_event->a;
+                ksr->channel[ksr->current_event->channel].program = ksr->current_event->key;
             break;
 
         case ME_SUSTAIN:
-            ksr->channel[ksr->current_event->channel].sustain = ksr->current_event->a;
+            ksr->channel[ksr->current_event->channel].sustain = ksr->current_event->key;
             break;
 
         case ME_RESET_CONTROLLERS:
@@ -115,7 +115,7 @@ static void seek_forward(Kasaria *ksr, long until_time)
 
         case ME_TONE_BANK:
             if(!ISDRUMCHANNEL(ksr, ksr->current_event->channel))
-                ksr->channel[ksr->current_event->channel].bank = ksr->current_event->a;
+                ksr->channel[ksr->current_event->channel].bank = ksr->current_event->key;
             break;
 
         case ME_EOT:
@@ -156,7 +156,7 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
             // Effects affecting a single note
 
         case ME_NOTEON:
-            if(!(e->b)) // Velocity 0?
+            if(!(e->vel)) // Velocity 0?
                 note_off(ksr, e);
             else
                 note_on(ksr, e);
@@ -173,31 +173,31 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
             // Effects affecting a single channel
 
         case ME_PITCH_SENS:
-            ksr->channel[e->channel].pitchsens   = e->a;
+            ksr->channel[e->channel].pitchsens   = e->key;
             ksr->channel[e->channel].pitchfactor = 0;
             break;
 
         case ME_PITCHWHEEL:
-            ksr->channel[e->channel].pitchbend   = e->a + e->b * 128;
+            ksr->channel[e->channel].pitchbend   = e->key + e->vel * 128;
             ksr->channel[e->channel].pitchfactor = 0;
             // Adjust pitch for notes already playing
             adjust_pitchbend(ksr, e->channel);
             break;
 
         case ME_MAINVOLUME:
-            ksr->channel[e->channel].volume = e->a;
+            ksr->channel[e->channel].volume = e->key;
             adjust_volume(ksr, e->channel);
             break;
 
         case ME_PAN:
-            ksr->channel[e->channel].panning = e->a;
+            ksr->channel[e->channel].panning = e->key;
             if(ksr->adjust_panning_immediately)
                 adjust_panning(ksr, e->channel);
 
             break;
 
         case ME_EXPRESSION:
-            ksr->channel[e->channel].expression = e->a;
+            ksr->channel[e->channel].expression = e->key;
             adjust_volume(ksr, e->channel);
             break;
 
@@ -205,17 +205,17 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
             if(ISDRUMCHANNEL(ksr, e->channel))
             {
                 // Change drum set
-                if(ksr->drumset[e->a])
-                    ksr->channel[e->channel].bank = e->a;
+                if(ksr->drumset[e->key])
+                    ksr->channel[e->channel].bank = e->key;
             }
             else
-                ksr->channel[e->channel].program = e->a;
+                ksr->channel[e->channel].program = e->key;
 
             break;
 
         case ME_SUSTAIN:
-            ksr->channel[e->channel].sustain = e->a;
-            if(!e->a)
+            ksr->channel[e->channel].sustain = e->key;
+            if(!e->key)
                 drop_sustain(ksr, e->channel);
 
             break;
@@ -245,8 +245,8 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
         case ME_TONE_BANK:
             if(!ISDRUMCHANNEL(ksr, e->channel))
             {
-                if(ksr->tonebank[e->a])
-                    ksr->channel[e->channel].bank = e->a;
+                if(ksr->tonebank[e->key])
+                    ksr->channel[e->channel].bank = e->key;
             }
             break;
         }
@@ -337,8 +337,8 @@ void ksr_channel_note_on(Kasaria *ksr, u_char channel, u_char note, u_char veloc
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_NOTEON;
-    ev.a       = note & 0x7f;
-    ev.b       = velocity & 0x7f;
+    ev.key     = note & 0x7f;
+    ev.vel     = velocity & 0x7f;
     play_midi(ksr, &ev);
 }
 
@@ -351,7 +351,7 @@ void ksr_channel_note_off(Kasaria *ksr, u_char channel, u_char note)
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_NOTEOFF;
-    ev.a       = note & 0x7f;
+    ev.key     = note & 0x7f;
     play_midi(ksr, &ev);
 }
 
@@ -364,8 +364,8 @@ void ksr_channel_key_pressure(Kasaria *ksr, u_char channel, u_char note, u_char 
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_KEYPRESSURE;
-    ev.a       = note & 0x7f;
-    ev.b       = velocity & 0x7f;
+    ev.key     = note & 0x7f;
+    ev.vel     = velocity & 0x7f;
     play_midi(ksr, &ev);
 }
 
@@ -378,7 +378,7 @@ void ksr_channel_set_volume(Kasaria *ksr, u_char channel, u_char volume)
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_MAINVOLUME;
-    ev.a       = volume & 0x7f;
+    ev.key     = volume & 0x7f;
     play_midi(ksr, &ev);
 }
 
@@ -391,7 +391,7 @@ void ksr_channel_set_pan(Kasaria *ksr, u_char channel, u_char pan)
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_PAN;
-    ev.a       = pan & 0x7f;
+    ev.key     = pan & 0x7f;
     play_midi(ksr, &ev);
 }
 
@@ -404,7 +404,7 @@ void ksr_channel_set_expression(Kasaria *ksr, u_char channel, u_char expression)
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_EXPRESSION;
-    ev.a       = expression & 0x7f;
+    ev.key     = expression & 0x7f;
     play_midi(ksr, &ev);
 }
 
@@ -417,7 +417,7 @@ void ksr_channel_set_sustain(Kasaria *ksr, u_char channel, u_char sustain)
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_SUSTAIN;
-    ev.a       = sustain & 0x7f;
+    ev.key     = sustain & 0x7f;
     play_midi(ksr, &ev);
 }
 
@@ -430,8 +430,8 @@ void ksr_channel_set_pitch_wheel(Kasaria *ksr, u_char channel, u_short pitch)
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_PITCHWHEEL;
-    ev.a       = pitch & 0x7f;
-    ev.b       = (pitch >> 7) & 0x7f;
+    ev.key     = pitch & 0x7f;
+    ev.vel     = (pitch >> 7) & 0x7f;
     play_midi(ksr, &ev);
 }
 
@@ -444,7 +444,7 @@ void ksr_channel_set_pitch_range(Kasaria *ksr, u_char channel, u_char range)
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_PITCH_SENS;
-    ev.a       = range & 0x7f;
+    ev.key     = range & 0x7f;
     play_midi(ksr, &ev);
 }
 
@@ -457,7 +457,7 @@ void ksr_channel_set_program(Kasaria *ksr, u_char channel, u_char program)
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_PROGRAM;
-    ev.a       = program & 0x7f;
+    ev.key     = program & 0x7f;
     play_midi(ksr, &ev);
 }
 
@@ -470,7 +470,7 @@ void ksr_channel_set_bank(Kasaria *ksr, u_char channel, u_char bank)
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_TONE_BANK;
-    ev.a       = bank & 0x7f;
+    ev.key     = bank & 0x7f;
     play_midi(ksr, &ev);
 }
 
