@@ -477,7 +477,7 @@ void       *safe_malloc(size_t count);
 void        antialiasing(Sample *sp, long output_rate);
 int         load_missing_instruments(Kasaria *tm);
 void        free_instruments(Kasaria *tm);
-int         set_default_instrument(Kasaria *tm, char *name);
+//int         set_default_instrument(Kasaria *tm, char *name);
 void        free_default_instrument(Kasaria *tm);
 void        mix_voice(Kasaria *tm, f32 *buf, int v, long c);
 int         recompute_envelope(Kasaria *tm, int v);

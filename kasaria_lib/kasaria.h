@@ -158,8 +158,8 @@ KSR_API int  ksr_force_instrument_load(Kasaria *ksr);               // Force all
 KSR_API void ksr_preload_instruments(Kasaria *ksr);                 // Preload all instruments
 
 // Manage default instruments. These functions take effect on the next MIDI reset
-KSR_API int  ksr_set_default_instrument(Kasaria *ksr, char *filename);
-KSR_API void ksr_free_default_instrument(Kasaria *ksr);
+// KSR_API int  ksr_set_default_instrument(Kasaria *ksr, char *filename);
+// KSR_API void ksr_free_default_instrument(Kasaria *ksr);
 
 // --------------------------- MIDI Player API ---------------------------
 KSR_API int  ksr_load_midi_file(Kasaria *ksr, char *filename); // MIDI file player, only supports standard MIDI files

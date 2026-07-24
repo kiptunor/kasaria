@@ -375,6 +375,7 @@ int ksr_force_instrument_load(Kasaria *ksr)
     return 0;
 }
 
+/*
 int ksr_set_default_instrument(Kasaria *ksr, char *filename)
 {
     if(!ksr || !filename)
@@ -386,6 +387,7 @@ int ksr_set_default_instrument(Kasaria *ksr, char *filename)
 
     return 0;
 }
+*/
 
 void ksr_free_default_instrument(Kasaria *ksr)
 {
