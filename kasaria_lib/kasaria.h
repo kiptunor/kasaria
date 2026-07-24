@@ -208,6 +208,7 @@ KSR_API void ksr_render_short(Kasaria *ksr, short *buffer, long count);
 KSR_API void ksr_render_24(Kasaria *ksr, int24 *buffer, long count);
 KSR_API void ksr_render_long(Kasaria *ksr, long *buffer, long count);
 KSR_API void ksr_render_float(Kasaria *ksr, float *buffer, long count);
+KSR_API void ksr_render_f64(Kasaria *ksr, double *buffer, long count);
 KSR_API void ksr_render_double(Kasaria *ksr, double *buffer, long count);
 KSR_API void ksr_render_ulaw(Kasaria *ksr, unsigned char *buffer, long count);
 

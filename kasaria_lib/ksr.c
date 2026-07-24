@@ -746,6 +746,63 @@ int ksr_samples2millis(Kasaria *ksr, long samples)
     return (int)((f64)samples * 1000 / ksr->play_mode.rate);
 }
 
+// TODO: Find a better place for this
+int ksr_preload_soundfont_instruments(Kasaria *ksr)
+{
+    int i, b, p;
+
+    if(!ksr->sf_loaded)
+        return 0;
+
+    for(i = 0; i < ksr->sf_info.npresets; i++)
+    {
+        b = ksr->sf_info.preset[i].bank;
+        p = ksr->sf_info.preset[i].preset;
+
+        if(b < 0 || b > 127 || p < 0 || p > 127)
+            continue;
+
+        if(!ksr->tonebank[b])
+        {
+            ksr->tonebank[b] = (ToneBank *)safe_malloc(sizeof(ToneBank));
+            memset(ksr->tonebank[b], 0, sizeof(ToneBank));
+        }
+
+        if(!ksr->tonebank[b]->tone[p].instrument)
+        {
+            ksr->tonebank[b]->tone[p].instrument =
+                load_soundfont_instrument(ksr, &ksr->sf_info, ksr->sf_filename, b, p);
+        }
+    }
+
+    return 1;
+}
+
+// And this one too (It may prob dissapear)
+void ksr_preload_instruments(Kasaria *ksr)
+{
+    MidiEvent *e = ksr->event_list;
+    int        i;
+    for(i = 0; i < ksr->events_midi; i++)
+    {
+        if(e[i].type == ME_PROGRAM)
+        {
+            int ch = e[i].channel;
+            if(!ISDRUMCHANNEL(ksr, ch))
+            {
+                int bank = ksr->channel[ch].bank;
+                int prog = e[i].a;
+                // trigger load if not already loaded
+                if(ksr->tonebank[bank] && ksr->tonebank[bank]->tone[prog].name && !ksr->tonebank[bank]->tone[prog].instrument)
+                {
+                    ksr->tonebank[bank]->tone[prog].instrument = MAGIC_LOAD_INSTRUMENT;
+                    load_missing_instruments(ksr);
+                }
+            }
+        }
+    }
+}
+
 void ksr_shutdown(Kasaria *ksr)
 {
     if(!ksr)

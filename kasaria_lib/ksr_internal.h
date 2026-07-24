@@ -490,11 +490,40 @@ void        free_tables(Kasaria *tm);
 Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filename, int bank, int program);
 int         read_config_file(Kasaria *tm, char *name);
 void        reset_midi(Kasaria *ksr);
-void        adjust_amplification(Kasaria *ksr, int amplification);
-void        reset_voices(Kasaria *ksr);
-void        drop_sustain(Kasaria *ksr, int c);
-void        all_notes_off(Kasaria *ksr, int c);
-void        reset_controllers(Kasaria *ksr, int c);
+
 void        audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
 
+
+// ------------- Synth Base functions -------------
+void channel_voice_add(Kasaria *ksr, int ch, int vi);
+void channel_voice_remove(Kasaria *ksr, int ch, int vi);
+void select_sample(Kasaria *ksr, int v, Instrument *ip);
+void recompute_freq(Kasaria *ksr, int v);
+void recompute_amp(Kasaria *ksr, int v);
+void start_note(Kasaria *ksr, MidiEvent *e, int i);
+void kill_note(Kasaria *ksr, int i);
+void note_on(Kasaria *ksr, MidiEvent *e);
+void finish_note(Kasaria *ksr, int i);
+void note_off(Kasaria *ksr, MidiEvent *e);
+void all_notes_off(Kasaria *ksr, int c);
+void all_sounds_off(Kasaria *ksr, int c);
+void adjust_pressure(Kasaria *ksr, MidiEvent *e);
+void adjust_panning(Kasaria *ksr, int c);
+void adjust_pitchbend(Kasaria *ksr, int c);
+void adjust_volume(Kasaria *ksr, int c);
+void do_compute_data(Kasaria *ksr, long count);
+void adjust_amplification(Kasaria *ksr, int amplification);
+void reset_voices(Kasaria *ksr);
+void drop_sustain(Kasaria *ksr, int c);
+void reset_controllers(Kasaria *ksr, int c);
+
+
+// ------------- Output functions -------------
+//void ksr_render_char(Kasaria *ksr, u_char *buffer, long count);
+//void ksr_render_short(Kasaria *ksr, short *buffer, long count);
+//void ksr_render_24(Kasaria *ksr, int24 *buffer, long count);
+//void ksr_render_long(Kasaria *ksr, long *buffer, long count);
+//void ksr_render_float(Kasaria *ksr, f32 *buffer, long count);
+//void ksr_render_f64(Kasaria *ksr, f64 *buffer, long count);
+//void ksr_render_ulaw(Kasaria *ksr, u_char *buffer, long count);
 #endif
