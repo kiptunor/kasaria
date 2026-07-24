@@ -29,13 +29,19 @@ target("example-sdl3")
         "example_sdl3.c"
     )
 
-target("example-conmidi")
+target("example-simple")
     set_kind("binary")
-    --set_languages("c11")
     add_links("m")
     add_files(
         "kasaria_lib/*.c",
-        "conmidi_example/*.c",
-        "conmidi_example/Synth/*.c",
-        "conmidi_example/MIDI/*.c"
+        "simple-example.c"
+    )
+
+target("example-conmidi")
+    set_kind("binary")
+    --set_languages("c11")
+    add_links("m", "pthread")
+    add_files(
+        "kasaria_lib/*.c",
+        "conmidi_example/**.c"
     )

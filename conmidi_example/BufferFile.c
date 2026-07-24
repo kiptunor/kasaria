@@ -1,16 +1,5 @@
 #include "BufferFile.h"
-
-#if defined(_WIN32)
-    #define fseeko _fseeki64
-    #define ftello _ftelli64
-#elif !defined(_LARGEFILE_SOURCE)
-    #define _LARGEFILE_SOURCE
-    #define _FILE_OFFSET_BITS 64
-#endif
-
 typedef int BOOL;
-#define FALSE 0
-#define TRUE 1
 
 FILE *midi;
 char *buffer;
