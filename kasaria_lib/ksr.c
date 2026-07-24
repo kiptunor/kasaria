@@ -32,6 +32,7 @@ playmidi.c -- random stuff in need of rearrangement
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 
 
@@ -73,7 +74,7 @@ Kasaria *ksr_init(void)
 #else
     ksr->fast_decay = 0;
 #endif
-    ksr->dynamic_loading                           = 0;
+    // ksr->dynamic_loading                           = 0;
     ksr->voices                                    = DEFAULT_VOICES;
     ksr->play_mode.rate                            = DEFAULT_RATE;
     ksr->play_mode.encoding                        = 0;
@@ -84,6 +85,18 @@ Kasaria *ksr_init(void)
     ksr->adjust_panning_immediately                = 1;
 
     default_compressor_settings(ksr);
+
+    // This might be temporary
+    if(!ksr->tonebank[0])
+    {
+        ksr->tonebank[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
+        memset(ksr->tonebank[0], 0, sizeof(ToneBank));
+    }
+    if(!ksr->drumset[0])
+    {
+        ksr->drumset[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
+        memset(ksr->drumset[0], 0, sizeof(ToneBank));
+    }
 
     init_tables(ksr);
     reset_midi(ksr);
@@ -105,7 +118,7 @@ void ksr_restore_defaults(Kasaria *ksr)
 #else
     ksr->fast_decay = 0;
 #endif
-    ksr->dynamic_loading            = 0;
+    // ksr->dynamic_loading            = 0;
     ksr->voices                     = DEFAULT_VOICES;
     ksr->play_mode.rate             = DEFAULT_RATE;
     ksr->play_mode.encoding         = 0;
@@ -116,19 +129,8 @@ void ksr_restore_defaults(Kasaria *ksr)
     ksr->adjust_panning_immediately = 1;
 
     default_compressor_settings(ksr);
-    
-    adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
-    ksr_reload_config(ksr);
-}
 
-int ksr_load_config(Kasaria *ksr, char *filename)
-{
-    char  directory[256];
-    char *separator;
-    if(!ksr || !filename)
-        return 0;
-
-    ksr_unload_config(ksr);
+    // This might be temporary
     if(!ksr->tonebank[0])
     {
         ksr->tonebank[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
@@ -139,53 +141,8 @@ int ksr_load_config(Kasaria *ksr, char *filename)
         ksr->drumset[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
         memset(ksr->drumset[0], 0, sizeof(ToneBank));
     }
-    memset(directory, 0, sizeof(directory));
-    strncpy(directory, filename, 255);
-    directory[255] = '\0';
-    separator      = strrchr(directory, PATH_SEP);
-    if(separator)
-        *separator = '\0';
-
-    add_to_pathlist(ksr, directory);
-    if(read_config_file(ksr, filename) == 0)
-    {
-        if(*ksr->def_instr_name)
-            set_default_instrument(ksr, ksr->def_instr_name);
-
-        if(!ksr->dynamic_loading)
-            return ksr_force_instrument_load(ksr);
-        else
-            return 1;
-    }
-    return 0;
-}
-
-void ksr_unload_config(Kasaria *ksr)
-{
-    if(!ksr)
-        return;
-
-    reset_voices(ksr);
-    free_instruments(ksr);
-    free_pathlist(ksr);
-    memset(ksr->def_instr_name, 0, sizeof(ksr->def_instr_name));
-    memset(ksr->last_config, 0, sizeof(ksr->last_config));
-}
-
-int ksr_reload_config(Kasaria *ksr)
-{
-    if(!ksr)
-        return 0;
-
-    if(strlen(ksr->last_config))
-    {
-        char temp[1024];
-        memset(temp, 0, sizeof(temp));
-        strncpy(temp, ksr->last_config, 1023);
-        temp[1023] = '\0';
-        return ksr_load_config(ksr, temp);
-    }
-    return 0;
+    
+    adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
 }
 
 int ksr_load_soundfont_file(Kasaria *ksr, char *filename)
@@ -250,7 +207,7 @@ void ksr_set_max_voices(Kasaria *ksr, int voices)
     ksr->voices = voices;
 }
 
-void ksr_set_immediate_panning(Kasaria *ksr, int value)
+void ksr_set_immediate_panning(Kasaria *ksr, bool value)
 {
     if(!ksr)
         return;
@@ -259,7 +216,7 @@ void ksr_set_immediate_panning(Kasaria *ksr, int value)
     ksr->adjust_panning_immediately = value;
 }
 
-void ksr_set_mono(Kasaria *ksr, int value)
+void ksr_set_mono(Kasaria *ksr, bool value)
 {
     if(!ksr)
         return;
@@ -271,44 +228,31 @@ void ksr_set_mono(Kasaria *ksr, int value)
         ksr->play_mode.encoding &= ~PE_MONO;
 }
 
-void ksr_set_fast_decay(Kasaria *ksr, int value)
+void ksr_set_fast_decay(Kasaria *ksr, bool value)
 {
     if(!ksr)
         return;
 
     reset_voices(ksr);
     ksr->fast_decay = value;
-    ksr_reload_config(ksr);
 }
 
-void ksr_set_antialiasing(Kasaria *ksr, int value)
+void ksr_set_antialiasing(Kasaria *ksr, bool value)
 {
     if(!ksr)
         return;
 
     reset_voices(ksr);
     ksr->antialiasing_allowed = value;
-    ksr_reload_config(ksr);
 }
 
-void ksr_set_pre_resample(Kasaria *ksr, int value)
+void ksr_set_pre_resample(Kasaria *ksr, bool value)
 {
     if(!ksr)
         return;
 
     reset_voices(ksr);
     ksr->pre_resampling_allowed = value;
-    ksr_reload_config(ksr);
-}
-
-void ksr_set_dynamic_instrument_load(Kasaria *ksr, int value)
-{
-    if(!ksr)
-        return;
-
-    reset_voices(ksr);
-    ksr->dynamic_loading = value;
-    ksr_reload_config(ksr);
 }
 
 void ksr_set_sample_rate(Kasaria *ksr, int rate)
@@ -337,8 +281,6 @@ void ksr_set_sample_rate(Kasaria *ksr, int rate)
 
     else if(ksr->control_ratio < 1)
         ksr->control_ratio = 1;
-
-    ksr_reload_config(ksr);
 }
 
 void ksr_set_control_rate(Kasaria *ksr, int rate)
@@ -360,8 +302,6 @@ void ksr_set_control_rate(Kasaria *ksr, int rate)
 
     else if(ksr->control_ratio < 1)
         ksr->control_ratio = 1;
-
-    ksr_reload_config(ksr);
 }
 
 void ksr_set_default_program(Kasaria *ksr, int program)
@@ -372,7 +312,7 @@ void ksr_set_default_program(Kasaria *ksr, int program)
     ksr->default_program = program & 0x7f;
 }
 
-void ksr_set_drum_channel(Kasaria *ksr, int channel, int enable)
+void ksr_set_drum_channel(Kasaria *ksr, int channel, bool enable)
 {
     if(!ksr)
         return;
@@ -385,7 +325,7 @@ void ksr_set_drum_channel(Kasaria *ksr, int channel, int enable)
         ksr->drumchannels &= ~(1 << channel);
 }
 
-void ksr_set_quiet_channel(Kasaria *ksr, int channel, int enable)
+void ksr_set_quiet_channel(Kasaria *ksr, int channel, bool enable)
 {
     if(!ksr)
         return;
@@ -454,19 +394,6 @@ void ksr_free_default_instrument(Kasaria *ksr)
 
     reset_voices(ksr);
     free_default_instrument(ksr);
-}
-
-int ksr_get_config_name(Kasaria *ksr, char *buffer, long count)
-{
-    int len;
-    if(!ksr)
-        return 0;
-
-    len = strlen(ksr->last_config);
-    if(buffer && len)
-        strncpy(buffer, ksr->last_config, count);
-
-    return len;
 }
 
 int ksr_get_amplification(Kasaria *ksr)
@@ -543,6 +470,7 @@ int ksr_get_pre_resample(Kasaria *ksr)
     return ksr->pre_resampling_allowed;
 }
 
+/*
 int ksr_get_dynamic_instrument_load(Kasaria *ksr)
 {
     if(!ksr)
@@ -550,6 +478,7 @@ int ksr_get_dynamic_instrument_load(Kasaria *ksr)
 
     return ksr->dynamic_loading;
 }
+*/
 
 int ksr_get_sample_rate(Kasaria *ksr)
 {
@@ -822,7 +751,6 @@ void ksr_shutdown(Kasaria *ksr)
 
     reset_midi(ksr);
     ksr_unload_midi(ksr);
-    ksr_unload_config(ksr);
     free_default_instrument(ksr);
     free_tables(ksr);
     memset(ksr, 0, sizeof(Kasaria));

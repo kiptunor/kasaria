@@ -7,13 +7,13 @@
 
 #include "kasaria_lib/kasaria.h"
 
-#define SAMPLE_RATE 48000
+#define SAMPLE_RATE   48000
 #define BUFFER_FRAMES 512
 
 static Kasaria *synth;
-static int song_finished = 0;
+static int      song_finished = 0;
 
-void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
+void            data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
     (void)pInput;
 
@@ -23,14 +23,14 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
         return;
     }
 
-    float interleaved[BUFFER_FRAMES * 2];
-    float *out = (float *)pOutput;
-    int remaining = frameCount;
+    float  raw_audio[BUFFER_FRAMES * 2];
+    float *out       = (float *)pOutput;
+    int    remaining = frameCount;
 
     while(remaining > 0)
     {
-        int chunk = remaining > BUFFER_FRAMES ? BUFFER_FRAMES : remaining;
-        int rendered = ksr_play_midi(synth, AUDIO_FLOAT, (uint8_t *)interleaved, chunk);
+        int chunk    = remaining > BUFFER_FRAMES ? BUFFER_FRAMES : remaining;
+        int rendered = ksr_play_midi(synth, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play MIDI in realtime and get the generated audio (as Raw PCM)
 
         if(!rendered)
         {
@@ -41,13 +41,13 @@ void data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uin
 
         for(int i = 0; i < chunk; i++)
         {
-            out[i * 2 + 0] = interleaved[i * 2 + 0];
-            out[i * 2 + 1] = interleaved[i * 2 + 1];
+            out[i * 2 + 0] = raw_audio[i * 2 + 0];
+            out[i * 2 + 1] = raw_audio[i * 2 + 1];
         }
-        out += chunk * 2;
+        out       += chunk * 2;
         remaining -= chunk;
 
-        //printf("Active voices: %d\n", timid_get_active_voices(synth));
+        // printf("Active voices: %d\n", timid_get_active_voices(synth));
     }
 }
 
@@ -69,22 +69,7 @@ int main(int argc, char **argv)
     ksr_set_sample_rate(synth, SAMPLE_RATE);
     ksr_set_max_voices(synth, 5000);
     ksr_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2");
-    ksr_set_antialiasing(synth, 5);
-
-    /* Try loading timidity.cfg from current dir or common locations */
-
-    
-    if(!ksr_load_config(synth, "timidity.cfg"))
-    {
-        if(!ksr_load_config(synth, "/etc/timidity.cfg"))
-        {
-            if(!ksr_load_config(synth, "/etc/timidity/timidity.cfg"))
-            {
-                printf("WARNING: No timidity.cfg found. Instruments may not load.\n");
-                printf("Place timidity.cfg with GUS patch paths next to the executable.\n");
-            }
-        }
-    }
+    ksr_set_antialiasing(synth, 1);
 
     printf("Loading midi\n");
     if(!ksr_load_midi_file(synth, argv[1]))
@@ -94,12 +79,13 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    //timid_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2");
-    //printf("Loaded soundfont\n");
+    // timid_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2");
+    // printf("Loaded soundfont\n");
 
     printf("Duration: %d ms\n", ksr_get_duration(synth));
-    //printf("Active voices: %d\n", timid_get_active_voices(synth));
+    // printf("Active voices: %d\n", timid_get_active_voices(synth));
 
+    // Configure the audio device
     ma_device_config config   = ma_device_config_init(ma_device_type_playback);
     config.playback.format    = ma_format_f32;
     config.playback.channels  = 2;
@@ -108,7 +94,8 @@ int main(int argc, char **argv)
     config.periodSizeInFrames = BUFFER_FRAMES;
 
     ma_device device;
-    
+
+    // Initialize and audio device
     if(ma_device_init(NULL, &config, &device) != MA_SUCCESS)
     {
         printf("Failed to open playback device.\n");
@@ -116,7 +103,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    ma_device_start(&device);
+    ma_device_start(&device); // This starts the audio callback
     printf("Playing... Press Enter to stop.\n");
     getchar();
 

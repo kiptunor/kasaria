@@ -40,11 +40,121 @@
 
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <math.h>
 
 #include "config.h"
 #include "kasaria.h"
 #include "ksr_sf2.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#ifndef PI
+    #define PI 3.14159265
+#endif
+
+#ifdef USE_LDEXP
+    #define FSCALE(a, b)    ldexp((double)(a), (b))
+    #define FSCALENEG(a, b) ldexp((double)(a), -(b))
+#else
+    #define FSCALE(a, b)    ((a) * (double)(1 << (b)))
+    #define FSCALENEG(a, b) ((a) * (1.0L / (double)(1 << (b))))
+#endif
+
+#define ISDRUMCHANNEL(tm, c)  ((tm->drumchannels & (1 << (c))))
+#define ISQUIETCHANNEL(tm, c) ((tm->quietchannels & (1 << (c))))
+#define MAGIC_LOAD_INSTRUMENT ((Instrument *)(-1))
+
+// Voice status options:
+#define VOICE_FREE            0
+#define VOICE_ON              1
+#define VOICE_SUSTAINED       2
+#define VOICE_OFF             3
+#define VOICE_DIE             4
+
+// Voice panned options:
+#define PANNED_MYSTERY        0
+#define PANNED_LEFT           1
+#define PANNED_RIGHT          2
+#define PANNED_CENTER         3
+
+
+// Noise modes for open_file
+#define OF_SILENT  0
+#define OF_NORMAL  1
+#define OF_VERBOSE 2
+
+// Order of the FIR filter = 20 should be enough !
+#define ORDER      20
+#define ORDER2     ORDER / 2
+
+// Midi events
+#define ME_NONE              0
+#define ME_NOTEON            1
+#define ME_NOTEOFF           2
+#define ME_KEYPRESSURE       3
+#define ME_MAINVOLUME        4
+#define ME_PAN               5
+#define ME_SUSTAIN           6
+#define ME_EXPRESSION        7
+#define ME_PITCHWHEEL        8
+#define ME_PROGRAM           9
+#define ME_MONO              10
+#define ME_PITCH_SENS        11
+#define ME_ALL_SOUNDS_OFF    12
+#define ME_RESET_CONTROLLERS 13
+#define ME_ALL_NOTES_OFF     14
+#define ME_TONE_BANK         15
+#define ME_POLY              16
+#define ME_TEMPO             17
+#define ME_EOT               99
+
+// Data format encoding bits
+#define PE_MONO         0x01 // versus stereo
+#define PE_SIGNED       0x02 // versus unsigned
+#define PE_16BIT        0x04 // versus 8-bit
+#define PE_ULAW         0x08 // versus linear
+#define PE_BYTESWAP     0x10 // versus the other way
+
+#define SINE_CYCLE_LENGTH 1024
+
+// Bits in modes:
+#define MODES_16BIT    (1 << 0)
+#define MODES_UNSIGNED (1 << 1)
+#define MODES_LOOPING  (1 << 2)
+#define MODES_PINGPONG (1 << 3)
+#define MODES_REVERSE  (1 << 4)
+#define MODES_SUSTAIN  (1 << 5)
+#define MODES_ENVELOPE (1 << 6)
+
+#define SPECIAL_PROGRAM -1
+
+// Causes the instrument's default panning to be used.
+#define NO_PANNING -1
+
+
+
+
+
+// Anything but PANNED_MYSTERY only uses the left volume
+
+
+
 
 
 typedef uint8_t        u8;
@@ -61,32 +171,48 @@ typedef unsigned long  u_long;
 typedef unsigned short u_short;
 typedef unsigned char  u_char;
 
+#ifdef LOOKUP_SINE
+f64 sine(int x);
+#else
+    #include <math.h>
+    #define sine(x) (sin((2 * PI / 1024.0) * (x)))
+#endif
+
+
+
+
+
+#ifdef LOOKUP_HACK
+extern short _u2l[];
+#endif
+
+extern long    freq_table[];
+extern f64     vol_table[];
+extern f64     bend_fine[];
+extern f64     bend_coarse[];
+extern u_char *_l2u;    // 13-bit PCM to 8-bit u-law
+extern u_char  _l2u_[]; // used in LOOKUP_HACK
+
+
 typedef struct
 {
     char *path;
     void *next;
 } PathList;
 
-// Noise modes for open_file
-#define OF_SILENT  0
-#define OF_NORMAL  1
-#define OF_VERBOSE 2
-
-// Order of the FIR filter = 20 should be enough !
-#define ORDER      20
-#define ORDER2     ORDER / 2
-
-#ifndef PI
-    #define PI 3.14159265
-#endif
-
-#ifdef USE_LDEXP
-    #define FSCALE(a, b)    ldexp((double)(a), (b))
-    #define FSCALENEG(a, b) ldexp((double)(a), -(b))
-#else
-    #define FSCALE(a, b)    ((a) * (double)(1 << (b)))
-    #define FSCALENEG(a, b) ((a) * (1.0L / (double)(1 << (b))))
-#endif
+typedef struct
+{
+    f32 envelope;
+    f32 gain;
+    f32 limiter_threshold;
+    f32 limiter_ratio;
+    f32 limiter_attack_coeff;
+    f32 limiter_release_coeff;
+    f32 limiter_makeup_gain;
+    f32 limiter_attack_ms;
+    f32 limiter_release_ms;
+    f32 limiter_sample_rate;
+} CompressorSettings;
 
 typedef struct
 {
@@ -113,15 +239,6 @@ typedef struct
     long      data_alloced;
 } Sample;
 
-// Bits in modes:
-#define MODES_16BIT    (1 << 0)
-#define MODES_UNSIGNED (1 << 1)
-#define MODES_LOOPING  (1 << 2)
-#define MODES_PINGPONG (1 << 3)
-#define MODES_REVERSE  (1 << 4)
-#define MODES_SUSTAIN  (1 << 5)
-#define MODES_ENVELOPE (1 << 6)
-
 typedef struct
 {
     int     samples;
@@ -135,29 +252,11 @@ typedef struct
     int         note, amp, pan, strip_loop, strip_envelope, strip_tail;
 } ToneBankElement;
 
-// A hack to delay instrument loading until after reading the entire MIDI file.
-#define MAGIC_LOAD_INSTRUMENT ((Instrument *)(-1))
-
 typedef struct
 {
     ToneBankElement tone[128];
 } ToneBank;
 
-#define SPECIAL_PROGRAM -1
-
-// Data format encoding bits
-
-#define PE_MONO         0x01 /* versus stereo */
-#define PE_SIGNED       0x02 /* versus unsigned */
-#define PE_16BIT        0x04 /* versus 8-bit */
-#define PE_ULAW         0x08 /* versus linear */
-#define PE_BYTESWAP     0x10 /* versus the other way */
-
-typedef struct
-{
-    long rate;
-    long encoding;
-} PlayMode;
 
 typedef struct
 {
@@ -168,26 +267,21 @@ typedef struct
     u_char a;
 } MidiEvent;
 
-// Midi events
-#define ME_NONE              0
-#define ME_NOTEON            1
-#define ME_NOTEOFF           2
-#define ME_KEYPRESSURE       3
-#define ME_MAINVOLUME        4
-#define ME_PAN               5
-#define ME_SUSTAIN           6
-#define ME_EXPRESSION        7
-#define ME_PITCHWHEEL        8
-#define ME_PROGRAM           9
-#define ME_MONO              10
-#define ME_PITCH_SENS        11
-#define ME_ALL_SOUNDS_OFF    12
-#define ME_RESET_CONTROLLERS 13
-#define ME_ALL_NOTES_OFF     14
-#define ME_TONE_BANK         15
-#define ME_POLY              16
-#define ME_TEMPO             17
-#define ME_EOT               99
+typedef struct
+{
+    MidiEvent event;
+    void     *next;
+} MidiEventList;
+
+
+
+typedef struct
+{
+    long rate;
+    long encoding;
+} PlayMode;
+
+
 
 typedef struct
 {
@@ -203,9 +297,6 @@ typedef struct
     // chorus, reverb... Coming soon to a 300-MHz, eight-way superscalar processor near you
     f64 pitchfactor; // precomputed pitch bend factor to save some fdiv's
 } Channel;
-
-// Causes the instrument's default panning to be used.
-#define NO_PANNING -1
 
 typedef struct
 {
@@ -264,30 +355,13 @@ typedef struct
     u16 overriding_root_key;
 } SoundFontEffects;
 
-
-typedef struct
-{
-    f32 envelope;
-    f32 gain;
-    f32 limiter_threshold;
-    f32 limiter_ratio;
-    f32 limiter_attack_coeff;
-    f32 limiter_release_coeff;
-    f32 limiter_makeup_gain;
-    f32 limiter_attack_ms;
-    f32 limiter_release_ms;
-    f32 limiter_sample_rate;
-} CompressorSettings;
-
 typedef struct
 {
     u_char           status;
     u_char           channel;
     u_char           note;
     u_char           velocity;
-
     Sample          *sample;
-
     long             orig_frequency;
     long             frequency;
     long             sample_offset;
@@ -301,10 +375,8 @@ typedef struct
     long             tremolo_phase_increment;
     long             vibrato_sweep;
     long             vibrato_sweep_position;
-
     final_volume_t   left_mix;
     final_volume_t   right_mix;
-
     f64              left_amp;
     f64              right_amp;
     f64              tremolo_volume;
@@ -319,47 +391,6 @@ typedef struct
     SoundFontEffects sf2_effects;
 } Voice;
 
-// Voice status options:
-#define VOICE_FREE            0
-#define VOICE_ON              1
-#define VOICE_SUSTAINED       2
-#define VOICE_OFF             3
-#define VOICE_DIE             4
-
-// Voice panned options:
-#define PANNED_MYSTERY        0
-#define PANNED_LEFT           1
-#define PANNED_RIGHT          2
-#define PANNED_CENTER         3
-// Anything but PANNED_MYSTERY only uses the left volume
-
-#define ISDRUMCHANNEL(tm, c)  ((tm->drumchannels & (1 << (c))))
-#define ISQUIETCHANNEL(tm, c) ((tm->quietchannels & (1 << (c))))
-
-typedef struct
-{
-    MidiEvent event;
-    void     *next;
-} MidiEventList;
-
-#ifdef LOOKUP_SINE
-f64 sine(int x);
-#else
-    #include <math.h>
-    #define sine(x) (sin((2 * PI / 1024.0) * (x)))
-#endif
-
-#define SINE_CYCLE_LENGTH 1024
-extern long    freq_table[];
-extern f64     vol_table[];
-extern f64     bend_fine[];
-extern f64     bend_coarse[];
-extern u_char *_l2u;    // 13-bit PCM to 8-bit u-law
-extern u_char  _l2u_[]; // used in LOOKUP_HACK
-#ifdef LOOKUP_HACK
-extern short _u2l[];
-#endif
-
 struct Kasaria
 {
     char           current_filename[1024];
@@ -368,12 +399,12 @@ struct Kasaria
     ToneBank      *drumset[128];
     Instrument    *default_instrument; // This is only used for tracks that don't specify a program
     int            default_program;    // This is a special instrument, used for all melodic programs
-    int            antialiasing_allowed;
-    int            pre_resampling_allowed;
-    int            fast_decay;
-    int            dynamic_loading;
+    bool           antialiasing_allowed;
+    bool           pre_resampling_allowed;
+    bool           fast_decay;
+    // int            dynamic_loading; // No longer it use
     PlayMode       play_mode;
-    f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; /* stereo samples */
+    f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
     f32           *buffer_pointer;
     Channel        channel[16];
     Voice          voice[MAX_VOICES];
@@ -385,7 +416,7 @@ struct Kasaria
     long           quietchannels;
     long           lost_notes;
     long           cut_notes;
-    int            adjust_panning_immediately;
+    bool           adjust_panning_immediately;
     int            voices;
     u_char         rpn_msb[16];
     u_char         rpn_lsb[16];
@@ -417,7 +448,6 @@ struct Kasaria
     #endif
 #endif
     char               def_instr_name[256];
-    char               last_config[1024];
     int                sf_loaded;
     SFInfo             sf_info;
     char               sf_filename[1024];
@@ -425,6 +455,18 @@ struct Kasaria
     int                channel_voice_count[16];
     int                channel_voice_list[16][MAX_VOICES * 2];
 };
+
+
+
+
+
+
+
+
+
+
+
+
 
 FILE       *open_file(Kasaria *tm, char *name, int decompress, int noise_mode);
 void        add_to_pathlist(Kasaria *tm, char *s);

@@ -30,7 +30,9 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
-
+/*
+    TODO: Split the basic synth function into another source file (ksr_synth_base.c)
+*/
 
 
 
