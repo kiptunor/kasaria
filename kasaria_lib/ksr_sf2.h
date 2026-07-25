@@ -1,5 +1,5 @@
 /*
-    TiMidity++ -- MIDI to WAVE converter and player
+    Kasaria -- A powerful and High efficiency MIDI Synth based on TiMidity
     Copyright (C) 1999-2002 Masanao Izumo <mo@goice.co.jp>
     Copyright (C) 1995 Tuukka Toivonen <tt@cgs.fi>
     Copyright (C) 2026 Kiptunor
@@ -60,8 +60,8 @@
 #include <stdint.h>
 
 
-#ifndef SFFILE_H_DEF
-    #define SFFILE_H_DEF
+#ifndef KSR_SF2_H
+#define KSR_SF2_H
 
 // chunk record header
 typedef struct _SFChunk

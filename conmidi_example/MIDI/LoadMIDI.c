@@ -29,13 +29,8 @@ char CopyTrack(unsigned long int id)
         return 1;
     }
     realTracks++;
-    double t = getTimeMsec();
     lastSize = (ReadFast() * 16777216) + (ReadFast() * 65536) + (ReadFast() * 256) + ReadFast();
-    if(id + 1 == fakeTracks || t - lastPrint > 250)
-    {
-        printf("\nTrack %hu / %hu | Size %lu", id + 1, fakeTracks, lastSize);
-        lastPrint = t;
-    }
+    printf("\nTrack %hu / %hu | Size %lu", id + 1, fakeTracks, lastSize);
     unsigned long int offset = 0;
     unsigned long int sz = lastSize;
     tracks[id] = malloc(sz);

@@ -13,7 +13,7 @@ int main(void)
     ksr_set_control_rate(ksr, 12000);
     ksr_set_max_voices(ksr, 256);
     
-    int r = ksr_load_soundfont_file(ksr, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2");
+    int r = ksr_load_soundfont_file(ksr, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2", true);
     printf("SF2 load: %d\n", r);
     
     ksr_force_instrument_load(ksr);

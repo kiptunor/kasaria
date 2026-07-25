@@ -1,6 +1,6 @@
 /*
 
-    TiMidity -- Experimental MIDI to WAVE converter
+    Kasaria -- A powerful and High efficiency MIDI Synth based on TiMidity
     Copyright (C) 1995 Tuukka Toivonen <toivonen@clinet.fi>
     Copyright (C) 2026 Kiptunor
 
@@ -35,8 +35,8 @@
 
 
 
-#ifndef TIMID_INTERNAL_H
-#define TIMID_INTERNAL_H
+#ifndef KASARIA_INTERNAL_H
+#define KASARIA_INTERNAL_H
 
 
 #include <stdio.h>
@@ -402,6 +402,7 @@ struct Kasaria
     bool           antialiasing_allowed;
     bool           pre_resampling_allowed;
     bool           fast_decay;
+    bool           preload_soundfont_instruments;
     // int            dynamic_loading; // No longer it use
     PlayMode       play_mode;
     f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
@@ -418,6 +419,7 @@ struct Kasaria
     long           cut_notes;
     bool           adjust_panning_immediately;
     int            voices;
+    bool           note_vel_skipping;
     u8             low_vel_treshold;
     u8             high_vel_treshold;
     u_char         rpn_msb[16];
@@ -490,6 +492,7 @@ void        pre_resample(Kasaria *tm, Sample *sp);
 void        init_tables(Kasaria *tm);
 void        free_tables(Kasaria *tm);
 Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filename, int bank, int program);
+int         preload_soundfont_instruments(Kasaria *ksr);
 int         read_config_file(Kasaria *tm, char *name);
 void        reset_midi(Kasaria *ksr);
 
@@ -518,14 +521,4 @@ void adjust_amplification(Kasaria *ksr, int amplification);
 void reset_voices(Kasaria *ksr);
 void drop_sustain(Kasaria *ksr, int c);
 void reset_controllers(Kasaria *ksr, int c);
-
-
-// ------------- Output functions -------------
-//void ksr_render_char(Kasaria *ksr, u_char *buffer, long count);
-//void ksr_render_short(Kasaria *ksr, short *buffer, long count);
-//void ksr_render_24(Kasaria *ksr, int24 *buffer, long count);
-//void ksr_render_long(Kasaria *ksr, long *buffer, long count);
-//void ksr_render_float(Kasaria *ksr, f32 *buffer, long count);
-//void ksr_render_f64(Kasaria *ksr, f64 *buffer, long count);
-//void ksr_render_ulaw(Kasaria *ksr, u_char *buffer, long count);
 #endif

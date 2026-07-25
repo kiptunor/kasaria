@@ -1,6 +1,6 @@
 /*
 
-TiMidity -- Experimental MIDI to WAVE converter
+Kasaria -- A powerful and High efficiency MIDI Synth based on TiMidity
 Copyright (C) 1995 Tuukka Toivonen <toivonen@clinet.fi>
 Copyright (C) 2026 Kiptunor
 
@@ -101,7 +101,7 @@ void ksr_render_short(Kasaria *ksr, short *buffer, long count)
     }
 }
 
-void ksr_render_24(Kasaria *ksr, int24 *buffer, long count)
+void ksr_render_int24(Kasaria *ksr, int24 *buffer, long count)
 {
     int curframes, cursamples, i;
     if(!ksr || !buffer)
@@ -208,7 +208,7 @@ void ksr_render_float(Kasaria *ksr, f32 *buffer, long count)
     }
 }
 
-void ksr_render_f64(Kasaria *ksr, f64 *buffer, long count)
+void ksr_render_double(Kasaria *ksr, f64 *buffer, long count)
 {
     int  curframes, cursamples, i;
     long maxval = 1 << (31 - GUARD_BITS);

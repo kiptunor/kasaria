@@ -115,9 +115,11 @@ void KSR_Init()
     ksr_set_control_rate(ksr_inst, SAMPLE_RATE / 4);
     ksr_set_max_voices(ksr_inst, 5000);
     ksr_set_antialiasing(ksr_inst, 1);
-    ksr_load_soundfont_file(ksr_inst, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2");
-    ksr_force_instrument_load(ksr_inst);
-    ksr_preload_soundfont_instruments(ksr_inst);
+    ksr_set_note_velocity_skipping(ksr_inst, 0, 32, true);
+    //ksr_load_soundfont_file(ksr_inst, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2");
+    ksr_load_soundfont_file(ksr_inst, "/home/andre/disks/1_TB_1/bm/soundfonts/SgtPepperArc360.sf2", true);
+    //ksr_force_instrument_load(ksr_inst);
+    //ksr_preload_soundfont_instruments(ksr_inst);
 }
 
 void KSR_Shutdown()

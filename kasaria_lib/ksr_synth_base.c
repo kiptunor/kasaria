@@ -1,6 +1,6 @@
 /*
 
-TiMidity -- Experimental MIDI to WAVE converter
+Kasaria -- A powerful and High efficiency MIDI Synth based on TiMidity
 Copyright (C) 1995 Tuukka Toivonen <toivonen@clinet.fi>
 Copyright (C) 2026 Kiptunor
 
@@ -94,12 +94,10 @@ void select_sample(Kasaria *ksr, int v, Instrument *ip)
         sp++;
     }
 
-    /*
-        No suitable sample found! We'll select the sample whose root
-        frequency is closest to the one we want. (Actually we should
-        probably convert the low, high, and root frequencies to MIDI note
-        values and compare those.)
-    */
+    // No suitable sample found! We'll select the sample whose root
+    // frequency is closest to the one we want. (Actually we should
+    // probably convert the low, high, and root frequencies to MIDI note
+    // values and compare those.)
 
     cdiff   = 0x7FFFFFFF;
     closest = sp = ip->sample;
@@ -290,7 +288,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     recompute_amp(ksr, i);
     if(ksr->voice[i].sample->modes & MODES_ENVELOPE)
     {
-        /* Ramp up from 0 */
+        // Ramp up from 0
         ksr->voice[i].envelope_stage  = 0;
         ksr->voice[i].envelope_volume = 0;
         ksr->voice[i].control_counter = 0;
@@ -387,8 +385,9 @@ void note_on(Kasaria *ksr, MidiEvent *e)
     long lv = 0x7FFFFFFF, v;
 
     // Skip notes below the low velocity threshold or above the high velocity threshold (Sligtly faster ? idfk)
-    if(e->vel >= ksr->low_vel_treshold && e->vel <= ksr->high_vel_treshold)
-        return;
+    if(ksr->note_vel_skipping)
+        if(e->vel >= ksr->low_vel_treshold && e->vel <= ksr->high_vel_treshold)
+            return;
 
     while(i--)
     {
@@ -450,7 +449,7 @@ void finish_note(Kasaria *ksr, int i)
 {
     if(ksr->voice[i].sample->modes & MODES_ENVELOPE)
     {
-        /* We need to get the envelope out of Sustain stage */
+        // We need to get the envelope out of Sustain stage
         ksr->voice[i].envelope_stage = 3;
         ksr->voice[i].status         = VOICE_OFF;
         recompute_envelope(ksr, i);
@@ -458,11 +457,9 @@ void finish_note(Kasaria *ksr, int i)
     }
     else
     {
-        /*
-            Set status to OFF so resample_voice() will let this voice out
-            of its loop, if any. In any case, this voice dies when it
-            hits the end of its data (ofs>=data_length).
-        */
+        // Set status to OFF so resample_voice() will let this voice out
+        // of its loop, if any. In any case, this voice dies when it
+        // hits the end of its data (ofs>=data_length).
         ksr->voice[i].status = VOICE_OFF;
     }
     channel_voice_remove(ksr, ksr->voice[i].channel, i);

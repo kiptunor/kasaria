@@ -1,6 +1,6 @@
 /*
 
-TiMidity -- Experimental MIDI to WAVE converter
+Kasaria -- A powerful and High efficiency MIDI Synth based on TiMidity
 Copyright (C) 1995 Tuukka Toivonen <toivonen@clinet.fi>
 Copyright (C) 2026 Kiptunor
 

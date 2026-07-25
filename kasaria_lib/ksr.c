@@ -1,6 +1,6 @@
 /*
 
-TiMidity -- Experimental MIDI to WAVE converter
+Kasaria -- A powerful and High efficiency MIDI Synth based on TiMidity
 Copyright (C) 1995 Tuukka Toivonen <toivonen@clinet.fi>
 Copyright (C) 2026 Kiptunor
 
@@ -83,6 +83,7 @@ Kasaria *ksr_init(void)
     ksr->drumchannels                              = DEFAULT_DRUMCHANNELS;
     ksr->quietchannels                             = 0;
     ksr->adjust_panning_immediately                = 1;
+    ksr->preload_soundfont_instruments             = 1;
 
     default_compressor_settings(ksr);
 
@@ -130,6 +131,7 @@ void ksr_restore_defaults(Kasaria *ksr)
     ksr->drumchannels               = DEFAULT_DRUMCHANNELS;
     ksr->quietchannels              = 0;
     ksr->adjust_panning_immediately = 1;
+    ksr->preload_soundfont_instruments = 1;
 
     default_compressor_settings(ksr);
 
@@ -148,10 +150,12 @@ void ksr_restore_defaults(Kasaria *ksr)
     adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
 }
 
-int ksr_load_soundfont_file(Kasaria *ksr, char *filename)
+int ksr_load_soundfont_file(Kasaria *ksr, char *filename, bool preload_instruments)
 {
     if(!ksr || !filename)
         return 0;
+
+    ksr->preload_soundfont_instruments = preload_instruments;
 
     const char *ext = strrchr(filename, '.');
     if(ext)
@@ -179,6 +183,8 @@ int ksr_load_soundfont_file(Kasaria *ksr, char *filename)
     ksr->sf_filename[sizeof(ksr->sf_filename) - 1] = '\0';
     ksr->sf_loaded                                 = 1;
 
+    if(ksr->preload_soundfont_instruments)
+        preload_soundfont_instruments(ksr);
     return 1;
 }
 
@@ -346,12 +352,13 @@ void ksr_set_quiet_channel(Kasaria *ksr, int channel, bool enable)
         ksr->quietchannels &= ~(1 << channel);
 }
 
-void ksr_set_note_velocity_skipping(Kasaria *ksr, uint8_t low_vel, uint8_t high_vel)
+void ksr_set_note_velocity_skipping(Kasaria *ksr, uint8_t low_vel, uint8_t high_vel, bool enabled)
 {
     if(!ksr)
         return;
-    
-    ksr->low_vel_treshold = low_vel;
+
+    ksr->note_vel_skipping = enabled;
+    ksr->low_vel_treshold  = low_vel;
     ksr->high_vel_treshold = high_vel;
 }
 
@@ -759,7 +766,7 @@ int ksr_samples2millis(Kasaria *ksr, long samples)
 }
 
 // TODO: Find a better place for this
-int ksr_preload_soundfont_instruments(Kasaria *ksr)
+int preload_soundfont_instruments(Kasaria *ksr)
 {
     int i, b, p;
 

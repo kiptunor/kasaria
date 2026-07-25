@@ -1,5 +1,5 @@
 /*
-    TiMidity++ -- MIDI to WAVE converter and player
+    Kasaria -- A powerful and High efficiency MIDI Synth based on TiMidity
     Copyright (C) 1999-2002 Masanao Izumo <mo@goice.co.jp>
     Copyright (C) 1995 Tuukka Toivonen <tt@cgs.fi>
     Copyright (C) 2026 Kiptunor
