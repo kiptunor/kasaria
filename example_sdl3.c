@@ -70,14 +70,14 @@ int main(int argc, char **argv)
     synth = ksr_init();
     if(!synth)
     {
-        printf("Failed to initialize Timidity.\n");
+        printf("Failed to initialize Kasaria.\n");
         SDL_Quit();
         return 1;
     }
 
     ksr_set_sample_rate(synth, SAMPLE_RATE);
     ksr_set_max_voices(synth, 5000);
-    //ksr_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2");
+    //ksr_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2", true);
     ksr_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/SgtPepperArc360.sf2", true);
     ksr_set_antialiasing(synth, 1);
     ksr_set_fast_decay(synth, true);

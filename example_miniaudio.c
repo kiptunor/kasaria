@@ -62,7 +62,7 @@ int main(int argc, char **argv)
     synth = ksr_init();
     if(!synth)
     {
-        printf("Failed to initialize Timidity.\n");
+        printf("Failed to initialize Kasaria.\n");
         return 1;
     }
 
