@@ -17,7 +17,7 @@ target("example-miniaudio")
     set_kind("binary")
     add_links("m")
     add_files(
-        "kasaria_lib/**.c",
+        "src/**.c",
         "example_miniaudio.c"
     )
 
@@ -27,7 +27,7 @@ target("example-sdl3")
     add_packages("sdl3")
     add_links("m")
     add_files(
-        "kasaria_lib/**.c",
+        "src/**.c",
         "example_sdl3.c"
     )
 
@@ -36,7 +36,7 @@ target("example-simple")
     set_kind("binary")
     add_links("m")
     add_files(
-        "kasaria_lib/**.c",
+        "src/**.c",
         "simple-example.c"
     )
 
@@ -46,6 +46,6 @@ target("example-conmidi")
     --set_languages("c11")
     add_links("m", "pthread")
     add_files(
-        "kasaria_lib/**.c",
+        "src/**.c",
         "conmidi_example/**.c"
     )
