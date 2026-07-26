@@ -62,6 +62,24 @@ typedef struct
     signed char data[3];
 }int24;
 
+
+typedef struct
+{
+    int amplification;
+    int voice_limit;
+    int sample_rate;
+    int control_rate;
+    int default_program;
+    int low_note_velocity;
+    int high_note_velocity;
+    bool immediate_panning;
+    bool mono_audio;
+    bool fast_decay;
+    bool antialiasing;
+    bool pre_resample;
+    bool velocity_skipping;
+}KasariaConfig;
+
 /*
     General API notes: Unless otherwise indicated, functions that return a value will return non-0 on success,
     and 0 on failure. Time and duration is represented in milliseconds. API functions for getting strings return
@@ -88,6 +106,10 @@ typedef struct
 
 // Allocate and initialize an instance of Kasaria
 KSR_API Kasaria *ksr_init(void);
+
+KSR_API void ksr_print_config(Kasaria *ksr);                     // Print the configuration to stdout at any time
+KSR_API KasariaConfig ksr_get_config(Kasaria *ksr);              // Read the current config at any time
+KSR_API void ksr_set_config(Kasaria *ksr, KasariaConfig config); // Set config using the provided struct (This overrides majority of the settings)
 
 KSR_API void ksr_restore_defaults(Kasaria *ksr); // Restore default settings
 

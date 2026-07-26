@@ -13,6 +13,7 @@ set_languages("c11")
 add_requires("sdl3",       {system = true})
 
 target("example-miniaudio")
+    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
     add_links("m")
     add_files(
@@ -21,6 +22,7 @@ target("example-miniaudio")
     )
 
 target("example-sdl3")
+    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
     add_packages("sdl3")
     add_links("m")
@@ -30,6 +32,7 @@ target("example-sdl3")
     )
 
 target("example-simple")
+    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
     add_links("m")
     add_files(
@@ -38,7 +41,7 @@ target("example-simple")
     )
 
 target("example-conmidi")
-add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
+    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
     --set_languages("c11")
     add_links("m", "pthread")

@@ -59,7 +59,7 @@ void default_compressor_settings(Kasaria *ksr)
     ksr->compressor_settings.makeup_gain   = 1.0f;
 }
 
-void print_config(Kasaria *ksr)
+void ksr_print_config(Kasaria *ksr)
 {
     ulog_debug("fast_decay                 = %d", ksr->fast_decay);
     ulog_debug("antialiasing_allowed       = %d", ksr->antialiasing_allowed);
@@ -72,13 +72,13 @@ void print_config(Kasaria *ksr)
     ulog_debug("quiet_channels             = %ld", ksr->quietchannels);
     ulog_debug("voice_limit                = %d", ksr->voices);
     ulog_debug("adjust_panning_immediately = %d", ksr->adjust_panning_immediately);
-    
+
     printf("\n------------- [Filters and audio DSP Effects] -------------\n\n");
-    
+
     ulog_debug("note_vel_skipping -> enabled           = %d", ksr->note_vel_skipping);
     ulog_debug("note_vel_skipping -> low_vel_treshold  = %u", ksr->low_vel_treshold);
     ulog_debug("note_vel_skipping -> high_vel_treshold = %u\n\n", ksr->high_vel_treshold);
-    
+
     ulog_debug("compressor -> envelope      = %f", ksr->compressor_settings.envelope);
     ulog_debug("compressor -> gain          = %f", ksr->compressor_settings.gain);
     ulog_debug("compressor -> threshold     = %f", ksr->compressor_settings.threshold);
@@ -109,15 +109,15 @@ Kasaria *ksr_init(void)
     ksr->fast_decay = 0;
 #endif
     // ksr->dynamic_loading                           = 0;
-    ksr->voices                                    = DEFAULT_VOICES;
-    ksr->play_mode.rate                            = DEFAULT_RATE;
-    ksr->play_mode.encoding                        = 0;
-    ksr->control_rate                              = CONTROLS_PER_SECOND;
-    ksr->control_ratio                             = ksr->play_mode.rate / ksr->control_rate;
-    ksr->drumchannels                              = DEFAULT_DRUMCHANNELS;
-    ksr->quietchannels                             = 0;
-    ksr->adjust_panning_immediately                = 1;
-    ksr->preload_soundfont_instruments             = 1;
+    ksr->voices                        = DEFAULT_VOICES;
+    ksr->play_mode.rate                = DEFAULT_RATE;
+    ksr->play_mode.encoding            = 0;
+    ksr->control_rate                  = CONTROLS_PER_SECOND;
+    ksr->control_ratio                 = ksr->play_mode.rate / ksr->control_rate;
+    ksr->drumchannels                  = DEFAULT_DRUMCHANNELS;
+    ksr->quietchannels                 = 0;
+    ksr->adjust_panning_immediately    = 1;
+    ksr->preload_soundfont_instruments = 1;
 
     default_compressor_settings(ksr);
 
@@ -140,11 +140,10 @@ Kasaria *ksr_init(void)
     reset_midi(ksr);
     adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
 
-    //ulog_color_config(1);
+    // ulog_color_config(1);
     ulog_topic_add("SF2", ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
     ulog_info("Kasaria Init\n\n");
 
-    print_config(ksr);
     return ksr;
 }
 
@@ -163,14 +162,14 @@ void ksr_restore_defaults(Kasaria *ksr)
     ksr->fast_decay = 0;
 #endif
     // ksr->dynamic_loading            = 0;
-    ksr->voices                     = DEFAULT_VOICES;
-    ksr->play_mode.rate             = DEFAULT_RATE;
-    ksr->play_mode.encoding         = 0;
-    ksr->control_rate               = CONTROLS_PER_SECOND;
-    ksr->control_ratio              = ksr->play_mode.rate / ksr->control_rate;
-    ksr->drumchannels               = DEFAULT_DRUMCHANNELS;
-    ksr->quietchannels              = 0;
-    ksr->adjust_panning_immediately = 1;
+    ksr->voices                        = DEFAULT_VOICES;
+    ksr->play_mode.rate                = DEFAULT_RATE;
+    ksr->play_mode.encoding            = 0;
+    ksr->control_rate                  = CONTROLS_PER_SECOND;
+    ksr->control_ratio                 = ksr->play_mode.rate / ksr->control_rate;
+    ksr->drumchannels                  = DEFAULT_DRUMCHANNELS;
+    ksr->quietchannels                 = 0;
+    ksr->adjust_panning_immediately    = 1;
     ksr->preload_soundfont_instruments = 1;
 
     default_compressor_settings(ksr);
@@ -186,8 +185,49 @@ void ksr_restore_defaults(Kasaria *ksr)
         ksr->drumset[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
         memset(ksr->drumset[0], 0, sizeof(ToneBank));
     }
-    
+
     adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
+}
+
+KasariaConfig ksr_get_config(Kasaria *ksr)
+{
+    KasariaConfig config;
+
+    config.amplification      = ksr->master_volume * 100.0L;
+    config.voice_limit        = ksr->voices;
+    config.sample_rate        = ksr->play_mode.rate;
+    config.control_rate       = ksr->control_rate;
+    config.default_program    = ksr->default_program;
+    config.low_note_velocity  = ksr->low_vel_treshold;
+    config.high_note_velocity = ksr->high_vel_treshold;
+    config.immediate_panning  = ksr->adjust_panning_immediately;
+    config.mono_audio         = ksr->play_mode.encoding == 1;
+    config.fast_decay         = ksr->fast_decay;
+    config.antialiasing       = ksr->antialiasing_allowed;
+    config.pre_resample       = ksr->pre_resampling_allowed;
+    config.velocity_skipping  = ksr->note_vel_skipping;
+
+    return config;
+}
+
+void ksr_set_config(Kasaria *ksr, KasariaConfig config)
+{
+    if(!ksr)
+        return;
+
+    ksr->master_volume              = config.amplification / 100.0L;
+    ksr->voices                     = config.voice_limit;
+    ksr->play_mode.rate             = config.sample_rate;
+    ksr->control_rate               = config.control_rate;
+    ksr->default_program            = config.default_program;
+    ksr->low_vel_treshold           = config.low_note_velocity;
+    ksr->high_vel_treshold          = config.high_note_velocity;
+    ksr->adjust_panning_immediately = config.immediate_panning;
+    ksr->play_mode.encoding         = config.mono_audio ? 1 : 0;
+    ksr->fast_decay                 = config.fast_decay;
+    ksr->antialiasing_allowed       = config.antialiasing;
+    ksr->pre_resampling_allowed     = config.pre_resample;
+    ksr->note_vel_skipping          = config.velocity_skipping;
 }
 
 int ksr_load_soundfont_file(Kasaria *ksr, char *filename, bool preload_instruments)
@@ -199,7 +239,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, char *filename, bool preload_instrumen
 
     ksr->preload_soundfont_instruments = preload_instruments;
 
-    const char *ext = strrchr(filename, '.');
+    const char *ext                    = strrchr(filename, '.');
     if(ext)
         ext++; // skip the dot
 
@@ -832,7 +872,6 @@ int preload_soundfont_instruments(Kasaria *ksr)
 
         if(!ksr->tonebank[b]->tone[p].instrument)
             ksr->tonebank[b]->tone[p].instrument = load_soundfont_instrument(ksr, &ksr->sf_info, ksr->sf_filename, b, p);
-        
     }
 
     return 1;

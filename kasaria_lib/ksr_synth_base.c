@@ -171,7 +171,19 @@ void recompute_amp(Kasaria *ksr, int v)
 
     // TODO: use fscale
 
-    tempamp = (ksr->voice[v].velocity * ksr->channel[ksr->voice[v].channel].volume * ksr->channel[ksr->voice[v].channel].expression); /* 21 bits */
+    long vol = ksr->channel[ksr->voice[v].channel].volume;
+    long vol_scaled = vol ? (long)(vol_table[vol] * 127.0) : 0;
+    
+    long expr = ksr->channel[ksr->voice[v].channel].expression;
+    long expr_scaled = expr ? (long)(vol_table[expr] * 127.0) : 0;
+
+    //tempamp = (ksr->voice[v].velocity * ksr->channel[ksr->voice[v].channel].volume * ksr->channel[ksr->voice[v].channel].expression); /* 21 bits */
+    // Good but channel volume being 0 still makes sound
+    //tempamp = ksr->voice[v].velocity
+    //        * (long)(vol_table[ksr->channel[ksr->voice[v].channel].volume] * 127.0)
+    //        * ksr->channel[ksr->voice[v].channel].expression;
+
+    tempamp = ksr->voice[v].velocity * vol_scaled * expr_scaled;
 
     if(!(ksr->play_mode.encoding & PE_MONO))
     {
@@ -567,7 +579,7 @@ void adjust_volume(Kasaria *ksr, int c)
     for(int i = 0; i < n; i++)
     {
         int vi = ksr->channel_voice_list[c][i];
-        if(ksr->voice[vi].status == VOICE_ON || ksr->voice[vi].status == VOICE_SUSTAINED)
+        if(ksr->voice[vi].status == VOICE_ON || ksr->voice[vi].status == VOICE_SUSTAINED || ksr->voice[vi].status == VOICE_OFF)
         {
             recompute_amp(ksr, vi);
             apply_envelope_to_amp(ksr, vi);
