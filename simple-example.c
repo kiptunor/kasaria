@@ -1,5 +1,5 @@
 // Minimal test - no threads, no audio device
-#include "kasaria_lib/kasaria.h"
+#include "src/kasaria.h"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>

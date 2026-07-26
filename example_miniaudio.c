@@ -3,9 +3,9 @@
 
 
 #define MINIAUDIO_IMPLEMENTATION
-#include "kasaria_lib/ext_deps/miniaudio/miniaudio.h"
+#include "src/ext_deps/miniaudio/miniaudio.h"
 
-#include "kasaria_lib/kasaria.h"
+#include "src/kasaria.h"
 
 #define SAMPLE_RATE   48000
 #define BUFFER_FRAMES 512

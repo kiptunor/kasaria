@@ -1,10 +1,10 @@
 #include <stdio.h>
 
 #include "Sound.h"
-#include "../../kasaria_lib/kasaria.h"
+#include "../../src/kasaria.h"
 
 #define MINIAUDIO_IMPLEMENTATION
-#include "../../kasaria_lib/ext_deps/miniaudio/miniaudio.h"
+#include "../../src/ext_deps/miniaudio/miniaudio.h"
 
 
 

@@ -5,7 +5,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_audio.h>
 
-#include "kasaria_lib/kasaria.h"
+#include "src/kasaria.h"
 
 #define SAMPLE_RATE   48000
 #define BUFFER_FRAMES 512
