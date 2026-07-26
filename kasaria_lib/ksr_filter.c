@@ -243,13 +243,13 @@ void audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 leng
         f32 abs_input            = fabsf(input);
 
         // Envelope detection
-        f32 coeff                = (abs_input > compr_settings->envelope) ? compr_settings->limiter_attack_coeff : compr_settings->limiter_release_coeff;
+        f32 coeff                = (abs_input > compr_settings->envelope) ? compr_settings->attack_coeff : compr_settings->release_coeff;
         compr_settings->envelope = coeff * compr_settings->envelope + (1.0f - coeff) * abs_input;
 
         // Gain computation
         f32 target_gain          = 1.0f;
-        if(compr_settings->envelope > compr_settings->limiter_threshold)
-            target_gain = compr_settings->limiter_threshold / compr_settings->envelope;
+        if(compr_settings->envelope > compr_settings->threshold)
+            target_gain = compr_settings->threshold / compr_settings->envelope;
 
         // Always smooth gain
         compr_settings->gain = 0.001f * compr_settings->gain + 0.999f * target_gain;

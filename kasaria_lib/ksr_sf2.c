@@ -57,10 +57,10 @@
 
 
 
-#ifdef HAVE_CONFIG_H
-    #include "config.h"
-#endif /* HAVE_CONFIG_H */
+
 #include <stdio.h>
+#include <errno.h>
+
 #ifndef NO_STRING_H
     #include <string.h>
 #else
@@ -68,6 +68,7 @@
 #endif
 #include <stdlib.h>
 
+#include "ext_deps/ulog/src/ulog.h"
 
 #include "ksr_internal.h"
 #include "ksr_sf2.h"
@@ -288,7 +289,7 @@ int load_soundfont(SFInfo *sf, const char *filename)
     fp                      = fopen(filename, "rb");
     if(!fp)
     {
-        fprintf(stderr, "%s: could not open soundfont file\n", filename);
+        ulog_topic_error("SF2", "Failed to open soundfont '%s': %s", filename, strerror(errno));
         return -1;
     }
 
@@ -296,7 +297,7 @@ int load_soundfont(SFInfo *sf, const char *filename)
     READCHUNK(&chunk, fp);
     if(chunkid(chunk.id) != RIFF_ID)
     {
-        fprintf(stderr, "%s: *** not a RIFF file", filename);
+        ulog_topic_error("SF2", "'%s' Is not a RIFF file", filename);
         fclose(fp);
         return -1;
     }
@@ -304,7 +305,7 @@ int load_soundfont(SFInfo *sf, const char *filename)
     READID(chunk.id, fp);
     if(chunkid(chunk.id) != SFBK_ID)
     {
-        fprintf(stderr, "%s: *** not a SoundFont file", filename);
+        ulog_topic_error("SF2", "'%s' Is not a SoundFont file", filename);
         fclose(fp);
         return -1;
     }
@@ -320,7 +321,7 @@ int load_soundfont(SFInfo *sf, const char *filename)
         }
         else
         {
-            fprintf(stderr, "%s: *** illegal id in level 0: %4.4s %4d", filename, chunk.id, chunk.size);
+            ulog_topic_error("SF2", "'%s' Has incorrect chunk id levels: %4.4s %4d", filename, chunk.id, chunk.size);
             FSKIP(chunk.size, fp);
         }
     }
@@ -679,9 +680,8 @@ static void load_sample_info(int size, SFInfo *sf, FILE *fp)
             sf->sample   = NEW(SFSampleInfo, sf->nsamples);
         }
         else if(sf->nsamples != nsamples)
-        {
             sf->nsamples = nsamples;
-        }
+        
     }
 
     in_rom = 1;

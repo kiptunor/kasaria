@@ -35,6 +35,7 @@ playmidi.c -- random stuff in need of rearrangement
 #include <strings.h>
 
 
+#include "ext_deps/ulog/src/ulog.h"
 
 #include "ksr_internal.h"
 
@@ -46,16 +47,49 @@ playmidi.c -- random stuff in need of rearrangement
 
 void default_compressor_settings(Kasaria *ksr)
 {
-    ksr->compressor_settings.envelope              = 0.0f;
-    ksr->compressor_settings.gain                  = 1.0f;
-    ksr->compressor_settings.limiter_attack_ms     = 2.0f;
-    ksr->compressor_settings.limiter_release_ms    = 80.0f;
-    ksr->compressor_settings.limiter_sample_rate   = ksr->play_mode.rate;
-    ksr->compressor_settings.limiter_attack_coeff  = expf(-1.0f / (ksr->compressor_settings.limiter_attack_ms * 0.001f * ksr->compressor_settings.limiter_sample_rate));
-    ksr->compressor_settings.limiter_release_coeff = expf(-1.0f / (ksr->compressor_settings.limiter_release_ms * 0.001f * ksr->compressor_settings.limiter_sample_rate));
-    ksr->compressor_settings.limiter_threshold     = 2000000.0f;
-    ksr->compressor_settings.limiter_ratio         = 4.0f;
-    ksr->compressor_settings.limiter_makeup_gain   = 1.0f;
+    ksr->compressor_settings.envelope      = 0.0f;
+    ksr->compressor_settings.gain          = 1.0f;
+    ksr->compressor_settings.attack_ms     = 2.0f;
+    ksr->compressor_settings.release_ms    = 80.0f;
+    ksr->compressor_settings.sample_rate   = ksr->play_mode.rate;
+    ksr->compressor_settings.attack_coeff  = expf(-1.0f / (ksr->compressor_settings.attack_ms * 0.001f * ksr->compressor_settings.sample_rate));
+    ksr->compressor_settings.release_coeff = expf(-1.0f / (ksr->compressor_settings.release_ms * 0.001f * ksr->compressor_settings.sample_rate));
+    ksr->compressor_settings.threshold     = 2000000.0f;
+    ksr->compressor_settings.ratio         = 4.0f;
+    ksr->compressor_settings.makeup_gain   = 1.0f;
+}
+
+void print_config(Kasaria *ksr)
+{
+    ulog_debug("fast_decay                 = %d", ksr->fast_decay);
+    ulog_debug("antialiasing_allowed       = %d", ksr->antialiasing_allowed);
+    ulog_debug("pre_resampling_allowed     = %d", ksr->pre_resampling_allowed);
+    ulog_debug("sample_rate                = %ld", ksr->play_mode.rate);
+    ulog_debug("control_rate               = %ld", ksr->control_rate);
+    ulog_debug("control_ratio              = %ld", ksr->control_ratio);
+    ulog_debug("master_volume              = %f", ksr->master_volume);
+    ulog_debug("drum_channels              = %ld", ksr->drumchannels);
+    ulog_debug("quiet_channels             = %ld", ksr->quietchannels);
+    ulog_debug("voice_limit                = %d", ksr->voices);
+    ulog_debug("adjust_panning_immediately = %d", ksr->adjust_panning_immediately);
+    
+    printf("\n------------- [Filters and audio DSP Effects] -------------\n\n");
+    
+    ulog_debug("note_vel_skipping -> enabled           = %d", ksr->note_vel_skipping);
+    ulog_debug("note_vel_skipping -> low_vel_treshold  = %u", ksr->low_vel_treshold);
+    ulog_debug("note_vel_skipping -> high_vel_treshold = %u\n\n", ksr->high_vel_treshold);
+    
+    ulog_debug("compressor -> envelope      = %f", ksr->compressor_settings.envelope);
+    ulog_debug("compressor -> gain          = %f", ksr->compressor_settings.gain);
+    ulog_debug("compressor -> threshold     = %f", ksr->compressor_settings.threshold);
+    ulog_debug("compressor -> ratio         = %f", ksr->compressor_settings.ratio);
+    ulog_debug("compressor -> attack_coeff  = %f", ksr->compressor_settings.attack_coeff);
+    ulog_debug("compressor -> release_coeff = %f", ksr->compressor_settings.release_coeff);
+    ulog_debug("compressor -> makeup_gain   = %f", ksr->compressor_settings.makeup_gain);
+    ulog_debug("compressor -> attack_ms     = %f", ksr->compressor_settings.attack_ms);
+    ulog_debug("compressor -> release_ms    = %f", ksr->compressor_settings.release_ms);
+    ulog_debug("compressor -> sample_rate   = %f", ksr->compressor_settings.sample_rate);
+    ulog_debug("compressor -> makeup_gain   = %f", ksr->compressor_settings.makeup_gain);
 }
 
 
@@ -105,6 +139,12 @@ Kasaria *ksr_init(void)
     init_tables(ksr);
     reset_midi(ksr);
     adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
+
+    //ulog_color_config(1);
+    ulog_topic_add("SF2", ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
+    ulog_info("Kasaria Init\n\n");
+
+    print_config(ksr);
     return ksr;
 }
 
@@ -155,6 +195,8 @@ int ksr_load_soundfont_file(Kasaria *ksr, char *filename, bool preload_instrumen
     if(!ksr || !filename)
         return 0;
 
+    ulog_topic_debug("SF2", "Loading soundfont file: %s", filename);
+
     ksr->preload_soundfont_instruments = preload_instruments;
 
     const char *ext = strrchr(filename, '.');
@@ -169,7 +211,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, char *filename, bool preload_instrumen
 
     if(strcasecmp(ext, "sf2") != 0)
     {
-        printf("Unsuported soundfont format!\n");
+        ulog_error("Unsuported soundfont format!");
         return 0;
     }
 
@@ -768,6 +810,7 @@ int ksr_samples2millis(Kasaria *ksr, long samples)
 // TODO: Find a better place for this
 int preload_soundfont_instruments(Kasaria *ksr)
 {
+    ulog_topic_debug("SF2", "Preloading soundfont instruments for %s", ksr->sf_filename);
     int i, b, p;
 
     if(!ksr->sf_loaded)
@@ -788,10 +831,8 @@ int preload_soundfont_instruments(Kasaria *ksr)
         }
 
         if(!ksr->tonebank[b]->tone[p].instrument)
-        {
-            ksr->tonebank[b]->tone[p].instrument =
-                load_soundfont_instrument(ksr, &ksr->sf_info, ksr->sf_filename, b, p);
-        }
+            ksr->tonebank[b]->tone[p].instrument = load_soundfont_instrument(ksr, &ksr->sf_info, ksr->sf_filename, b, p);
+        
     }
 
     return 1;

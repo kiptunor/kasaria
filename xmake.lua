@@ -16,7 +16,7 @@ target("example-miniaudio")
     set_kind("binary")
     add_links("m")
     add_files(
-        "kasaria_lib/*.c",
+        "kasaria_lib/**.c",
         "example_miniaudio.c"
     )
 
@@ -25,7 +25,7 @@ target("example-sdl3")
     add_packages("sdl3")
     add_links("m")
     add_files(
-        "kasaria_lib/*.c",
+        "kasaria_lib/**.c",
         "example_sdl3.c"
     )
 
@@ -33,15 +33,16 @@ target("example-simple")
     set_kind("binary")
     add_links("m")
     add_files(
-        "kasaria_lib/*.c",
+        "kasaria_lib/**.c",
         "simple-example.c"
     )
 
 target("example-conmidi")
+add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
     --set_languages("c11")
     add_links("m", "pthread")
     add_files(
-        "kasaria_lib/*.c",
+        "kasaria_lib/**.c",
         "conmidi_example/**.c"
     )

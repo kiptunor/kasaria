@@ -3,7 +3,7 @@
 
 
 #define MINIAUDIO_IMPLEMENTATION
-#include "miniaudio.h"
+#include "kasaria_lib/ext_deps/miniaudio/miniaudio.h"
 
 #include "kasaria_lib/kasaria.h"
 

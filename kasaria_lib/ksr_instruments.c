@@ -50,6 +50,8 @@ Code to load and unload GUS-compatible instrument patches.
     #include <malloc.h>
 #endif
 
+#include "ext_deps/ulog/src/ulog.h"
+
 #include "ksr_internal.h"
 #include "ksr_sf2.h"
 
@@ -189,21 +191,36 @@ static long sf_calc_envelope_rate(Kasaria *ksr, long msec)
 Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *filename, int bank, int program)
 {
     FILE         *fp;
-    Instrument   *ip;
-    Sample       *sp;
+    Instrument   *sf_instr;
+    Sample       *sample;
     int           i, j, k;
-    int           preset_idx, inst_idx, sample_idx;
+    int           preset_idx;
+    int           inst_idx;
+    int           sample_idx;
+    int           root_key;
+    int           fine_tune;
+    int           coarse_tune;
+    int           sample_flags;
+    int           gen_val;
+    int           attack_tc;
+    int           decay_tc;
+    int           sustain_level;
+    int           release_tc;
+    int           total_samples;
+    int           count;
+    int           low_key;
+    int           high_key;
     SFPresetHdr  *preset;
     SFInstHdr    *inst_hdr;
     SFGenLayer   *inst_zone;
     SFSampleInfo *sfsample;
-    int           total_samples, count;
-    long          start, end, loop_start, loop_end, loop_mode;
-    long          attenuation, pan;
-    int           root_key, fine_tune, coarse_tune, sample_flags;
-    int           gen_val;
-    int           attack_tc, decay_tc, sustain_level, release_tc;
-    int           low_key, high_key;
+    long          start;
+    long          end;
+    long          loop_start;
+    long          loop_end;
+    long          loop_mode;
+    long          attenuation;
+    long          pan;
 
     if(!sf || !sf->preset || !sf->inst || !sf->sample)
         return NULL;
@@ -260,12 +277,15 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
 
     fp = fopen(filename, "rb");
     if(!fp)
+    {
+        ulog_topic_error("SF2", "Failed to load SoundFont instrument (bank: %d, program: %d) from: '%s'", bank, program, filename);
         return NULL;
+    }
 
-    ip          = (Instrument *)safe_malloc(sizeof(Instrument));
-    ip->samples = total_samples;
-    ip->sample  = (Sample *)safe_malloc(sizeof(Sample) * total_samples);
-    memset(ip->sample, 0, sizeof(Sample) * total_samples);
+    sf_instr          = (Instrument *)safe_malloc(sizeof(Instrument));
+    sf_instr->samples = total_samples;
+    sf_instr->sample  = (Sample *)safe_malloc(sizeof(Sample) * total_samples);
+    memset(sf_instr->sample, 0, sizeof(Sample) * total_samples);
 
     count = 0;
 
@@ -292,7 +312,7 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
             if(sfsample->sampletype & 0x8000)
                 continue;
 
-            sp          = &ip->sample[count];
+            sample      = &sf_instr->sample[count];
 
             start       = sfsample->startsample;
             end         = sfsample->endsample;
@@ -347,100 +367,100 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
             if(root_key < 0 || root_key > 127)
                 root_key = 60;
 
-            fine_tune       = sf_find_gen(inst_zone, SF_FINETUNE, 0);
-            coarse_tune     = sf_find_gen(inst_zone, SF_COARSETUNE, 0);
-            attenuation     = sf_find_gen(inst_zone, SF_INITATTEN, 0);
-            pan             = sf_find_gen(inst_zone, SF_PAN, 0);
+            fine_tune           = sf_find_gen(inst_zone, SF_FINETUNE, 0);
+            coarse_tune         = sf_find_gen(inst_zone, SF_COARSETUNE, 0);
+            attenuation         = sf_find_gen(inst_zone, SF_INITATTEN, 0);
+            pan                 = sf_find_gen(inst_zone, SF_PAN, 0);
 
-            low_key         = sf_find_gen(inst_zone, SF_KEYRANGE, 0x7F00) & 0xFF;
-            high_key        = (sf_find_gen(inst_zone, SF_KEYRANGE, 0x7F00)) >> 8;
+            low_key             = sf_find_gen(inst_zone, SF_KEYRANGE, 0x7F00) & 0xFF;
+            high_key            = (sf_find_gen(inst_zone, SF_KEYRANGE, 0x7F00)) >> 8;
 
-            sp->sample_rate = sfsample->samplerate;
+            sample->sample_rate = sfsample->samplerate;
 
-            if(sp->sample_rate <= 0)
-                sp->sample_rate = 44100;
+            if(sample->sample_rate <= 0)
+                sample->sample_rate = 44100;
 
-            sp->root_freq               = (long)(8.176 * pow(2.0, (root_key + coarse_tune + fine_tune / 100.0) / 12.0) * 1000.0);
-            sp->low_freq                = (long)(8.176 * pow(2.0, (low_key + coarse_tune) / 12.0) * 1000.0);
-            sp->high_freq               = (long)(8.176 * pow(2.0, (high_key + coarse_tune) / 12.0) * 1000.0);
+            sample->root_freq               = (long)(8.176 * pow(2.0, (root_key + coarse_tune + fine_tune / 100.0) / 12.0) * 1000.0);
+            sample->low_freq                = (long)(8.176 * pow(2.0, (low_key + coarse_tune) / 12.0) * 1000.0);
+            sample->high_freq               = (long)(8.176 * pow(2.0, (high_key + coarse_tune) / 12.0) * 1000.0);
 
-            sp->volume                  = pow(10.0, -attenuation / 200.0);
-            sp->panning                 = (u_char)((pan + 500) * 127 / 1000);
-            sp->modes                   = MODES_16BIT | MODES_ENVELOPE | loop_mode;
-            sp->note_to_use             = 0;
+            sample->volume                  = pow(10.0, -attenuation / 200.0);
+            sample->panning                 = (u_char)((pan + 500) * 127 / 1000);
+            sample->modes                   = MODES_16BIT | MODES_ENVELOPE | loop_mode;
+            sample->note_to_use             = 0;
 
-            sp->tremolo_sweep_increment = 0;
-            sp->tremolo_phase_increment = 0;
-            sp->tremolo_depth           = 0;
-            sp->vibrato_sweep_increment = 0;
-            sp->vibrato_control_ratio   = 0;
-            sp->vibrato_depth           = 0;
+            sample->tremolo_sweep_increment = 0;
+            sample->tremolo_phase_increment = 0;
+            sample->tremolo_depth           = 0;
+            sample->vibrato_sweep_increment = 0;
+            sample->vibrato_control_ratio   = 0;
+            sample->vibrato_depth           = 0;
 
-            attack_tc                   = sf_find_gen(inst_zone, SF_ATTACKENV1, -12000);
-            decay_tc                    = sf_find_gen(inst_zone, SF_DECAYENV1, -12000);
-            sustain_level               = sf_find_gen(inst_zone, SF_SUSTAINENV1, 0);
-            release_tc                  = sf_find_gen(inst_zone, SF_RELEASEENV1, -12000);
+            attack_tc                       = sf_find_gen(inst_zone, SF_ATTACKENV1, -12000);
+            decay_tc                        = sf_find_gen(inst_zone, SF_DECAYENV1, -12000);
+            sustain_level                   = sf_find_gen(inst_zone, SF_SUSTAINENV1, 0);
+            release_tc                      = sf_find_gen(inst_zone, SF_RELEASEENV1, -12000);
 
-            sp->envelope_offset[0]      = 255 << (7 + 15);
-            sp->envelope_rate[0]        = sf_calc_envelope_rate(ksr, sf_timecent_to_msec(attack_tc));
+            sample->envelope_offset[0]      = 255 << (7 + 15);
+            sample->envelope_rate[0]        = sf_calc_envelope_rate(ksr, sf_timecent_to_msec(attack_tc));
 
             {
-                f64 sus_amp            = pow(10.0, -sustain_level / 200.0);
-                sp->envelope_offset[1] = (long)(sus_amp * 255.0) << (7 + 15);
+                f64 sus_amp                = pow(10.0, -sustain_level / 200.0);
+                sample->envelope_offset[1] = (long)(sus_amp * 255.0) << (7 + 15);
             }
-            sp->envelope_rate[1]   = sf_calc_envelope_rate(ksr, sf_timecent_to_msec(decay_tc)) * (sp->envelope_offset[0] - sp->envelope_offset[1]) / sp->envelope_offset[0];
+            sample->envelope_rate[1]   = sf_calc_envelope_rate(ksr, sf_timecent_to_msec(decay_tc)) * (sample->envelope_offset[0] - sample->envelope_offset[1]) / sample->envelope_offset[0];
 
-            sp->envelope_offset[2] = sp->envelope_offset[1];
-            sp->envelope_rate[2]   = 0;
+            sample->envelope_offset[2] = sample->envelope_offset[1];
+            sample->envelope_rate[2]   = 0;
 
-            sp->envelope_offset[3] = 0;
-            sp->envelope_rate[3]   = sf_calc_envelope_rate(ksr, sf_timecent_to_msec(release_tc)) * sp->envelope_offset[2] / (255 << (7 + 15));
+            sample->envelope_offset[3] = 0;
+            sample->envelope_rate[3]   = sf_calc_envelope_rate(ksr, sf_timecent_to_msec(release_tc)) * sample->envelope_offset[2] / (255 << (7 + 15));
 
-            sp->envelope_offset[4] = 0;
-            sp->envelope_rate[4]   = 0;
-            sp->envelope_offset[5] = 0;
-            sp->envelope_rate[5]   = 0;
+            sample->envelope_offset[4] = 0;
+            sample->envelope_rate[4]   = 0;
+            sample->envelope_offset[5] = 0;
+            sample->envelope_rate[5]   = 0;
 
             {
                 long num_samples = end - start;
                 long byte_offset;
 
-                sp->data_length = num_samples;
-                sp->loop_start  = loop_start - start;
-                sp->loop_end    = loop_end - start;
+                sample->data_length = num_samples;
+                sample->loop_start  = loop_start - start;
+                sample->loop_end    = loop_end - start;
 
-                if(sp->loop_start < 0)
-                    sp->loop_start = 0;
+                if(sample->loop_start < 0)
+                    sample->loop_start = 0;
 
-                if(sp->loop_end > num_samples)
-                    sp->loop_end = num_samples;
+                if(sample->loop_end > num_samples)
+                    sample->loop_end = num_samples;
 
-                if(sp->loop_end <= sp->loop_start)
+                if(sample->loop_end <= sample->loop_start)
                 {
-                    sp->loop_start = 0;
-                    sp->loop_end   = num_samples;
+                    sample->loop_start = 0;
+                    sample->loop_end   = num_samples;
                 }
 
-                sp->data         = (sample_t *)safe_malloc((num_samples + 2) * sizeof(short));
-                sp->data_alloced = 1;
+                sample->data         = (sample_t *)safe_malloc((num_samples + 2) * sizeof(short));
+                sample->data_alloced = 1;
 
-                byte_offset      = sf->samplepos + start * sizeof(short);
+                byte_offset          = sf->samplepos + start * sizeof(short);
                 fseek(fp, byte_offset, SEEK_SET);
 
-                if(fread(sp->data, sizeof(short), num_samples, fp) != (size_t)num_samples)
+                if(fread(sample->data, sizeof(short), num_samples, fp) != (size_t)num_samples)
                 {
-                    free(sp->data);
-                    sp->data = NULL;
+                    free(sample->data);
+                    sample->data = NULL;
                     continue;
                 }
 
-                sp->data[num_samples]     = 0;
-                sp->data[num_samples + 1] = 0;
+                sample->data[num_samples]     = 0;
+                sample->data[num_samples + 1] = 0;
 
                 {
                     long   _i;
                     short  _maxamp = 1, _a;
-                    short *_tmp    = (short *)sp->data;
+                    short *_tmp    = (short *)sample->data;
                     for(_i = 0; _i < num_samples; _i++)
                     {
                         _a = *_tmp++;
@@ -449,15 +469,15 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
                         if(_a > _maxamp)
                             _maxamp = _a;
                     }
-                    sp->volume = 32768.0 / (f64)_maxamp * sp->volume;
+                    sample->volume = 32768.0 / (f64)_maxamp * sample->volume;
                 }
 
                 if(ksr->antialiasing_allowed)
-                    antialiasing(sp, ksr->play_mode.rate);
+                    antialiasing(sample, ksr->play_mode.rate);
 
-                sp->data_length <<= FRACTION_BITS;
-                sp->loop_start  <<= FRACTION_BITS;
-                sp->loop_end    <<= FRACTION_BITS;
+                sample->data_length <<= FRACTION_BITS;
+                sample->loop_start  <<= FRACTION_BITS;
+                sample->loop_end    <<= FRACTION_BITS;
             }
 
             count++;
@@ -468,13 +488,13 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
 
     if(count == 0)
     {
-        free(ip->sample);
-        free(ip);
+        free(sf_instr->sample);
+        free(sf_instr);
         return NULL;
     }
 
-    ip->samples = count;
-    return ip;
+    sf_instr->samples = count;
+    return sf_instr;
 }
 
 void free_default_instrument(Kasaria *ksr)

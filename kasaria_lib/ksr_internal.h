@@ -204,14 +204,14 @@ typedef struct
 {
     f32 envelope;
     f32 gain;
-    f32 limiter_threshold;
-    f32 limiter_ratio;
-    f32 limiter_attack_coeff;
-    f32 limiter_release_coeff;
-    f32 limiter_makeup_gain;
-    f32 limiter_attack_ms;
-    f32 limiter_release_ms;
-    f32 limiter_sample_rate;
+    f32 threshold;
+    f32 ratio;
+    f32 attack_coeff;
+    f32 release_coeff;
+    f32 makeup_gain;
+    f32 attack_ms;
+    f32 release_ms;
+    f32 sample_rate;
 } CompressorSettings;
 
 typedef struct
