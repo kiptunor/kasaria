@@ -480,7 +480,7 @@ void StartPlayback()
         
         if(aliveTracks == 0)
         {
-            printf("\nRan out of events, playback finished.");
+            printf("\nRan out of events, playback finished.\n");
             // Restore when done
             tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
             sleep(1);
