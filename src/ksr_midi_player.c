@@ -790,7 +790,7 @@ int ksr_reload_midi(Kasaria *ksr)
     return 0;
 }
 
-int ksr_play_midi(Kasaria *ksr, long type, u_char *buffer, long count)
+int ksr_play_midi_sync(Kasaria *ksr, long type, u_char *buffer, long count)
 {
     int convert;
     if(!ksr || !buffer || (type > AUDIO_ULAW || type < AUDIO_CHAR) || !ksr->current_event || (ksr->current_event->type == ME_EOT && !ksr_get_active_voices(ksr)))
