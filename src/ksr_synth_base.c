@@ -230,55 +230,36 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     int         j;
     if(ISDRUMCHANNEL(ksr, e->channel))
     {
-        /*
         if(!ksr->drumset[ksr->channel[e->channel].bank] && !ksr->drumset[0])
-            return; // No drumset? Then we can't play.
-
+            return;
+        
         if(!(ip = ksr->drumset[ksr->channel[e->channel].bank]->tone[e->key].instrument))
         {
             if(!(ip = ksr->drumset[0]->tone[e->key].instrument))
-                return; // No instrument? Then we can't play.
+                return;
         }
-
-        if(ip->sample->note_to_use) // Do we have a fixed pitch?
-            ksr->voice[i].orig_frequency = freq_table[(int)(ip->sample->note_to_use)];
+    
+        /* For drums, select sample by matching MIDI key to note_to_use/root_key
+         * rather than by frequency range, since drum kits map keys to instruments */
+            
+        Sample *best = NULL;
+        for(j = 0; j < ip->samples; j++)
+        {
+            if(ip->sample[j].note_to_use == e->key)
+            {
+                best = &ip->sample[j];
+                break;
+            }
+        }
+        if(!best)
+            return;  /* No drum sample for this key */
+        ksr->voice[i].sample = best;
+            
+        
+        if(ksr->voice[i].sample->note_to_use)
+            ksr->voice[i].orig_frequency = freq_table[(int)(ksr->voice[i].sample->note_to_use)];
         else
             ksr->voice[i].orig_frequency = freq_table[e->key & 0x7F];
-
-        // drums are supposed to have only one sample
-        ksr->voice[i].sample = ip->sample;
-        //select_sample(ksr, i, ip);
-        */
-        if(!ksr->drumset[ksr->channel[e->channel].bank] && !ksr->drumset[0])
-                return;
-        
-            if(!(ip = ksr->drumset[ksr->channel[e->channel].bank]->tone[e->key].instrument))
-            {
-                if(!(ip = ksr->drumset[0]->tone[e->key].instrument))
-                    return;
-            }
-        
-            /* For drums, select sample by matching MIDI key to note_to_use/root_key
-             * rather than by frequency range, since drum kits map keys to instruments */
-            {
-                Sample *best = NULL;
-                        for(j = 0; j < ip->samples; j++)
-                        {
-                            if(ip->sample[j].note_to_use == e->key)
-                            {
-                                best = &ip->sample[j];
-                                break;
-                            }
-                        }
-                        if(!best)
-                            return;  /* No drum sample for this key */
-                        ksr->voice[i].sample = best;
-            }
-        
-            if(ksr->voice[i].sample->note_to_use)
-                ksr->voice[i].orig_frequency = freq_table[(int)(ksr->voice[i].sample->note_to_use)];
-            else
-                ksr->voice[i].orig_frequency = freq_table[e->key & 0x7F];
     }
     else
     {
