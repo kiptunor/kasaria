@@ -1,7 +1,6 @@
 # Kasaria
 
-A powerful midi synthesizer capable to process millions of voices and offer high audio quality.
-This midi synth is based on Timidity and it aims to provide an easy to use C API.
+A powerful and high efficiency midi synthesizer based on Timidity
 
 
 
