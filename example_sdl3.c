@@ -79,6 +79,7 @@ int main(int argc, char **argv)
     ksr_set_max_voices(synth, 5000);
     ksr_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2", true);
     //ksr_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/SgtPepperArc360.sf2", true);
+    ksr_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/Arachno SoundFont Version 1.0.sf2", true);
     ksr_set_antialiasing(synth, 1);
     ksr_set_fast_decay(synth, true);
 

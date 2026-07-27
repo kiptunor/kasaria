@@ -95,6 +95,7 @@ static void free_bank(Kasaria *ksr, int dr, int b)
 
 static int fill_bank(Kasaria *ksr, int dr, int b)
 {
+    /*
     int       i, errors = 0;
     ToneBank *bank = ((dr) ? ksr->drumset[b] : ksr->tonebank[b]);
     if(!bank)
@@ -116,6 +117,47 @@ static int fill_bank(Kasaria *ksr, int dr, int b)
         }
     }
     return errors;
+    */
+
+    int       i, errors = 0;
+        ToneBank *bank = ((dr) ? ksr->drumset[b] : ksr->tonebank[b]);
+        if(!bank)
+            return 0;
+    
+        if(dr && ksr->sf_loaded)
+        {
+            Instrument *drum_instr = NULL;
+            for(i = 0; i < 128; i++)
+            {
+                if(bank->tone[i].instrument == MAGIC_LOAD_INSTRUMENT)
+                {
+                    if(!drum_instr)
+                        drum_instr = load_soundfont_instrument(ksr, &ksr->sf_info, ksr->sf_filename, b + 128, 0);
+    
+                    bank->tone[i].instrument = drum_instr;
+                    if(!drum_instr)
+                        errors++;
+                }
+            }
+            return errors;
+        }
+    
+        for(i = 0; i < 128; i++)
+        {
+            if(bank->tone[i].instrument == MAGIC_LOAD_INSTRUMENT)
+            {
+                if(ksr->sf_loaded)
+                {
+                    bank->tone[i].instrument = load_soundfont_instrument(ksr, &ksr->sf_info, ksr->sf_filename, b, i);
+                    if(bank->tone[i].instrument)
+                        continue;
+                }
+    
+                bank->tone[i].instrument = 0;
+                errors++;
+            }
+        }
+        return errors;
 }
 
 int load_missing_instruments(Kasaria *ksr)
@@ -372,8 +414,25 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
             attenuation         = sf_find_gen(inst_zone, SF_INITATTEN, 0);
             pan                 = sf_find_gen(inst_zone, SF_PAN, 0);
 
-            low_key             = sf_find_gen(inst_zone, SF_KEYRANGE, 0x7F00) & 0xFF;
-            high_key            = (sf_find_gen(inst_zone, SF_KEYRANGE, 0x7F00)) >> 8;
+            // low_key             = sf_find_gen(inst_zone, SF_KEYRANGE, 0x7F00) & 0xFF;
+            // high_key            = (sf_find_gen(inst_zone, SF_KEYRANGE, 0x7F00)) >> 8;
+
+            int keyrange = sf_find_gen(inst_zone, SF_KEYRANGE, -1);
+                            if(keyrange == 0x7F00 && bank >= 128)
+                            {
+                                low_key  = root_key;
+                                high_key = root_key;
+                            }
+                            else if(keyrange < 0)
+                            {
+                                low_key  = 0;
+                                high_key = 127;
+                            }
+                            else
+                            {
+                                low_key  = keyrange & 0xFF;
+                                high_key = (keyrange >> 8) & 0xFF;
+                            }
 
             sample->sample_rate = sfsample->samplerate;
 
@@ -387,7 +446,7 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
             sample->volume                  = pow(10.0, -attenuation / 200.0);
             sample->panning                 = (u_char)((pan + 500) * 127 / 1000);
             sample->modes                   = MODES_16BIT | MODES_ENVELOPE | loop_mode;
-            sample->note_to_use             = 0;
+            sample->note_to_use             = (bank >= 128) ? root_key : 0;
 
             sample->tremolo_sweep_increment = 0;
             sample->tremolo_phase_increment = 0;
