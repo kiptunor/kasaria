@@ -605,7 +605,7 @@ void adjust_volume(Kasaria *ksr, int c)
 // Process the Reset All Controllers event
 void reset_controllers(Kasaria *ksr, int c)
 {
-    ulog_debug("Reset controllers for channel %d", c);
+    // ulog_debug("Reset controllers for channel %d", c);
     ksr->channel[c].volume      = 90;  // Some standard says, although the SCC docs say 0.
     ksr->channel[c].expression  = 127; // SCC-1 does this.
     ksr->channel[c].sustain     = 0;

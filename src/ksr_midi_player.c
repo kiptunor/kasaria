@@ -740,6 +740,7 @@ int ksr_load_midi_file(Kasaria *ksr, char *filename)
     skip_to(ksr, 0);
     strncpy(ksr->last_smf, filename, 1023);
     ksr->last_smf[1023] = '\0';
+    ulog_info("Loaded MIDI: %s", ksr->last_smf);
     return 1;
 }
 

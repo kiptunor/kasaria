@@ -41,6 +41,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
     #include <string.h>
 #endif
 
+#include "ext_deps/ulog/src/ulog.h"
+
 #include "ksr_internal.h"
 
 
@@ -658,10 +660,16 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
     len = BE_LONG(len);
 
     if(memcmp(tmp, "MThd", 4) || len < 6)
+    {
+        ulog_topic_error("MIDI Loader", "MIDI File does not have track header!");
         return 0;
+    }
 
     if(fread(&format, 2, 1, ksr->fp) != 1 || fread(&tracks, 2, 1, ksr->fp) != 1 || fread(&divisions_tmp, 2, 1, ksr->fp) != 1)
+    {
+        ulog_topic_error("MIDI Loader", "Incompatible MIDI File Format!!");
         return 0;
+    }
 
     format        = BE_SHORT(format);
     tracks        = BE_SHORT(tracks);
@@ -676,7 +684,10 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
         skip(ksr->fp, len - 6);
 
     if(format < 0 || format > 2)
+    {
+        ulog_topic_error("MIDI Loader", "Invalid MIDI File Format!");
         return 0;
+    }
 
     ksr->evlist = (MidiEventList *)safe_malloc(sizeof(MidiEventList));
 
@@ -693,6 +704,7 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
     switch(format)
     {
     case 0:
+        ulog_topic_debug("MIDI Loader", "Format 0 Identified (Single Track)");
         if(read_track(ksr, &tail, 0))
         {
             free_midi_list(ksr);
@@ -701,24 +713,34 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
         break;
 
     case 1:
+        ulog_topic_debug("MIDI Loader", "Format 1 Identified (Multichannel Track)");
         for(i = 0; i < tracks; i++)
+        {
+            ulog_topic_debug("MIDI Loader", "Reading MIDI track %d / %d", i, tracks);
             if(read_track(ksr, &tail, 0))
             {
                 free_midi_list(ksr);
                 return 0;
             }
+        }
         break;
 
     case 2:
+        ulog_topic_debug("MIDI Loader", "Format 2 Identified");
         for(i = 0; i < tracks; i++)
+        {
+            ulog_topic_debug("MIDI Loader", "Reading MIDI track %d / %d", i, tracks);
             if(read_track(ksr, &tail, 1))
             {
                 free_midi_list(ksr);
                 return 0;
             }
+        }
         break;
     }
 
+    ulog_topic_debug("MIDI Loader", "Sorting Event List...");
+    
     sort_event_list(ksr);
     return groom_list(ksr, divisions, count, sp);
 }

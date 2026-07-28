@@ -3,6 +3,8 @@ add_rules("mode.debug", "mode.release", "plugin.compile_commands.autoupdate", "m
 set_toolset("ld", "clang")
 -- set_policy("build.sanitizer.address", true)
 -- add_cflags("-O0", "-g")
+add_cflags("-march=native", "-O3", "-ffast-math", "-fomit-frame-pointer")
+add_ldflags("-flto")
 
 
 

@@ -142,6 +142,7 @@ Kasaria *ksr_init(void)
 
     // ulog_color_config(1);
     ulog_topic_add("SF2", ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
+    ulog_topic_add("MIDI Loader", ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
     ulog_info("Kasaria Init\n\n");
 
     return ksr;

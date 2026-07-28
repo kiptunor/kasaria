@@ -82,7 +82,7 @@ int main(int argc, char **argv)
     //ksr_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/Arachno SoundFont Version 1.0.sf2", true);
     ksr_set_antialiasing(synth, 1);
     ksr_set_fast_decay(synth, true);
-    ksr_set_note_velocity_skipping(synth, 0, 32, true);
+    ksr_set_note_velocity_skipping(synth, 0, 20, true);
 
     printf("Loading midi\n");
     if(!ksr_load_midi_file(synth, argv[1])) // Try to load a midi file
