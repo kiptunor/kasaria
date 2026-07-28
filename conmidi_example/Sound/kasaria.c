@@ -64,7 +64,7 @@ void KSR_CreateAudioThread()
 
 void KSR_SendDirectData(unsigned long int data)
 {
-    ksr_write_midi_packed(ksr_inst, data);
+    ksr_write_midi_ev_packed(ksr_inst, data);
 }
 
 int KSR_SendDirectDataLong(MIDIHDR *mid_ev, unsigned int size)
@@ -74,7 +74,7 @@ int KSR_SendDirectDataLong(MIDIHDR *mid_ev, unsigned int size)
     unsigned int i;
     
     for(i = 0; i + 2 < len; i += 3)
-        ksr_write_midi(ksr_inst, data[i], data[i+1], data[i+2]);
+        ksr_write_midi_ev(ksr_inst, data[i], data[i+1], data[i+2]);
     
     
     if(i < len)
@@ -85,7 +85,7 @@ int KSR_SendDirectDataLong(MIDIHDR *mid_ev, unsigned int size)
         for(unsigned int j = 0; j < remaining; j++)
             pad[j] = data[i + j];
         
-        ksr_write_midi(ksr_inst, pad[0], pad[1], pad[2]);
+        ksr_write_midi_ev(ksr_inst, pad[0], pad[1], pad[2]);
     }
     return 0;
 }

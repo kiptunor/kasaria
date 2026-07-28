@@ -23,6 +23,15 @@ target("example-miniaudio")
         "example_miniaudio.c"
     )
 
+target("example-sokol")
+    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
+    set_kind("binary")
+    add_links("m", "asound")
+    add_files(
+        "src/**.c",
+        "example_sokol.c"
+    )
+
 target("example-sdl3")
     add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")

@@ -20,7 +20,7 @@ int main(void)
     ksr_reset(ksr);
     
     // Send Note On: ch0, note 60 (C4), velocity 100
-    ksr_write_midi(ksr, 0x90, 60, 100);
+    ksr_write_midi_ev(ksr, 0x90, 60, 100);
     
     // Render
     float buf[8192];
@@ -38,7 +38,7 @@ int main(void)
     if (max < 0.001f) {
         printf("Silence - trying with program change\n");
         ksr_channel_set_program(ksr, 0, 0);
-        ksr_write_midi(ksr, 0x90, 60, 100);
+        ksr_write_midi_ev(ksr, 0x90, 60, 100);
         memset(buf, 0, sizeof(buf));
         ksr_render_float(ksr, buf, 2048);
         max = 0;

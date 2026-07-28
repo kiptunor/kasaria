@@ -217,8 +217,8 @@ KSR_API void ksr_panic(Kasaria *ksr);             // Stop all notes immediately
 KSR_API void ksr_reset(Kasaria *ksr);             // Stop all notes immediately, and reset all MIDI parameters
 
 // Low level input API
-KSR_API void ksr_write_midi(Kasaria *ksr, unsigned char byte1, unsigned char byte2, unsigned char byte3); // Requires long MIDI data manipulation
-KSR_API void ksr_write_midi_packed(Kasaria *ksr, unsigned long data);                                     // Send short MIDI events
+KSR_API void ksr_write_midi_ev(Kasaria *ksr, unsigned char byte1, unsigned char byte2, unsigned char byte3); // Requires long MIDI data manipulation
+KSR_API void ksr_write_midi_ev_packed(Kasaria *ksr, unsigned long data);                                     // Send short MIDI events
 KSR_API void ksr_write_sysex(Kasaria *ksr, unsigned char *buffer, long count);
 
 // Audio output functions

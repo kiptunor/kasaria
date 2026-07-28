@@ -604,7 +604,7 @@ void ksr_channel_control_change(Kasaria *ksr, u_char channel, u_char controller,
     }
 }
 
-void ksr_write_midi(Kasaria *ksr, u_char byte1, u_char byte2, u_char byte3)
+void ksr_write_midi_ev(Kasaria *ksr, u_char byte1, u_char byte2, u_char byte3)
 {
     u_char type    = byte1 & 0xf0;
     u_char channel = byte1 & 0x0f;
@@ -634,7 +634,7 @@ void ksr_write_midi(Kasaria *ksr, u_char byte1, u_char byte2, u_char byte3)
     }
 }
 
-void ksr_write_midi_packed(Kasaria *ksr, u_long data)
+void ksr_write_midi_ev_packed(Kasaria *ksr, u_long data)
 {
     u_char byte1 = data & 0xff;
     u_char byte2 = (data >> 8) & 0x7f;
@@ -642,7 +642,7 @@ void ksr_write_midi_packed(Kasaria *ksr, u_long data)
     if(!ksr)
         return;
 
-    ksr_write_midi(ksr, byte1, byte2, byte3);
+    ksr_write_midi_ev(ksr, byte1, byte2, byte3);
 }
 
 void ksr_write_sysex(Kasaria *ksr, u_char *buffer, long count)
