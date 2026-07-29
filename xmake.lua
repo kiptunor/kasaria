@@ -14,6 +14,13 @@ set_languages("c11")
 
 add_requires("sdl3",       {system = true})
 
+
+target("kasaria")
+    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
+    set_kind("shared")
+    add_links("m")
+    add_files("src/**.c")
+
 target("example-miniaudio")
     set_default(false)
     add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
