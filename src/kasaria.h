@@ -106,6 +106,7 @@ typedef struct
 
 // Allocate and initialize an instance of Kasaria
 KSR_API Kasaria *ksr_init(void);
+KSR_API int ksr_init_audio(Kasaria *ksr);
 
 KSR_API void ksr_print_config(Kasaria *ksr);                     // Print the configuration to stdout at any time
 KSR_API KasariaConfig ksr_get_config(Kasaria *ksr);              // Read the current config at any time
@@ -186,10 +187,12 @@ KSR_API int  ksr_load_midi_file(Kasaria *ksr, char *filename); // MIDI file play
 KSR_API void ksr_unload_midi(Kasaria *ksr);
 KSR_API int  ksr_reload_midi(Kasaria *ksr);
 KSR_API int  ksr_play_midi_sync(Kasaria *ksr, long type, unsigned char *buffer, long count); // count is in samples
+KSR_API int  ksr_play_midi_async(Kasaria *ksr, bool wait_midi_ending);                       // Play MIDI asynchronously (Audio streaming is handeled internally)
 KSR_API int  ksr_seek_midi(Kasaria *ksr, long time);                                    // Absolute seeking
 KSR_API int  ksr_fast_forward_midi(Kasaria *ksr, long time);                            // Relative seeking
 KSR_API int  ksr_rewind_midi(Kasaria *ksr, long time);
 KSR_API int  ksr_restart_midi(Kasaria *ksr);
+KSR_API bool ksr_is_midi_ended(Kasaria *ksr);
 KSR_API int  ksr_stop_midi(Kasaria *ksr);
 
 // --------------------------- MIDI Event API ---------------------------

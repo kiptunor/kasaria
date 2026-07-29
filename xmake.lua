@@ -15,6 +15,7 @@ set_languages("c11")
 add_requires("sdl3",       {system = true})
 
 target("example-miniaudio")
+    set_default(false)
     add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
     add_links("m")
@@ -52,6 +53,7 @@ target("example-simple")
     )
 
 target("example-conmidi")
+    set_default(false)
     add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
     --set_languages("c11")
@@ -59,4 +61,14 @@ target("example-conmidi")
     add_files(
         "src/**.c",
         "conmidi_example/**.c"
+    )
+
+target("example-async")
+    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
+    set_kind("binary")
+    --set_languages("c11")
+    add_links("m", "pthread")
+    add_files(
+        "src/**.c",
+        "example_async.c"
     )

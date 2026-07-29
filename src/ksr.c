@@ -93,6 +93,13 @@ void ksr_print_config(Kasaria *ksr)
 }
 
 
+void init_internal_state(Kasaria *ksr)
+{
+    ksr->is_midi_loaded = false;
+    ksr->is_midi_ended  = false;
+    
+}
+
 Kasaria *ksr_init(void)
 {
     Kasaria *ksr = (Kasaria *)safe_malloc(sizeof(Kasaria));
@@ -118,6 +125,7 @@ Kasaria *ksr_init(void)
     ksr->quietchannels                 = 0;
     ksr->adjust_panning_immediately    = 1;
     ksr->preload_soundfont_instruments = 1;
+    ksr->buffer_period_size            = 512;
 
     default_compressor_settings(ksr);
 
@@ -135,6 +143,8 @@ Kasaria *ksr_init(void)
         ksr->drumset[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
         memset(ksr->drumset[0], 0, sizeof(ToneBank));
     }
+
+    init_internal_state(ksr);
 
     init_tables(ksr);
     reset_midi(ksr);
@@ -172,6 +182,7 @@ void ksr_restore_defaults(Kasaria *ksr)
     ksr->quietchannels                 = 0;
     ksr->adjust_panning_immediately    = 1;
     ksr->preload_soundfont_instruments = 1;
+    ksr->buffer_period_size            = 512;
 
     default_compressor_settings(ksr);
 
@@ -848,6 +859,38 @@ int ksr_samples2millis(Kasaria *ksr, long samples)
     return (int)((f64)samples * 1000 / ksr->play_mode.rate);
 }
 
+int ksr_init_audio(Kasaria *ksr)
+{
+    if(!ksr)
+        return 1;
+
+    if(ksr->is_audio_init)
+    {
+        ulog_warn("Audio device is already initialized");
+        return 0;
+    }
+
+    ksr->dev_config                    = ma_device_config_init(ma_device_type_playback);
+
+    ksr->dev_config.playback.format    = ma_format_f32;
+    ksr->dev_config.playback.channels  = 2;
+    ksr->dev_config.sampleRate         = ksr->play_mode.rate;
+    ksr->dev_config.periodSizeInFrames = ksr->buffer_period_size;
+    ksr->dev_config.dataCallback       = _audio_callback;
+
+    if(ma_device_init(NULL, &ksr->dev_config, &ksr->audio_device) != MA_SUCCESS)
+    {
+        ulog_error("Failed to open audio device");
+        return 1;
+    }
+
+    ksr->is_audio_init = true;
+
+    ulog_info("Audio device initialized");
+
+    return 0;
+}
+
 // TODO: Find a better place for this
 int preload_soundfont_instruments(Kasaria *ksr)
 {
@@ -909,6 +952,9 @@ void ksr_shutdown(Kasaria *ksr)
         return;
 
     ulog_info("Kasaria shutdown...");
+
+    if(ksr->is_audio_init)
+        ma_device_uninit(&ksr->audio_device);
 
     reset_midi(ksr);
     ksr_unload_midi(ksr); // This also calls reset_midi()

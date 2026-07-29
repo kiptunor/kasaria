@@ -66,7 +66,8 @@
 
 /* Default sampling rate, default polyphony, and maximum polyphony.
    All but the last can be overridden from the command line. */
-#define DEFAULT_RATE          44100
+//#define DEFAULT_RATE          44100 // Audio is way too offpitch and the midi player is too slow
+#define DEFAULT_RATE          48000
 #define DEFAULT_VOICES        520
 // #define MAX_VOICES	48
 #define MAX_VOICES            9024

@@ -47,6 +47,9 @@ playmidi.c -- random stuff in need of rearrangement
 
 #include "ext_deps/ulog/src/ulog.h"
 
+#define MINIAUDIO_IMPLEMENTATION
+#include "ext_deps/miniaudio/miniaudio.h"
+
 #include "ksr_internal.h"
 #include "ksr_sf2.h"
 #include "kasaria.h"
@@ -59,6 +62,50 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
+
+
+
+
+
+Kasaria *async_midi_player; // Required only for the async MIDI player
+
+
+
+
+void            _audio_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
+{
+    (void)pInput;
+
+    if(async_midi_player->is_midi_ended)
+    {
+        memset(pOutput, 0, frameCount * 2 * sizeof(float));
+        return;
+    }
+
+    float  raw_audio[async_midi_player->buffer_period_size * 2];
+    float *out       = (float *)pOutput;
+    int    remaining = frameCount;
+
+    while(remaining > 0)
+    {
+        int chunk    = remaining > async_midi_player->buffer_period_size ? async_midi_player->buffer_period_size : remaining;
+        int rendered = ksr_play_midi_sync(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play MIDI in realtime and get the generated audio (as Raw PCM)
+
+        if(!rendered)
+        {
+            memset(out, 0, remaining * 2 * sizeof(float));
+            return;
+        }
+
+        for(int i = 0; i < chunk; i++)
+        {
+            out[i * 2 + 0] = raw_audio[i * 2 + 0];
+            out[i * 2 + 1] = raw_audio[i * 2 + 1];
+        }
+        out       += chunk * 2;
+        remaining -= chunk;
+    }
+}
 
 static void seek_forward(Kasaria *ksr, long until_time)
 {
@@ -740,7 +787,9 @@ int ksr_load_midi_file(Kasaria *ksr, char *filename)
     skip_to(ksr, 0);
     strncpy(ksr->last_smf, filename, 1023);
     ksr->last_smf[1023] = '\0';
+    ksr->is_midi_loaded = true;
     ulog_info("Loaded MIDI: %s", ksr->last_smf);
+    
     return 1;
 }
 
@@ -794,7 +843,7 @@ int ksr_reload_midi(Kasaria *ksr)
 int ksr_play_midi_sync(Kasaria *ksr, long type, u_char *buffer, long count)
 {
     int convert;
-    if(!ksr || !buffer || (type > AUDIO_ULAW || type < AUDIO_CHAR) || !ksr->current_event || (ksr->current_event->type == ME_EOT && !ksr_get_active_voices(ksr)))
+    if(!ksr || !buffer || (type > AUDIO_ULAW || type < AUDIO_CHAR))
         return 0;
 
     while(count > 0)
@@ -803,7 +852,10 @@ int ksr_play_midi_sync(Kasaria *ksr, long type, u_char *buffer, long count)
         while(ksr->current_event->time <= ksr->current_sample)
         {
             if(ksr->current_event->type == ME_EOT)
+            {
+                ksr->is_midi_ended = true;
                 break;
+            }
 
             play_midi(ksr, ksr->current_event);
             ksr->current_event++;
@@ -878,6 +930,45 @@ int ksr_play_midi_sync(Kasaria *ksr, long type, u_char *buffer, long count)
         count               -= convert;
     }
     return 1;
+}
+
+int ksr_play_midi_async(Kasaria *ksr, bool wait_midi_ending)
+{
+    if(!ksr)
+        return 0;
+
+    if(!ksr->is_audio_init)
+    {
+        ulog_error("Audio device not initialized");
+        return 0;
+    }
+
+    if(!ksr->is_midi_loaded)
+    {
+        ulog_error("No MIDI File was loaded!");
+        return 0;
+    }
+
+    async_midi_player = ksr; // Get the current synth context for the async player
+
+    ulog_info("Starting MIDI playback...");
+    ma_device_start(&async_midi_player->audio_device);
+
+    // Wait for the MIDI playback to finish (This is required if this function is called on the main thread so it won't exit)
+    if(wait_midi_ending)
+        while(!ksr->is_midi_ended)
+            ma_sleep(1000);
+
+    // In any case the while loop above is not used
+    if(ksr->is_midi_ended)
+        ma_device_stop(&ksr->audio_device);
+    
+    return 1;
+}
+
+bool ksr_is_midi_ended(Kasaria *ksr)
+{
+    return ksr->is_midi_ended;
 }
 
 int ksr_seek_midi(Kasaria *ksr, long time)

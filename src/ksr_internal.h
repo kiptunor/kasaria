@@ -43,6 +43,12 @@
 #include <stdbool.h>
 #include <math.h>
 
+
+
+
+#include "ext_deps/miniaudio/miniaudio.h"
+
+
 #include "config.h"
 #include "kasaria.h"
 #include "ksr_sf2.h"
@@ -403,6 +409,7 @@ struct Kasaria
     bool           pre_resampling_allowed;
     bool           fast_decay;
     bool           preload_soundfont_instruments;
+    bool           is_audio_init;
     // int            dynamic_loading; // No longer it use
     PlayMode       play_mode;
     f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
@@ -419,6 +426,7 @@ struct Kasaria
     long           cut_notes;
     bool           adjust_panning_immediately;
     int            voices;
+    u32            buffer_period_size;
     bool           note_vel_skipping;
     u8             low_vel_treshold;
     u8             high_vel_treshold;
@@ -433,6 +441,8 @@ struct Kasaria
     char           song_title[256];
     char           song_copyright[256];
     char           last_smf[1024];
+    bool           is_midi_loaded;
+    bool           is_midi_ended;
     // to avoid some unnecessary parameter passing
     MidiEventList *evlist;
     long           event_count;
@@ -458,6 +468,9 @@ struct Kasaria
     CompressorSettings compressor_settings;
     int                channel_voice_count[16];
     int                channel_voice_list[16][MAX_VOICES * 2];
+
+    ma_device_config   dev_config;
+    ma_device          audio_device;
 };
 
 
@@ -495,6 +508,7 @@ Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filen
 int         preload_soundfont_instruments(Kasaria *ksr);
 int         read_config_file(Kasaria *tm, char *name);
 void        reset_midi(Kasaria *ksr);
+void        _audio_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
 
 void        audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
 
