@@ -22,60 +22,38 @@ target("kasaria")
     add_files("src/**.c")
 
 target("example-miniaudio")
-    set_default(false)
-    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
     add_links("m")
-    add_files(
-        "src/**.c",
-        "example_miniaudio.c"
-    )
+    add_files("example_miniaudio.c")
+    add_deps("kasaria")
 
 target("example-sokol")
-    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
     add_links("m", "asound")
-    add_files(
-        "src/**.c",
-        "example_sokol.c"
-    )
+    add_files("example_sokol.c")
+    add_deps("kasaria")
 
 target("example-sdl3")
-    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
     add_packages("sdl3")
     add_links("m")
-    add_files(
-        "src/**.c",
-        "example_sdl3.c"
-    )
+    add_files("example_sdl3.c")
+    add_deps("kasaria")
 
 target("example-simple")
-    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
     add_links("m")
-    add_files(
-        "src/**.c",
-        "simple-example.c"
-    )
+    add_files("simple-example.c")
+    add_deps("kasaria")
 
 target("example-conmidi")
-    set_default(false)
-    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
-    --set_languages("c11")
     add_links("m", "pthread")
-    add_files(
-        "src/**.c",
-        "conmidi_example/**.c"
-    )
+    add_files("conmidi_example/**.c")
+    add_deps("kasaria")
 
 target("example-async")
-    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("binary")
-    --set_languages("c11")
     add_links("m", "pthread")
-    add_files(
-        "src/**.c",
-        "example_async.c"
-    )
+    add_files("example_async.c")
+    add_deps("kasaria")
