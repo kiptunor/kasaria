@@ -1,9 +1,5 @@
 #include <stdio.h>
 
-#define __USE_XOPEN_EXTENDED
-#include <unistd.h>
-
-
 #include "src/kasaria.h"
 
 
