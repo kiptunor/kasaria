@@ -51,6 +51,7 @@ int recompute_envelope(Kasaria *ksr, int v)
         // Envelope ran out.
         int tmp              = (ksr->voice[v].status == VOICE_DIE); /* Already displayed as dead */
         ksr->voice[v].status = VOICE_FREE;
+        free_voice_push(ksr, v);
         if(!tmp)
             return 1;
     }
@@ -534,6 +535,7 @@ void mix_voice(Kasaria *ksr, f32 *buf, int v, long c)
         if(c > 0)
             ramp_out(ksr, sp, buf, v, c);
         vp->status = VOICE_FREE;
+        free_voice_push(ksr, v);
     }
     else
     {

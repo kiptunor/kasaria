@@ -444,6 +444,8 @@ struct Kasaria
     char           last_smf[1024];
     bool           is_midi_loaded;
     bool           is_midi_ended;
+    int            free_voice_stack[MAX_VOICES];
+    int            free_voice_count;
     // to avoid some unnecessary parameter passing
     MidiEventList *evlist;
     long           event_count;
@@ -551,5 +553,6 @@ void reset_voices(Kasaria *ksr);
 void drop_sustain(Kasaria *ksr, int c);
 void reset_controllers(Kasaria *ksr, int c);
 void reset_midi(Kasaria *ksr);
+void free_voice_push(Kasaria *ksr, int i);
 
 #endif

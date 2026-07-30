@@ -42,11 +42,29 @@ playmidi.c -- random stuff in need of rearrangement
 void reset_voices(Kasaria *ksr)
 {
     ulog_debug("Reset voices");
+    /*
     int i;
     for(i = 0; i < MAX_VOICES; i++)
         ksr->voice[i].status = VOICE_FREE;
 
     memset(ksr->channel_voice_count, 0, sizeof(ksr->channel_voice_count));
+    */
+    for(int i = 0; i < MAX_VOICES; i++)    // ← MAX_VOICES, not ksr->voices
+        ksr->voice[i].status = VOICE_FREE;
+    
+    ksr->free_voice_count = ksr->voices;
+        for(int i = 0; i < ksr->voices; i++)
+        {
+            ksr->voice[i].status = VOICE_FREE;
+            ksr->free_voice_stack[i] = i;
+        }
+        memset(ksr->channel_voice_count, 0, sizeof(ksr->channel_voice_count));
+        memset(ksr->voice_by_channel_note, 0, sizeof(ksr->voice_by_channel_note));
+}
+
+void free_voice_push(Kasaria *ksr, int i)
+{
+    ksr->free_voice_stack[ksr->free_voice_count++] = i;
 }
 
 void channel_voice_add(Kasaria *ksr, int ch, int vi)
@@ -276,6 +294,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
 
         if(!ip)
             return;
+        
 
         if(ip->sample->note_to_use) // Fixed-pitch instrument?
             ksr->voice[i].orig_frequency = freq_table[(int)(ip->sample->note_to_use)];
@@ -340,11 +359,13 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             if(candidate->low_freq == primary->low_freq && candidate->high_freq == primary->high_freq && candidate->panning != primary->panning)
             {
                 int stereo_v;
-                for(stereo_v = 0; stereo_v < ksr->voices; stereo_v++)
-                    if(ksr->voice[stereo_v].status == VOICE_FREE)
-                        break;
-                if(stereo_v < ksr->voices)
+                // for(stereo_v = 0; stereo_v < ksr->voices; stereo_v++)
+                //     if(ksr->voice[stereo_v].status == VOICE_FREE)
+                //         break;
+                //if(stereo_v < ksr->voices)
+                if(ksr->free_voice_count > 0)
                 {
+                    stereo_v = ksr->free_voice_stack[--ksr->free_voice_count];
                     channel_voice_add(ksr, e->channel, stereo_v);
                     ksr->voice[stereo_v].status                     = VOICE_ON;
                     ksr->voice[stereo_v].channel                    = e->channel;
@@ -391,8 +412,9 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                         ksr->voice[stereo_v].envelope_increment = 0;
                         apply_envelope_to_amp(ksr, stereo_v);
                     }
+                    break;
                 }
-                break;
+                //break;
             }
         }
     }
@@ -408,6 +430,7 @@ void kill_note(Kasaria *ksr, int i)
 // This thing needs some serious oprimizations
 void note_on(Kasaria *ksr, MidiEvent *e)
 {
+    /*
     int  i = ksr->voices, lowest = -1;
     long lv = 0x7FFFFFFF, v;
 
@@ -470,6 +493,125 @@ void note_on(Kasaria *ksr, MidiEvent *e)
     }
     else
         ksr->lost_notes++;
+        */
+
+    // --------------------- some fix
+    /*
+    if(ksr->free_voice_count > 0)
+    {
+        int vi = ksr->free_voice_stack[--ksr->free_voice_count];
+        start_note(ksr, e, vi);
+        return;
+    }
+    // --- Bugfix: skip notes OUTSIDE velocity range, not inside ---
+        if(ksr->note_vel_skipping)
+            if(e->vel < ksr->low_vel_treshold || e->vel > ksr->high_vel_treshold)
+                return;
+    
+        // --- O(1) retrigger using existing lookup tables ---
+        if(ksr->channel[e->channel].mono)
+        {
+            // Mono mode: kill all voices on this channel via channel_voice_list
+            int n = ksr->channel_voice_count[e->channel];
+            while(n--)
+                kill_note(ksr, ksr->channel_voice_list[e->channel][n]);
+        }
+        else
+        {
+            // Poly mode: kill any existing voice on same channel+note
+            for(int k = 0; k < 2; k++)
+            {
+                Voice *vp = ksr->voice_by_channel_note[e->channel][e->key][k];
+                if(vp && vp->channel == e->channel && vp->note == e->key)
+                    kill_note(ksr, (int)(vp - ksr->voice));
+            }
+        }
+    
+        // --- O(1) free voice from stack ---
+        if(ksr->free_voice_count > 0)
+        {
+            start_note(ksr, e, ksr->free_voice_stack[--ksr->free_voice_count]);
+            return;
+        }
+    
+        // --- Steal quietest decaying voice (rare: only runs when ALL 5000 voices are active) ---
+        int  i = ksr->voices, lowest = -1;
+        long lv = 0x7FFFFFFF, v;
+    
+        while(i--)
+        {
+            if(ksr->voice[i].status != VOICE_ON && ksr->voice[i].status != VOICE_DIE)
+            {
+                v = ksr->voice[i].left_mix;
+                if(ksr->voice[i].panned == PANNED_MYSTERY && ksr->voice[i].right_mix > v)
+                    v = ksr->voice[i].right_mix;
+                if(v < lv) { lv = v; lowest = i; }
+            }
+        }
+    
+        if(lowest != -1)
+        {
+            ksr->cut_notes++;
+            channel_voice_remove(ksr, ksr->voice[lowest].channel, lowest);
+            // start_note takes ownership directly — no need to set VOICE_FREE in between
+            start_note(ksr, e, lowest);
+        }
+        else
+            ksr->lost_notes++;
+            */
+
+    // Velocity filter — only active when thresholds are configured
+    //if(ksr->note_vel_skipping && ksr->low_vel_treshold <= ksr->high_vel_treshold)
+    //    if(e->vel < ksr->low_vel_treshold || e->vel > ksr->high_vel_treshold)
+    //        return;
+    
+        // Retrigger: kill any existing voice on same channel+key
+        if(ksr->channel[e->channel].mono)
+        {
+            int n = ksr->channel_voice_count[e->channel];
+            while(n--)
+                kill_note(ksr, ksr->channel_voice_list[e->channel][n]);
+        }
+        else
+        {
+            for(int k = 0; k < 2; k++)
+            {
+                Voice *vp = ksr->voice_by_channel_note[e->channel][e->key][k];
+                if(vp && vp->channel == e->channel && vp->note == e->key)
+                    kill_note(ksr, (int)(vp - ksr->voice));
+            }
+        }
+    
+        // Pop from free stack
+        if(ksr->free_voice_count > 0)
+        {
+            start_note(ksr, e, ksr->free_voice_stack[--ksr->free_voice_count]);
+            return;
+        }
+    
+        // Steal quietest decaying voice
+        int  i = ksr->voices, lowest = -1;
+        long lv = 0x7FFFFFFF, v;
+    
+        while(i--)
+        {
+            if(ksr->voice[i].status != VOICE_ON && ksr->voice[i].status != VOICE_DIE)
+            {
+                v = ksr->voice[i].left_mix;
+                if(ksr->voice[i].panned == PANNED_MYSTERY && ksr->voice[i].right_mix > v)
+                    v = ksr->voice[i].right_mix;
+                if(v < lv) { lv = v; lowest = i; }
+            }
+        }
+    
+        if(lowest != -1)
+        {
+            ksr->cut_notes++;
+            channel_voice_remove(ksr, ksr->voice[lowest].channel, lowest);
+            start_note(ksr, e, lowest);
+        }
+        else
+            ksr->lost_notes++;
 }
 
 void finish_note(Kasaria *ksr, int i)
@@ -645,11 +787,16 @@ void do_compute_data(Kasaria *ksr, long count)
     for(i = 0; i < samples; i++)
         ksr->buffer_pointer[i] = 0;
 
+    //int active = 0;
     for(i = 0; i < ksr->voices; i++)
     {
         if(ksr->voice[i].status != VOICE_FREE)
+        {
             mix_voice(ksr, ksr->buffer_pointer, i, count);
+            //active++;
+        }
     }
+    //ulog_debug("mix: active=%d", active);  // ← moved OUTSIDE the loop
 
     audio_compressor(&ksr->compressor_settings, (f32 *)ksr->buffer_pointer, samples * sizeof(f32));
 }
