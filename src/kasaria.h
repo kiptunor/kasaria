@@ -78,6 +78,7 @@ typedef struct
     bool antialiasing;
     bool pre_resample;
     bool velocity_skipping;
+    bool audio_compressor;
 }KasariaConfig;
 
 /*
@@ -120,7 +121,7 @@ KSR_API void ksr_restore_defaults(Kasaria *ksr); // Restore default settings
 KSR_API void ksr_set_amplification(Kasaria *ksr, int amplification); // Amplification is represented in percent
 KSR_API void ksr_set_max_voices(Kasaria *ksr, int voices);           // The number of voices is clamped between 1 and MAX_VOICES
 KSR_API void ksr_set_immediate_panning(Kasaria *ksr, bool value);    // The value argument for the following functions should be treated as a boolean
-KSR_API void ksr_set_mono(Kasaria *ksr, bool value);                 // Renders mono audio buffers if enabled, interleaved stereo otherwise
+KSR_API void ksr_set_mono(Kasaria *ksr, bool value); //This makes weird noise // Renders mono audio buffers if enabled, interleaved stereo otherwise
 
 // These next few functions reload the current sample bank before returning
 KSR_API void ksr_set_fast_decay(Kasaria *ksr, bool value);
@@ -131,7 +132,8 @@ KSR_API void ksr_set_control_rate(Kasaria *ksr, int rate);                  // T
 KSR_API void ksr_set_default_program(Kasaria *ksr, int program);            // Sets the default MIDI program, takes effect on next MIDI reset
 KSR_API void ksr_set_drum_channel(Kasaria *ksr, int channel, bool enable);
 KSR_API void ksr_set_quiet_channel(Kasaria *ksr, int channel, bool enable);
-KSR_API void ksr_set_note_velocity_skipping(Kasaria *ksr, uint8_t low_vel, uint8_t high_vel, bool enabled); // TODO: Add enable argument (Enable / Disable the note velocity skipping)
+KSR_API void ksr_set_note_velocity_skipping(Kasaria *ksr, uint8_t low_vel, uint8_t high_vel, bool enabled);
+KSR_API void ksr_set_audio_compressor(Kasaria *ksr, bool enabled);
 
 
 // --------------------------- Parameters Reading API ---------------------------
@@ -179,11 +181,13 @@ KSR_API int ksr_get_song_copyright(Kasaria *ksr, char *buffer, long count);
 
 KSR_API int  ksr_load_soundfont_file(Kasaria *ksr, char *filename, bool preload_instruments); // Currently supports only SF2 format (SFZ Support is also planned)
 KSR_API int  ksr_force_instrument_load(Kasaria *ksr);               // Force all instruments to be loaded
-KSR_API void ksr_preload_instruments(Kasaria *ksr);                 // Preload all instruments
+//KSR_API void ksr_preload_instruments(Kasaria *ksr);                 // Preload all instruments
+KSR_API void ksr_load_soundfont_from_mem(Kasaria *ksr, void *mem, long size, bool preload_instruments); // Todo
 
 
 // --------------------------- MIDI Player API ---------------------------
 KSR_API int  ksr_load_midi_file(Kasaria *ksr, char *filename); // MIDI file player, only supports standard MIDI files
+KSR_API int  ksr_load_midi_from_mem(Kasaria *ksr, void *mem, long size); // Todo
 KSR_API void ksr_unload_midi(Kasaria *ksr);
 KSR_API int  ksr_reload_midi(Kasaria *ksr);
 KSR_API int  ksr_play_midi_sync(Kasaria *ksr, long type, unsigned char *buffer, long count); // count is in samples

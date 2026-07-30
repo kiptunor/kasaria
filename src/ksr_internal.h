@@ -428,6 +428,7 @@ struct Kasaria
     int            voices;
     u32            buffer_period_size;
     bool           note_vel_skipping;
+    bool           audio_compressor;
     u8             low_vel_treshold;
     u8             high_vel_treshold;
     u_char         rpn_msb[16];
@@ -480,40 +481,54 @@ struct Kasaria
 
 
 
+// ------------- Utility functions (utils.c) -------------
+FILE *open_file(Kasaria *tm, char *name, int decompress, int noise_mode);
+void add_to_pathlist(Kasaria *tm, char *s);
+void free_pathlist(Kasaria *tm);
+void close_file(FILE *fp);
+void skip(FILE *fp, size_t len);
+void *safe_malloc(size_t count);
 
 
+// ------------- Filter functions (ksr_filter.c) -------------
+void antialiasing(Sample *sp, long output_rate);
+void audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
 
 
-
-FILE       *open_file(Kasaria *tm, char *name, int decompress, int noise_mode);
-void        add_to_pathlist(Kasaria *tm, char *s);
-void        free_pathlist(Kasaria *tm);
-void        close_file(FILE *fp);
-void        skip(FILE *fp, size_t len);
-void       *safe_malloc(size_t count);
-void        antialiasing(Sample *sp, long output_rate);
-int         load_missing_instruments(Kasaria *tm);
-void        free_instruments(Kasaria *tm);
-//int         set_default_instrument(Kasaria *tm, char *name);
-void        free_default_instrument(Kasaria *tm);
-void        mix_voice(Kasaria *tm, f32 *buf, int v, long c);
-int         recompute_envelope(Kasaria *tm, int v);
-void        apply_envelope_to_amp(Kasaria *tm, int v);
-MidiEvent  *read_midi_file(Kasaria *tm, FILE *mfp, long *count, long *sp);
-sample_t   *resample_voice(Kasaria *tm, int v, long *countptr);
-void        pre_resample(Kasaria *tm, Sample *sp);
-void        init_tables(Kasaria *tm);
-void        free_tables(Kasaria *tm);
+// ------------- SoundFont Instrument functions (ksr_instruments.c) -------------
+int load_missing_instruments(Kasaria *tm);
+void free_instruments(Kasaria *tm);
+//int set_default_instrument(Kasaria *tm, char *name);
+void free_default_instrument(Kasaria *tm);
 Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filename, int bank, int program);
-int         preload_soundfont_instruments(Kasaria *ksr);
-int         read_config_file(Kasaria *tm, char *name);
-void        reset_midi(Kasaria *ksr);
-void        _audio_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
-
-void        audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
+int preload_soundfont_instruments(Kasaria *ksr);
 
 
-// ------------- Synth Base functions -------------
+// ------------- Voice mixing functions (ksr_voice_mix.c) -------------
+void mix_voice(Kasaria *tm, f32 *buf, int v, long c);
+int recompute_envelope(Kasaria *tm, int v);
+void apply_envelope_to_amp(Kasaria *tm, int v);
+
+
+// ------------- MIDI loading functions (ksr_midi_loader.c) -------------
+MidiEvent *read_midi_file(Kasaria *tm, FILE *mfp, long *count, long *sp);
+
+
+// ------------- Resampling functions (ksr_resample.c) -------------
+sample_t *resample_voice(Kasaria *tm, int v, long *countptr);
+void pre_resample(Kasaria *tm, Sample *sp);
+
+
+// ------------- Table functions (ksr_tables.c) -------------
+void init_tables(Kasaria *tm);
+void free_tables(Kasaria *tm);
+
+
+// ------------- Audio callback functions (ksr_midi_player.c) -------------
+void _audio_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
+
+
+// ------------- Synth Base functions (ksr_synth_base.c) -------------
 void channel_voice_add(Kasaria *ksr, int ch, int vi);
 void channel_voice_remove(Kasaria *ksr, int ch, int vi);
 void select_sample(Kasaria *ksr, int v, Instrument *ip);
@@ -535,4 +550,6 @@ void adjust_amplification(Kasaria *ksr, int amplification);
 void reset_voices(Kasaria *ksr);
 void drop_sustain(Kasaria *ksr, int c);
 void reset_controllers(Kasaria *ksr, int c);
+void reset_midi(Kasaria *ksr);
+
 #endif

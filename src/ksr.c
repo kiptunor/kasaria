@@ -61,17 +61,17 @@ void default_compressor_settings(Kasaria *ksr)
 
 void ksr_print_config(Kasaria *ksr)
 {
-    ulog_debug("fast_decay                 = %d", ksr->fast_decay);
-    ulog_debug("antialiasing_allowed       = %d", ksr->antialiasing_allowed);
-    ulog_debug("pre_resampling_allowed     = %d", ksr->pre_resampling_allowed);
+    ulog_debug("fast_decay                 = %d",  ksr->fast_decay);
+    ulog_debug("antialiasing_allowed       = %d",  ksr->antialiasing_allowed);
+    ulog_debug("pre_resampling_allowed     = %d",  ksr->pre_resampling_allowed);
     ulog_debug("sample_rate                = %ld", ksr->play_mode.rate);
     ulog_debug("control_rate               = %ld", ksr->control_rate);
     ulog_debug("control_ratio              = %ld", ksr->control_ratio);
-    ulog_debug("master_volume              = %f", ksr->master_volume);
+    ulog_debug("master_volume              = %f",  ksr->master_volume);
     ulog_debug("drum_channels              = %ld", ksr->drumchannels);
     ulog_debug("quiet_channels             = %ld", ksr->quietchannels);
-    ulog_debug("voice_limit                = %d", ksr->voices);
-    ulog_debug("adjust_panning_immediately = %d", ksr->adjust_panning_immediately);
+    ulog_debug("voice_limit                = %d",  ksr->voices);
+    ulog_debug("adjust_panning_immediately = %d",  ksr->adjust_panning_immediately);
 
     printf("\n------------- [Filters and audio DSP Effects] -------------\n\n");
 
@@ -218,7 +218,8 @@ KasariaConfig ksr_get_config(Kasaria *ksr)
     config.antialiasing       = ksr->antialiasing_allowed;
     config.pre_resample       = ksr->pre_resampling_allowed;
     config.velocity_skipping  = ksr->note_vel_skipping;
-
+    config.audio_compressor   = ksr->audio_compressor;
+    
     return config;
 }
 
@@ -240,6 +241,7 @@ void ksr_set_config(Kasaria *ksr, KasariaConfig config)
     ksr->antialiasing_allowed       = config.antialiasing;
     ksr->pre_resampling_allowed     = config.pre_resample;
     ksr->note_vel_skipping          = config.velocity_skipping;
+    ksr->audio_compressor           = config.audio_compressor;
 }
 
 int ksr_load_soundfont_file(Kasaria *ksr, char *filename, bool preload_instruments)
@@ -891,34 +893,12 @@ int ksr_init_audio(Kasaria *ksr)
     return 0;
 }
 
-// TODO: Find a better place for this
-int preload_soundfont_instruments(Kasaria *ksr)
+void ksr_set_audio_compressor(Kasaria *ksr, bool enabled)
 {
-    ulog_topic_debug("SF2", "Preloading soundfont instruments for %s", ksr->sf_filename);
-    int i, b, p;
-
-    if(!ksr->sf_loaded)
-        return 0;
-
-    for(i = 0; i < ksr->sf_info.npresets; i++)
-    {
-        b = ksr->sf_info.preset[i].bank;
-        p = ksr->sf_info.preset[i].preset;
-
-        if(b < 0 || b > 127 || p < 0 || p > 127)
-            continue;
-
-        if(!ksr->tonebank[b])
-        {
-            ksr->tonebank[b] = (ToneBank *)safe_malloc(sizeof(ToneBank));
-            memset(ksr->tonebank[b], 0, sizeof(ToneBank));
-        }
-
-        if(!ksr->tonebank[b]->tone[p].instrument)
-            ksr->tonebank[b]->tone[p].instrument = load_soundfont_instrument(ksr, &ksr->sf_info, ksr->sf_filename, b, p);
-    }
-
-    return 1;
+    if(!ksr)
+        return;
+    
+    ksr->audio_compressor = enabled;
 }
 
 // And this one too (It may prob dissapear)
