@@ -422,9 +422,9 @@ void kill_note(Kasaria *ksr, int i)
 void note_on(Kasaria *ksr, MidiEvent *e)
 {
     // idk why but this is broken now
-    //if(ksr->note_vel_skipping && ksr->low_vel_treshold <= ksr->high_vel_treshold)
-    //    if(e->vel < ksr->low_vel_treshold || e->vel > ksr->high_vel_treshold)
-    //        return;
+    if(ksr->note_vel_skipping)
+        if(e->vel >= ksr->low_vel_treshold && e->vel <= ksr->high_vel_treshold)
+            return;
     
     // Retrigger: kill any existing voice on same channel+key
     if(ksr->channel[e->channel].mono)
@@ -443,36 +443,36 @@ void note_on(Kasaria *ksr, MidiEvent *e)
         }
     }
     
-        // Pop from free stack
-        if(ksr->free_voice_count > 0)
-        {
-            start_note(ksr, e, ksr->free_voice_stack[--ksr->free_voice_count]);
-            return;
-        }
+    // Pop from free stack
+    if(ksr->free_voice_count > 0)
+    {
+        start_note(ksr, e, ksr->free_voice_stack[--ksr->free_voice_count]);
+        return;
+    }
+
+    // Steal quietest decaying voice
+    int  i = ksr->voices, lowest = -1;
+    long lv = 0x7FFFFFFF, v;
     
-        // Steal quietest decaying voice
-        int  i = ksr->voices, lowest = -1;
-        long lv = 0x7FFFFFFF, v;
-    
-        while(i--)
+    while(i--)
+    {
+        if(ksr->voice[i].status != VOICE_ON && ksr->voice[i].status != VOICE_DIE)
         {
-            if(ksr->voice[i].status != VOICE_ON && ksr->voice[i].status != VOICE_DIE)
-            {
-                v = ksr->voice[i].left_mix;
-                if(ksr->voice[i].panned == PANNED_MYSTERY && ksr->voice[i].right_mix > v)
-                    v = ksr->voice[i].right_mix;
-                if(v < lv) { lv = v; lowest = i; }
-            }
+            v = ksr->voice[i].left_mix;
+            if(ksr->voice[i].panned == PANNED_MYSTERY && ksr->voice[i].right_mix > v)
+                v = ksr->voice[i].right_mix;
+            if(v < lv) { lv = v; lowest = i; }
         }
+    }
     
-        if(lowest != -1)
-        {
-            ksr->cut_notes++;
-            channel_voice_remove(ksr, ksr->voice[lowest].channel, lowest);
-            start_note(ksr, e, lowest);
-        }
-        else
-            ksr->lost_notes++;
+    if(lowest != -1)
+    {
+        ksr->cut_notes++;
+        channel_voice_remove(ksr, ksr->voice[lowest].channel, lowest);
+        start_note(ksr, e, lowest);
+    }
+    else
+        ksr->lost_notes++;
 }
 
 void finish_note(Kasaria *ksr, int i)
