@@ -16,3 +16,6 @@ A powerful and high efficiency midi synthesizer based on Timidity
 - [ ] SFZ Support
 - [ ] Audio Capture 
 - [X] Builtin Audio Limiter
+
+## Big thanks to
+Dominexis (for helping me with the earliest optimizarion ideas)
