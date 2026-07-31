@@ -54,6 +54,7 @@ void* HandleTermKeys(void* arg)
                 exit(0);
             }
         }
+        usleep(1000);
     }
 }
 

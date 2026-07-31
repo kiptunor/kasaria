@@ -37,7 +37,7 @@ static void     data_callback(float *pOutput, int frameCount, int numChannels)
     while(remaining > 0)
     {
         int chunk    = remaining > BUFFER_FRAMES ? BUFFER_FRAMES : remaining;
-        int rendered = ksr_play_midi_sync(synth, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk);
+        int rendered = ksr_play_midi_raw(synth, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk);
 
         if(!rendered)
         {

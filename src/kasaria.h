@@ -190,8 +190,8 @@ KSR_API int  ksr_load_midi_file(Kasaria *ksr, char *filename); // MIDI file play
 KSR_API int  ksr_load_midi_from_mem(Kasaria *ksr, void *mem, long size); // Todo
 KSR_API void ksr_unload_midi(Kasaria *ksr);
 KSR_API int  ksr_reload_midi(Kasaria *ksr);
-KSR_API int  ksr_play_midi_sync(Kasaria *ksr, long type, unsigned char *buffer, long count); // count is in samples
-KSR_API int  ksr_play_midi_async(Kasaria *ksr, bool wait_midi_ending);                       // Play MIDI asynchronously (Audio streaming is handeled internally)
+KSR_API int  ksr_play_midi_raw(Kasaria *ksr, long type, unsigned char *buffer, long count); // count is in samples
+KSR_API int  ksr_play_midi(Kasaria *ksr, bool wait_midi_ending);                       // Play MIDI asynchronously (Audio streaming is handeled internally)
 KSR_API int  ksr_seek_midi(Kasaria *ksr, long time);                                    // Absolute seeking
 KSR_API int  ksr_fast_forward_midi(Kasaria *ksr, long time);                            // Relative seeking
 KSR_API int  ksr_rewind_midi(Kasaria *ksr, long time);

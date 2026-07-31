@@ -36,7 +36,7 @@ void            audio_callback(void *userdata, SDL_AudioStream *stream, int addi
             return;
         }
 
-        int rendered = ksr_play_midi_sync(synth, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play the midi in realtime and get the generated audio data (as raw PCM)
+        int rendered = ksr_play_midi_raw(synth, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play the midi in realtime and get the generated audio data (as raw PCM)
 
         if(!rendered)
         {

@@ -30,7 +30,7 @@ void            data_callback(ma_device *pDevice, void *pOutput, const void *pIn
     while(remaining > 0)
     {
         int chunk    = remaining > BUFFER_FRAMES ? BUFFER_FRAMES : remaining;
-        int rendered = ksr_play_midi_sync(synth, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play MIDI in realtime and get the generated audio (as Raw PCM)
+        int rendered = ksr_play_midi_raw(synth, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play MIDI in realtime and get the generated audio (as Raw PCM)
 
         if(!rendered)
         {

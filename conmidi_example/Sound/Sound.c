@@ -35,7 +35,7 @@ void Sound_Setup()
 
 int Sound_Init()
 {
-    
+  
 
     KSR_Init();
     SendDirectDataPtr = KSR_SendDirectData;

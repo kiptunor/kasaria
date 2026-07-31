@@ -58,6 +58,7 @@ void reset_voices(Kasaria *ksr)
 
 void free_voice_push(Kasaria *ksr, int i)
 {
+    //ulog_debug("free_voice_push: i=%d", i);
     ksr->free_voice_stack[ksr->free_voice_count++] = i;
 }
 
@@ -421,7 +422,7 @@ void kill_note(Kasaria *ksr, int i)
 // This thing needs some serious oprimizations
 void note_on(Kasaria *ksr, MidiEvent *e)
 {
-    // idk why but this is broken now
+    // Skip notes based on their velocity (Only the ones within the threshold values)
     if(ksr->note_vel_skipping)
         if(e->vel >= ksr->low_vel_treshold && e->vel <= ksr->high_vel_treshold)
             return;

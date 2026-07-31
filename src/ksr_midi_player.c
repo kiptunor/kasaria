@@ -89,7 +89,7 @@ void            _audio_callback(ma_device *pDevice, void *pOutput, const void *p
     while(remaining > 0)
     {
         int chunk    = remaining > async_midi_player->buffer_period_size ? async_midi_player->buffer_period_size : remaining;
-        int rendered = ksr_play_midi_sync(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play MIDI in realtime and get the generated audio (as Raw PCM)
+        int rendered = ksr_play_midi_raw(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play MIDI in realtime and get the generated audio (as Raw PCM)
 
         if(!rendered)
         {
@@ -840,7 +840,7 @@ int ksr_reload_midi(Kasaria *ksr)
     return 0;
 }
 
-int ksr_play_midi_sync(Kasaria *ksr, long type, u_char *buffer, long count)
+int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
 {
     int convert;
     if(!ksr || !buffer || (type > AUDIO_ULAW || type < AUDIO_CHAR))
@@ -932,7 +932,7 @@ int ksr_play_midi_sync(Kasaria *ksr, long type, u_char *buffer, long count)
     return 1;
 }
 
-int ksr_play_midi_async(Kasaria *ksr, bool wait_midi_ending)
+int ksr_play_midi(Kasaria *ksr, bool wait_midi_ending)
 {
     if(!ksr)
         return 0;
