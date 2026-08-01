@@ -76,8 +76,8 @@ int main(int argc, char **argv)
 
     ksr_set_sample_rate(synth, SAMPLE_RATE);
     ksr_set_max_voices(synth, 5000);
-    ksr_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2", true);
-    ksr_load_soundfont_file(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/SgtPepperArc360.sf2", true);
+    ksr_load_soundfont_file(synth, "Full Grand Piano V2.sf2", true);
+    ksr_load_soundfont_file(synth, "SgtPepperArc360.sf2", true);
     ksr_set_antialiasing(synth, 1);
 
     printf("Loading midi\n");

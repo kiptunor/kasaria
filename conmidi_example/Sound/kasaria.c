@@ -15,7 +15,7 @@
 #define BUFFER_FRAMES 488 // OMv1 with WASAPi
 //#define BUFFER_FRAMES 800 // Default FPS on KMC (Realtime Simulation)
 //#define BUFFER_FRAMES 95   // Trying some experiments idfk 
-//#define BUFFER_FRAMES 8192
+//#define BUFFER_FRAMES 5192
 
 
 static Kasaria *ksr_inst;
@@ -117,8 +117,8 @@ void KSR_Init()
     ksr_set_antialiasing(ksr_inst, 0);
     ksr_set_note_velocity_skipping(ksr_inst, 0, 32, true);
     ksr_print_config(ksr_inst);
-    ksr_load_soundfont_file(ksr_inst, "/home/andre/disks/1_TB_1/bm/soundfonts/Full Grand Piano V2.sf2", true);
-    ksr_load_soundfont_file(ksr_inst, "/home/andre/disks/1_TB_1/bm/soundfonts/SgtPepperArc360.sf2", true);
+    ksr_load_soundfont_file(ksr_inst, "Full Grand Piano V2.sf2", true);
+    ksr_load_soundfont_file(ksr_inst, "SgtPepperArc360.sf2", true);
     //ksr_force_instrument_load(ksr_inst);
     //ksr_preload_soundfont_instruments(ksr_inst);
 }

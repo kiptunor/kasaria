@@ -72,6 +72,7 @@ typedef struct
     int default_program;
     int low_note_velocity;
     int high_note_velocity;
+    int audio_frame_size;
     bool immediate_panning;
     bool mono_audio;
     bool fast_decay;
@@ -134,6 +135,7 @@ KSR_API void ksr_set_drum_channel(Kasaria *ksr, int channel, bool enable);
 KSR_API void ksr_set_quiet_channel(Kasaria *ksr, int channel, bool enable);
 KSR_API void ksr_set_note_velocity_skipping(Kasaria *ksr, uint8_t low_vel, uint8_t high_vel, bool enabled);
 KSR_API void ksr_set_audio_compressor(Kasaria *ksr, bool enabled);
+KSR_API void ksr_set_audio_frame_size(Kasaria *ksr, int size);
 
 
 // --------------------------- Parameters Reading API ---------------------------

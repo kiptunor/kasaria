@@ -125,7 +125,7 @@ Kasaria *ksr_init(void)
     ksr->quietchannels                 = 0;
     ksr->adjust_panning_immediately    = 1;
     ksr->preload_soundfont_instruments = 1;
-    ksr->buffer_period_size            = 512;
+    ksr->buffer_period_size            = 488;
 
     default_compressor_settings(ksr);
 
@@ -182,7 +182,7 @@ void ksr_restore_defaults(Kasaria *ksr)
     ksr->quietchannels                 = 0;
     ksr->adjust_panning_immediately    = 1;
     ksr->preload_soundfont_instruments = 1;
-    ksr->buffer_period_size            = 512;
+    ksr->buffer_period_size            = 488;
 
     default_compressor_settings(ksr);
 
@@ -207,6 +207,7 @@ KasariaConfig ksr_get_config(Kasaria *ksr)
 
     config.amplification      = ksr->master_volume * 100.0L;
     config.voice_limit        = ksr->voices;
+    config.audio_frame_size   = ksr->buffer_period_size;
     config.sample_rate        = ksr->play_mode.rate;
     config.control_rate       = ksr->control_rate;
     config.default_program    = ksr->default_program;
@@ -230,6 +231,7 @@ void ksr_set_config(Kasaria *ksr, KasariaConfig config)
 
     ksr->master_volume              = config.amplification / 100.0L;
     ksr->voices                     = config.voice_limit;
+    ksr->buffer_period_size         = config.audio_frame_size;
     ksr->play_mode.rate             = config.sample_rate;
     ksr->control_rate               = config.control_rate;
     ksr->default_program            = config.default_program;
@@ -282,6 +284,14 @@ int ksr_load_soundfont_file(Kasaria *ksr, char *filename, bool preload_instrumen
     if(ksr->preload_soundfont_instruments)
         preload_soundfont_instruments(ksr);
     return 1;
+}
+
+void ksr_set_audio_frame_size(Kasaria *ksr, int size)
+{
+    if(!ksr)
+        return;
+
+    ksr->buffer_period_size = size;
 }
 
 void ksr_set_amplification(Kasaria *ksr, int amplification)
