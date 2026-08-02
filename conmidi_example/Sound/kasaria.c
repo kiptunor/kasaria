@@ -119,11 +119,16 @@ void KSR_Init()
     ksr_print_config(ksr_inst);
     ksr_load_soundfont_file(ksr_inst, "Full Grand Piano V2.sf2", true);
     ksr_load_soundfont_file(ksr_inst, "SgtPepperArc360.sf2", true);
+
+    ksr_init_audio(ksr_inst, RAW_MIDI_EVENTS);
     //ksr_force_instrument_load(ksr_inst);
     //ksr_preload_soundfont_instruments(ksr_inst);
+
+    ksr_start_audio(ksr_inst);
 }
 
 void KSR_Shutdown()
 {
+    ksr_stop_audio(ksr_inst);
     ksr_shutdown(ksr_inst);
 }

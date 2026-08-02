@@ -75,6 +75,6 @@ void LoadMIDI(char path[], unsigned int bs)
     free(buffer);
     fclose(midi);
     printf("\nBeginning playback...\n");
-    KSR_CreateAudioThread();
+    //KSR_CreateAudioThread();
     StartPlayback();
 }

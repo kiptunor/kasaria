@@ -72,7 +72,7 @@ Kasaria *async_midi_player; // Required only for the async MIDI player
 
 
 
-void            _audio_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
+void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
     (void)pInput;
 

@@ -45,6 +45,12 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
+
+
+Kasaria *raw_midi_event_ctx;
+
+
+
 void default_compressor_settings(Kasaria *ksr)
 {
     ksr->compressor_settings.envelope      = 0.0f;
@@ -871,7 +877,14 @@ int ksr_samples2millis(Kasaria *ksr, long samples)
     return (int)((f64)samples * 1000 / ksr->play_mode.rate);
 }
 
-int ksr_init_audio(Kasaria *ksr)
+void audio_callback(ma_device *dev, void *out, const void *in, ma_uint32 frames)
+{
+    // Sooo simple
+    // XD
+    ksr_render_float(raw_midi_event_ctx, out, frames);
+}
+
+int ksr_init_audio(Kasaria *ksr, int init_scope)
 {
     if(!ksr)
         return 1;
@@ -882,13 +895,24 @@ int ksr_init_audio(Kasaria *ksr)
         return 0;
     }
 
+    ksr->audio_init_scope = init_scope;
+
     ksr->dev_config                    = ma_device_config_init(ma_device_type_playback);
 
     ksr->dev_config.playback.format    = ma_format_f32;
     ksr->dev_config.playback.channels  = 2;
     ksr->dev_config.sampleRate         = ksr->play_mode.rate;
     ksr->dev_config.periodSizeInFrames = ksr->buffer_period_size;
-    ksr->dev_config.dataCallback       = _audio_callback;
+
+    if(ksr->audio_init_scope == INTERNAL_MIDI_PLAYER)
+        ksr->dev_config.dataCallback = _internal_midi_player_cb;
+
+    if(ksr->audio_init_scope == RAW_MIDI_EVENTS)
+    {
+        raw_midi_event_ctx = ksr;
+        ksr->dev_config.dataCallback = audio_callback;
+        ksr->is_init_raw_midi_events = true;
+    }
 
     if(ma_device_init(NULL, &ksr->dev_config, &ksr->audio_device) != MA_SUCCESS)
     {
@@ -909,6 +933,62 @@ void ksr_set_audio_compressor(Kasaria *ksr, bool enabled)
         return;
     
     ksr->audio_compressor = enabled;
+}
+
+int ksr_start_audio(Kasaria *ksr)
+{
+    if(!ksr)
+        return 1;
+
+    if(ksr->is_init_raw_midi_events)
+    {
+        if(ma_device_start(&raw_midi_event_ctx->audio_device) != MA_SUCCESS)
+        {
+            ulog_error("Failed to start audio device for raw MIDI events");
+            return 1;
+        }
+        ulog_info("Audio device started for raw MIDI events");
+        return 0;
+    }
+        
+
+    if(ma_device_start(&ksr->audio_device) != MA_SUCCESS)
+    {
+        ulog_error("Failed to start audio device for internal midi player");
+        return 1;
+    }
+
+    ulog_info("Audio device started for internal midi player");
+    //ksr->is_audio_started = true;
+    
+    return 0;
+}
+
+int ksr_stop_audio(Kasaria *ksr)
+{
+    if(!ksr)
+        return 1;
+
+    if(ksr->is_init_raw_midi_events)
+    {
+        if(ma_device_stop(&raw_midi_event_ctx->audio_device) != MA_SUCCESS)
+        {
+            ulog_error("Failed to stop audio device for raw MIDI events");
+            return 1;
+        }
+        return 0;
+    }
+        
+
+    if(ma_device_stop(&ksr->audio_device) != MA_SUCCESS)
+    {
+        ulog_error("Failed to stop audio device for internal midi player");
+        return 1;
+    }
+
+    //ksr->is_audio_started = true;
+    
+    return 0;
 }
 
 // And this one too (It may prob dissapear)

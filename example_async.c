@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     ksr_set_audio_frame_size(synth, 688);
 
     // Initialize and open an audio device
-    ksr_init_audio(synth); // Needed for the async midi playback
+    ksr_init_audio(synth, INTERNAL_MIDI_PLAYER); // Needed for the async midi playback
 
     // Load 2 soundfonts
 

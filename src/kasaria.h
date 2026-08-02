@@ -106,9 +106,15 @@ typedef struct
 #define MIDI_MEMORY  21 // Load MIDI data into memory
 #define MIDI_MAPPING 22 // Play MIDI File by reading it from disk (No RAM is used)
 
+// Audio initialization scope
+#define INTERNAL_MIDI_PLAYER 31
+#define RAW_MIDI_EVENTS      32
+
 // Allocate and initialize an instance of Kasaria
 KSR_API Kasaria *ksr_init(void);
-KSR_API int ksr_init_audio(Kasaria *ksr);
+KSR_API int ksr_init_audio(Kasaria *ksr, int init_scope);
+KSR_API int ksr_start_audio(Kasaria *ksr);
+KSR_API int ksr_stop_audio(Kasaria *ksr);
 
 KSR_API void ksr_print_config(Kasaria *ksr);                     // Print the configuration to stdout at any time
 KSR_API KasariaConfig ksr_get_config(Kasaria *ksr);              // Read the current config at any time

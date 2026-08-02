@@ -410,6 +410,8 @@ struct Kasaria
     bool           fast_decay;
     bool           preload_soundfont_instruments;
     bool           is_audio_init;
+    bool           is_init_raw_midi_events;
+    bool           is_audio_started;
     // int            dynamic_loading; // No longer it use
     PlayMode       play_mode;
     f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
@@ -474,6 +476,7 @@ struct Kasaria
 
     ma_device_config   dev_config;
     ma_device          audio_device;
+    int                audio_init_scope;
 };
 
 
@@ -527,7 +530,7 @@ void free_tables(Kasaria *tm);
 
 
 // ------------- Audio callback functions (ksr_midi_player.c) -------------
-void _audio_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
+void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
 
 
 // ------------- Synth Base functions (ksr_synth_base.c) -------------
