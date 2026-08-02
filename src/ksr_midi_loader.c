@@ -714,9 +714,11 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
 
     case 1:
         ulog_topic_debug("MIDI Loader", "Format 1 Identified (Multichannel Track)");
+        int temp_track_counter = 0;
         for(i = 0; i < tracks; i++)
         {
-            ulog_topic_debug("MIDI Loader", "Reading MIDI track %d / %d", i, tracks);
+            temp_track_counter = i;
+            ulog_topic_debug("MIDI Loader", "Reading MIDI track %d / %d", temp_track_counter + 1, tracks);
             if(read_track(ksr, &tail, 0))
             {
                 free_midi_list(ksr);
