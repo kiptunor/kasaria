@@ -3,9 +3,6 @@
 #include "Sound.h"
 #include "../../src/kasaria.h"
 
-#define MINIAUDIO_IMPLEMENTATION
-#include "../../src/ext_deps/miniaudio/miniaudio.h"
-
 
 
 
