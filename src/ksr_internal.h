@@ -416,6 +416,7 @@ struct Kasaria
     PlayMode       play_mode;
     f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
     f32           *buffer_pointer;
+    f32            current_midi_player_position;
     Channel        channel[16];
     Voice          voice[MAX_VOICES];
     Voice         *voice_by_channel_note[16][128][2];

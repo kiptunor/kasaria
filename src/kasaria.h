@@ -206,6 +206,7 @@ KSR_API int  ksr_rewind_midi(Kasaria *ksr, long time);
 KSR_API int  ksr_restart_midi(Kasaria *ksr);
 KSR_API bool ksr_is_midi_ended(Kasaria *ksr);
 KSR_API int  ksr_stop_midi(Kasaria *ksr);
+KSR_API double ksr_get_midi_player_pos(Kasaria *ksr);
 
 // --------------------------- MIDI Event API ---------------------------
 KSR_API void ksr_channel_note_on(Kasaria *ksr, unsigned char channel, unsigned char note, unsigned char velocity);

@@ -860,6 +860,10 @@ int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
             play_midi(ksr, ksr->current_event);
             ksr->current_event++;
         }
+
+        // ksr->current_midi_player_position = (double)ksr->current_event->time / (double)ksr->play_mode.rate;
+        // ksr->current_midi_player_position = (double)ksr->current_sample / (double)ksr->play_mode.rate;
+        ksr->current_midi_player_position = (double)(ksr->current_sample - ksr->dev_config.periodSizeInFrames) / (double)ksr->play_mode.rate; // idfk if it's correct
         convert = ksr->current_event->time - ksr->current_sample;
         if(convert > count || convert <= 0) // I could prob count the number of events here ??
             convert = count;
@@ -957,7 +961,7 @@ int ksr_play_midi(Kasaria *ksr, bool wait_midi_ending)
     // Wait for the MIDI playback to finish (This is required if this function is called on the main thread so it won't exit)
     if(wait_midi_ending)
         while(!ksr->is_midi_ended)
-            ma_sleep(1000);
+            ma_sleep(1000); // This may probably extend the position
 
     // In any case the while loop above is not used
     if(ksr->is_midi_ended)

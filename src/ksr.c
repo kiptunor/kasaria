@@ -189,6 +189,7 @@ void ksr_restore_defaults(Kasaria *ksr)
     ksr->adjust_panning_immediately    = 1;
     ksr->preload_soundfont_instruments = 1;
     ksr->buffer_period_size            = 488;
+    ksr->current_midi_player_position  = 0.0f;
 
     default_compressor_settings(ksr);
 
@@ -859,6 +860,14 @@ int ksr_get_song_copyright(Kasaria *ksr, char *buffer, long count)
         strncpy(buffer, ksr->song_copyright, count);
 
     return len;
+}
+
+double ksr_get_midi_player_pos(Kasaria *ksr)
+{
+    if(!ksr)
+        return 0;
+
+    return ksr->current_midi_player_position;
 }
 
 int ksr_millis2samples(Kasaria *ksr, long millis)
