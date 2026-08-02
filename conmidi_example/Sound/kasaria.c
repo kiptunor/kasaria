@@ -12,54 +12,14 @@
 
 
 #define SAMPLE_RATE 48000
-#define BUFFER_FRAMES 488 // OMv1 with WASAPi
-//#define BUFFER_FRAMES 800 // Default FPS on KMC (Realtime Simulation)
-//#define BUFFER_FRAMES 95   // Trying some experiments idfk 
-//#define BUFFER_FRAMES 5192
+
 
 
 static Kasaria *ksr_inst;
-static ma_device device;
 
 
 
 
-
-
-
-
-
-
-void audio_callback(ma_device *dev, void *out, const void *in, ma_uint32 frames)
-{
-    // This is how easy it can get
-    ksr_render_float(ksr_inst, out, frames);
-}
-
-
-// Required since kasaria does not handle audio callbacks internally currently
-
-void KSR_CreateAudioThread()
-{
-    printf("Audio thread created\n");
-        
-    ma_device_config config = ma_device_config_init(ma_device_type_playback);
-    config.playback.format    = ma_format_f32;
-    config.playback.channels  = 2;
-    config.sampleRate         = SAMPLE_RATE;
-    config.dataCallback       = audio_callback;
-    config.periodSizeInFrames = BUFFER_FRAMES;
-    
-    if(ma_device_init(NULL, &config, &device) != MA_SUCCESS)
-    {
-        printf("Failed to open playback device.\n");
-        ksr_shutdown(ksr_inst);
-        return;
-    }
-    
-    ma_device_start(&device);
-    printf("Audio device started\n");
-}
 
 
 void KSR_SendDirectData(unsigned long int data)
@@ -108,8 +68,6 @@ void KSR_Init()
 {
     ksr_inst = ksr_init();
 
-    //cap = fopen("/home/andre/disks/1_TB_1/bm/kasaria_cap.raw", "wb");
-    
     ksr_set_amplification(ksr_inst, 100);
     ksr_set_sample_rate(ksr_inst, SAMPLE_RATE);
     //ksr_set_control_rate(ksr_inst, SAMPLE_RATE / 4);
@@ -121,9 +79,6 @@ void KSR_Init()
     ksr_load_soundfont_file(ksr_inst, "SgtPepperArc360.sf2", true);
 
     ksr_init_audio(ksr_inst, RAW_MIDI_EVENTS);
-    //ksr_force_instrument_load(ksr_inst);
-    //ksr_preload_soundfont_instruments(ksr_inst);
-
     ksr_start_audio(ksr_inst);
 }
 

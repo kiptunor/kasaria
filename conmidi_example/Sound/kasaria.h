@@ -3,7 +3,7 @@
 
 
 
-void KSR_CreateAudioThread();
+
 
 void KSR_Init();
 void KSR_Shutdown();
