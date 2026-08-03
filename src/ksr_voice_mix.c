@@ -32,12 +32,69 @@ mix.c */
 
 
 
-
+#ifndef KSR_USE_MIX_SIMD
+    #define KSR_USE_MIX_SIMD 1
+#endif
 
 
 #include <malloc.h>
 
 #include "ksr_internal.h"
+
+
+
+#if defined(__AVX2__) && !defined(LOOKUP_HACK) && KSR_USE_MIX_SIMD
+#define KSR_MIX_SIMD 1
+#include <immintrin.h>
+#define MIX_BLOCK 8
+
+/* 8 input samples -> 16 interleaved stereo outputs:
+   lp[2k] += left*s_k, lp[2k+1] += right*s_k. */
+static inline void mix_stereo_block(f32 *__restrict lp, const sample_t *__restrict sp, long left, long right)
+{
+    __m256i s  = _mm256_cvtepi16_epi32(_mm_loadu_si128((const __m128i *)sp));
+    __m256i l  = _mm256_mullo_epi32(s, _mm256_set1_epi32((int)left));
+    __m256i r  = _mm256_mullo_epi32(s, _mm256_set1_epi32((int)right));
+    __m256  fl = _mm256_cvtepi32_ps(l);
+    __m256  fr = _mm256_cvtepi32_ps(r);
+
+    __m256 t0 = _mm256_unpacklo_ps(fl, fr);
+    __m256 t1 = _mm256_unpackhi_ps(fl, fr);
+    __m256 o0 = _mm256_permute2f128_ps(t0, t1, 0x20);
+    __m256 o1 = _mm256_permute2f128_ps(t0, t1, 0x31);
+
+    _mm256_storeu_ps(lp,     _mm256_add_ps(_mm256_loadu_ps(lp),     o0));
+    _mm256_storeu_ps(lp + 8, _mm256_add_ps(_mm256_loadu_ps(lp + 8), o1));
+}
+
+/* 8 input samples -> add left*s_k to lp[2k] only (one channel of stereo). */
+static inline void mix_single_block(f32 *__restrict lp, const sample_t *__restrict sp, long left)
+{
+    __m256i s = _mm256_cvtepi16_epi32(_mm_loadu_si128((const __m128i *)sp));
+    __m256i p = _mm256_mullo_epi32(s, _mm256_set1_epi32((int)left));
+    __m256  f = _mm256_cvtepi32_ps(p);
+    __m256  z = _mm256_setzero_ps();
+
+    __m256 t0 = _mm256_unpacklo_ps(f, z);
+    __m256 t1 = _mm256_unpackhi_ps(f, z);
+    __m256 o0 = _mm256_permute2f128_ps(t0, t1, 0x20);
+    __m256 o1 = _mm256_permute2f128_ps(t0, t1, 0x31);
+
+    _mm256_storeu_ps(lp,     _mm256_add_ps(_mm256_loadu_ps(lp),     o0));
+    _mm256_storeu_ps(lp + 8, _mm256_add_ps(_mm256_loadu_ps(lp + 8), o1));
+}
+
+/* 8 input samples -> add left*s_k to lp[k] (mono). */
+static inline void mix_mono_block(f32 *__restrict lp, const sample_t *__restrict sp, long left)
+{
+    __m256i s = _mm256_cvtepi16_epi32(_mm_loadu_si128((const __m128i *)sp));
+    __m256i p = _mm256_mullo_epi32(s, _mm256_set1_epi32((int)left));
+    __m256  f = _mm256_cvtepi32_ps(p);
+    _mm256_storeu_ps(lp, _mm256_add_ps(_mm256_loadu_ps(lp), f));
+}
+#else
+    #define KSR_MIX_SIMD 0
+#endif
 
 // Returns 1 if envelope runs out
 int recompute_envelope(Kasaria *ksr, int v)
@@ -191,192 +248,264 @@ static int update_signal(Kasaria *ksr, int v)
 static void mix_mystery_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 {
     Voice         *vp   = ksr->voice + v;
-    final_volume_t left = vp->left_mix, right = vp->right_mix;
-    int            cc;
-    sample_t       s;
+    final_volume_t left, right;
+    int            cc   = vp->control_counter;
+    int            n    = count;
 
-    if(!(cc = vp->control_counter))
+    for(;;)
     {
-        cc = ksr->control_ratio;
-        if(update_signal(ksr, v))
-            return; // Envelope ran out
-
-        left  = vp->left_mix;
-        right = vp->right_mix;
-    }
-
-    while(count)
-        if(cc < count)
+        if(!cc)
         {
-            count -= cc;
-            while(cc--)
-            {
-                s = *sp++;
-                MIXATION(left);
-                MIXATION(right);
-            }
             cc = ksr->control_ratio;
             if(update_signal(ksr, v))
-                return; // Envelope ran out
-
-            left  = vp->left_mix;
-            right = vp->right_mix;
+                return;
         }
-        else
+        left  = vp->left_mix;
+        right = vp->right_mix;
+
+        if(cc >= n)
         {
-            vp->control_counter = cc - count;
-            while(count--)
+            vp->control_counter = cc - n;
+#if KSR_MIX_SIMD
+            while(n >= MIX_BLOCK)
             {
-                s = *sp++;
+                mix_stereo_block(lp, sp, left, right);
+                sp += MIX_BLOCK;
+                lp += 2 * MIX_BLOCK;
+                n  -= MIX_BLOCK;
+            }
+#endif
+            while(n--)
+            {
+                sample_t s = *sp++;
                 MIXATION(left);
                 MIXATION(right);
             }
             return;
         }
+        else
+        {
+#if KSR_MIX_SIMD
+            while(cc >= MIX_BLOCK)
+            {
+                mix_stereo_block(lp, sp, left, right);
+                sp += MIX_BLOCK;
+                lp += 2 * MIX_BLOCK;
+                cc -= MIX_BLOCK;
+                n  -= MIX_BLOCK;
+            }
+#endif
+            while(cc--)
+            {
+                sample_t s = *sp++;
+                MIXATION(left);
+                MIXATION(right);
+                n--;
+            }
+
+            cc = 0;
+        }
+    }
 }
 
 static void mix_center_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 {
     Voice         *vp   = ksr->voice + v;
-    final_volume_t left = vp->left_mix;
-    int            cc;
-    sample_t       s;
+    final_volume_t left;
+    int            cc   = vp->control_counter;
+    int            n    = count;
 
-    if(!(cc = vp->control_counter))
+    for(;;)
     {
-        cc = ksr->control_ratio;
-        if(update_signal(ksr, v))
-            return; // Envelope ran out
-
-        left = vp->left_mix;
-    }
-
-    while(count)
-        if(cc < count)
+        if(!cc)
         {
-            count -= cc;
-            while(cc--)
-            {
-                s = *sp++;
-                MIXATION(left);
-                MIXATION(left);
-            }
             cc = ksr->control_ratio;
             if(update_signal(ksr, v))
-                return; // Envelope ran out
-
-            left = vp->left_mix;
+                return;
         }
-        else
+        left = vp->left_mix;
+
+        if(cc >= n)
         {
-            vp->control_counter = cc - count;
-            while(count--)
+            vp->control_counter = cc - n;
+#if KSR_MIX_SIMD
+            while(n >= MIX_BLOCK)
             {
-                s = *sp++;
+                mix_stereo_block(lp, sp, left, left);
+                sp += MIX_BLOCK;
+                lp += 2 * MIX_BLOCK;
+                n  -= MIX_BLOCK;
+            }
+#endif
+            while(n--)
+            {
+                sample_t s = *sp++;
                 MIXATION(left);
                 MIXATION(left);
             }
             return;
         }
+        else
+        {
+#if KSR_MIX_SIMD
+            while(cc >= MIX_BLOCK)
+            {
+                mix_stereo_block(lp, sp, left, left);
+                sp += MIX_BLOCK;
+                lp += 2 * MIX_BLOCK;
+                cc -= MIX_BLOCK;
+                n  -= MIX_BLOCK;
+            }
+#endif
+            while(cc--)
+            {
+                sample_t s = *sp++;
+                MIXATION(left);
+                MIXATION(left);
+                n--;
+            }
+            cc = 0;
+        }
+    }
 }
 
 static void mix_single_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 {
     Voice         *vp   = ksr->voice + v;
-    final_volume_t left = vp->left_mix;
-    int            cc;
-    sample_t       s;
-
-    if(!(cc = vp->control_counter))
+    final_volume_t left;
+    int            cc   = vp->control_counter;
+    int            n    = count;
+    
+    for(;;)
     {
-        cc = ksr->control_ratio;
-        if(update_signal(ksr, v))
-            return; // Envelope ran out
-
-        left = vp->left_mix;
-    }
-
-    while(count)
-        if(cc < count)
+        if(!cc)
         {
-            count -= cc;
-            while(cc--)
-            {
-                s = *sp++;
-                MIXATION(left);
-                lp++;
-            }
             cc = ksr->control_ratio;
             if(update_signal(ksr, v))
-                return; // Envelope ran out
-
-            left = vp->left_mix;
+                return;
         }
-        else
+        left = vp->left_mix;
+
+        if(cc >= n)
         {
-            vp->control_counter = cc - count;
-            while(count--)
+            vp->control_counter = cc - n;
+#if KSR_MIX_SIMD
+            while(n >= MIX_BLOCK && (ksr->common_buffer + AUDIO_BUFFER_SIZE * 2 - lp) >= 2 * MIX_BLOCK)
             {
-                s = *sp++;
+                mix_single_block(lp, sp, left);
+                sp += MIX_BLOCK;
+                lp += 2 * MIX_BLOCK;
+                n  -= MIX_BLOCK;
+            }
+#endif
+            while(n--)
+            {
+                sample_t s = *sp++;
                 MIXATION(left);
                 lp++;
             }
             return;
         }
+        else
+        {
+#if KSR_MIX_SIMD
+            while(cc >= MIX_BLOCK && (ksr->common_buffer + AUDIO_BUFFER_SIZE * 2 - lp) >= 2 * MIX_BLOCK)
+            {
+                mix_single_block(lp, sp, left);
+                sp += MIX_BLOCK;
+                lp += 2 * MIX_BLOCK;
+                cc -= MIX_BLOCK;
+                n  -= MIX_BLOCK;
+            }
+#endif
+            while(cc--)
+            {
+                sample_t s = *sp++;
+                MIXATION(left);
+                lp++;
+                n--;
+            }
+            cc = 0;
+        }
+    }
 }
 
 static void mix_mono_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 {
     Voice         *vp   = ksr->voice + v;
-    final_volume_t left = vp->left_mix;
-    int            cc;
-    sample_t       s;
+    final_volume_t left;
+    int            cc   = vp->control_counter;
+    int            n    = count;
 
-    if(!(cc = vp->control_counter))
+    for(;;)
     {
-        cc = ksr->control_ratio;
-        if(update_signal(ksr, v))
-            return; // Envelope ran out
-
-        left = vp->left_mix;
-    }
-
-    while(count)
-        if(cc < count)
+        if(!cc)
         {
-            count -= cc;
-            while(cc--)
-            {
-                s = *sp++;
-                MIXATION(left);
-            }
             cc = ksr->control_ratio;
             if(update_signal(ksr, v))
-                return; // Envelope ran out
-
-            left = vp->left_mix;
+                return;
         }
-        else
+        left = vp->left_mix;
+
+        if(cc >= n)
         {
-            vp->control_counter = cc - count;
-            while(count--)
+            vp->control_counter = cc - n;
+#if KSR_MIX_SIMD
+            while(n >= MIX_BLOCK)
             {
-                s = *sp++;
+                mix_mono_block(lp, sp, left);
+                sp += MIX_BLOCK;
+                lp += MIX_BLOCK;
+                n  -= MIX_BLOCK;
+            }
+#endif
+            while(n--)
+            {
+                sample_t s = *sp++;
                 MIXATION(left);
             }
             return;
         }
+        else
+        {
+#if KSR_MIX_SIMD
+            while(cc >= MIX_BLOCK)
+            {
+                mix_mono_block(lp, sp, left);
+                sp += MIX_BLOCK;
+                lp += MIX_BLOCK;
+                cc -= MIX_BLOCK;
+                n  -= MIX_BLOCK;
+            }
+#endif
+            while(cc--)
+            {
+                sample_t s = *sp++;
+                MIXATION(left);
+                n--;
+            }
+            cc = 0;
+        }
+    }
 }
 
 static void mix_mystery(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 {
     final_volume_t left  = ksr->voice[v].left_mix;
     final_volume_t right = ksr->voice[v].right_mix;
-    sample_t       s;
-
+    
+#if KSR_MIX_SIMD
+    while(count >= MIX_BLOCK)
+    {
+        mix_stereo_block(lp, sp, left, right);
+        sp += MIX_BLOCK;
+        lp += 2 * MIX_BLOCK;
+        count -= MIX_BLOCK;
+    }
+#endif
     while(count--)
     {
-        s = *sp++;
+        sample_t s = *sp++;
         MIXATION(left);
         MIXATION(right);
     }
@@ -385,11 +514,19 @@ static void mix_mystery(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 static void mix_center(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 {
     final_volume_t left = ksr->voice[v].left_mix;
-    sample_t       s;
-
+    
+#if KSR_MIX_SIMD
+    while(count >= MIX_BLOCK)
+    {
+        mix_stereo_block(lp, sp, left, left);
+        sp += MIX_BLOCK;
+        lp += 2 * MIX_BLOCK;
+        count -= MIX_BLOCK;
+    }
+#endif
     while(count--)
     {
-        s = *sp++;
+        sample_t s = *sp++;
         MIXATION(left);
         MIXATION(left);
     }
@@ -398,11 +535,19 @@ static void mix_center(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 static void mix_single(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 {
     final_volume_t left = ksr->voice[v].left_mix;
-    sample_t       s;
-
+    
+#if KSR_MIX_SIMD
+    while(count >= MIX_BLOCK && (ksr->common_buffer + AUDIO_BUFFER_SIZE * 2 - lp) >= 2 * MIX_BLOCK)
+    {
+        mix_single_block(lp, sp, left);
+        sp += MIX_BLOCK;
+        lp += 2 * MIX_BLOCK;
+        count -= MIX_BLOCK;
+    }
+#endif
     while(count--)
     {
-        s = *sp++;
+        sample_t s = *sp++;
         MIXATION(left);
         lp++;
     }
@@ -411,11 +556,19 @@ static void mix_single(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 static void mix_mono(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 {
     final_volume_t left = ksr->voice[v].left_mix;
-    sample_t       s;
-
+    
+#if KSR_MIX_SIMD
+    while(count >= MIX_BLOCK)
+    {
+        mix_mono_block(lp, sp, left);
+        sp += MIX_BLOCK;
+        lp += MIX_BLOCK;
+        count -= MIX_BLOCK;
+    }
+#endif
     while(count--)
     {
-        s = *sp++;
+        sample_t s = *sp++;
         MIXATION(left);
     }
 }
