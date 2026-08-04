@@ -38,6 +38,71 @@ resample.c
 
 #include "ksr_internal.h"
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+#define KSR_USE_RESAMPLE_SIMD 0 // Makes efficiency worse for some reason idk
+
+
+
+
+#if defined(__AVX2__) && defined(LINEAR_INTERPOLATION) && !defined(LOOKUP_HACK) && KSR_USE_RESAMPLE_SIMD
+#define KSR_RESAMPLE_SIMD 1
+#include <immintrin.h>
+#define RESAMPLE_BLOCK 8
+
+/* True if the next 8-sample block stays fully below lim (fixed-point). */
+#define KSR_RS_BLOCK_FITS_UP(ofs, incr, lim) \
+    (((((ofs) + (RESAMPLE_BLOCK - 1) * (incr)) >> FRACTION_BITS) + 1) < ((lim) >> FRACTION_BITS))
+
+/* True if the next 8-sample block (incr < 0) stays inside [ls, le). */
+#define KSR_RS_BLOCK_FITS_DOWN(ofs, incr, ls, le) \
+    (((((ofs) + (RESAMPLE_BLOCK - 1) * (incr)) >> FRACTION_BITS) >= ((ls) >> FRACTION_BITS)) && \
+     ((((ofs) >> FRACTION_BITS) + 1) < ((le) >> FRACTION_BITS)))
+
+    /* Linear-interpolate 8 samples at fixed-point ofs stepping by incr.
+       Gather reads src[idx], src[idx+1]; the caller's guard keeps it in-bounds. */
+static inline long rs_block8(long ofs, long incr, const sample_t *__restrict src, sample_t *__restrict dest)
+{
+    __m256i o = _mm256_setr_epi32((int)(ofs), (int)(ofs + incr), (int)(ofs + 2 * incr),
+                                  (int)(ofs + 3 * incr), (int)(ofs + 4 * incr),
+                                  (int)(ofs + 5 * incr), (int)(ofs + 6 * incr),
+                                  (int)(ofs + 7 * incr));
+    __m256i idx  = _mm256_srli_epi32(o, FRACTION_BITS);
+    __m256i frac = _mm256_and_si256(o, _mm256_set1_epi32((int)FRACTION_MASK));
+
+    /* 4-byte gather at src + idx*2 reads shorts [idx] and [idx+1] */
+    __m256i g  = _mm256_i32gather_epi32((const int *)src, idx, 2);
+    __m256i v1 = _mm256_srai_epi32(_mm256_slli_epi32(g, 16), 16); /* low short, sign-extended */
+    __m256i v2 = _mm256_srai_epi32(g, 16);                        /* high short, sign-extended */
+
+    __m256i d = _mm256_mullo_epi32(_mm256_sub_epi32(v2, v1), frac);
+    d = _mm256_add_epi32(_mm256_srai_epi32(d, FRACTION_BITS), v1);
+
+    //_mm_storeu_si128((__m128i *)dest, _mm256_castsi256_si128(_mm256_packs_epi32(d, d)));
+    _mm_storeu_si128((__m128i *)dest,
+                     _mm_packs_epi32(_mm256_castsi256_si128(d),
+                                     _mm256_extracti128_si256(d, 1)));
+
+    return ofs + 8 * incr;
+}
+#else
+    #define KSR_RESAMPLE_SIMD 0
+#endif
+
+
+
+
 #ifdef LINEAR_INTERPOLATION
     #if defined(LOOKUP_HACK) && defined(LOOKUP_INTERPOLATION)
         #define RESAMPLATION                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
@@ -105,6 +170,15 @@ static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
     else
         count -= i;
 
+#if KSR_RESAMPLE_SIMD
+    while(i >= RESAMPLE_BLOCK && KSR_RS_BLOCK_FITS_UP(ofs, incr, le))
+    {
+        ofs  = rs_block8(ofs, incr, src, dest);
+        dest += RESAMPLE_BLOCK;
+        i    -= RESAMPLE_BLOCK;
+    }
+#endif
+
     while(i--)
     {
         RESAMPLATION;
@@ -168,6 +242,15 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
         else
             count -= i;
 
+#if KSR_RESAMPLE_SIMD
+        while(i >= RESAMPLE_BLOCK && KSR_RS_BLOCK_FITS_UP(ofs, incr, le))
+        {
+            ofs  = rs_block8(ofs, incr, src, dest);
+            dest += RESAMPLE_BLOCK;
+            i    -= RESAMPLE_BLOCK;
+        }
+#endif
+
         while(i--)
         {
             RESAMPLATION;
@@ -216,6 +299,16 @@ static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
         }
         else
             count -= i;
+
+#if KSR_RESAMPLE_SIMD
+        if(incr > 0)
+            while(i >= RESAMPLE_BLOCK && KSR_RS_BLOCK_FITS_UP(ofs, incr, ls))
+            {
+                ofs  = rs_block8(ofs, incr, src, dest);
+                dest += RESAMPLE_BLOCK;
+                i    -= RESAMPLE_BLOCK;
+            }
+#endif
         while(i--)
         {
             RESAMPLATION;
@@ -236,6 +329,27 @@ static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
         }
         else
             count -= i;
+
+#if KSR_RESAMPLE_SIMD
+        if(incr > 0)
+        {
+            while(i >= RESAMPLE_BLOCK && KSR_RS_BLOCK_FITS_UP(ofs, incr, le))
+            {
+                ofs  = rs_block8(ofs, incr, src, dest);
+                dest += RESAMPLE_BLOCK;
+                i    -= RESAMPLE_BLOCK;
+            }
+        }
+        else
+        {
+            while(i >= RESAMPLE_BLOCK && KSR_RS_BLOCK_FITS_DOWN(ofs, incr, ls, le))
+            {
+                ofs  = rs_block8(ofs, incr, src, dest);
+                dest += RESAMPLE_BLOCK;
+                i    -= RESAMPLE_BLOCK;
+            }
+        }
+#endif
 
         while(i--)
         {
