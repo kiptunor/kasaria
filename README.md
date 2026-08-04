@@ -1,6 +1,6 @@
 # Kasaria
 
-A powerful and high efficiency midi synthesizer based on Timidity
+A powerful and high efficiency midi synthesizer based on Timidity 0.2i
 
 
 
