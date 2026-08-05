@@ -56,6 +56,9 @@ int main(int argc, char *argv[])
     long total = ksr_get_sample_count(converter) + ksr_millis2samples(converter, 1000); /* +1s tail */
     long chunk = 4096;
     float *buf = malloc(chunk * channels * sizeof(float));
+
+    ma_timer timer;
+    ma_timer_init(&timer);
     
     while(total > 0)
     {
@@ -67,6 +70,10 @@ int main(int argc, char *argv[])
         ma_encoder_write_pcm_frames(&encoder, buf, frames, &framesWritten);
         total -= frames;
     }
+
+    //ma_uint64 ns = ma_timer_uninit(&timer);
+    //double secs  = (double)ns / 1000000000.0;
+    printf("Converted in %.3f s\n", ma_timer_get_time_in_seconds(&timer));
     
     ma_encoder_uninit(&encoder);
     free(buf);
