@@ -187,14 +187,14 @@ KSR_API int ksr_get_song_title(Kasaria *ksr, char *buffer, long count);
 KSR_API int ksr_get_song_copyright(Kasaria *ksr, char *buffer, long count);
 
 
-KSR_API int  ksr_load_soundfont_file(Kasaria *ksr, char *filename, bool preload_instruments); // Currently supports only SF2 format (SFZ Support is also planned)
+KSR_API int  ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_instruments); // Currently supports only SF2 format (SFZ Support is also planned)
 KSR_API int  ksr_force_instrument_load(Kasaria *ksr);               // Force all instruments to be loaded
 //KSR_API void ksr_preload_instruments(Kasaria *ksr);                 // Preload all instruments
 KSR_API void ksr_load_soundfont_from_mem(Kasaria *ksr, void *mem, long size, bool preload_instruments); // Todo
 
 
 // --------------------------- MIDI Player API ---------------------------
-KSR_API int  ksr_load_midi_file(Kasaria *ksr, char *filename); // MIDI file player, only supports standard MIDI files
+KSR_API int  ksr_load_midi_file(Kasaria *ksr, const char *filename); // MIDI file player, only supports standard MIDI files
 KSR_API int  ksr_load_midi_from_mem(Kasaria *ksr, void *mem, long size); // Todo
 KSR_API void ksr_unload_midi(Kasaria *ksr);
 KSR_API int  ksr_reload_midi(Kasaria *ksr);
@@ -202,6 +202,7 @@ KSR_API int  ksr_play_midi_raw(Kasaria *ksr, long type, unsigned char *buffer, l
 KSR_API int  ksr_play_midi(Kasaria *ksr, bool wait_midi_ending);                       // Play MIDI asynchronously (Audio streaming is handeled internally)
 KSR_API int  ksr_seek_midi(Kasaria *ksr, long time);                                    // Absolute seeking
 KSR_API int  ksr_fast_forward_midi(Kasaria *ksr, long time);                            // Relative seeking
+KSR_API int  ksr_pause_midi(Kasaria *ksr);
 KSR_API int  ksr_rewind_midi(Kasaria *ksr, long time);
 KSR_API int  ksr_restart_midi(Kasaria *ksr);
 KSR_API bool ksr_is_midi_ended(Kasaria *ksr);

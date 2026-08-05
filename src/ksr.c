@@ -133,6 +133,8 @@ Kasaria *ksr_init(void)
     ksr->preload_soundfont_instruments = 1;
     ksr->buffer_period_size            = 488;
 
+    ksr->is_midi_player_paused = false;
+
     default_compressor_settings(ksr);
 
     ksr->low_vel_treshold  = 0;
@@ -253,7 +255,7 @@ void ksr_set_config(Kasaria *ksr, KasariaConfig config)
     ksr->audio_compressor           = config.audio_compressor;
 }
 
-int ksr_load_soundfont_file(Kasaria *ksr, char *filename, bool preload_instruments)
+int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_instruments)
 {
     if(!ksr || !filename)
         return 0;

@@ -447,6 +447,7 @@ struct Kasaria
     char           last_smf[1024];
     bool           is_midi_loaded;
     bool           is_midi_ended;
+    bool           is_midi_player_paused;
     int            free_voice_stack[MAX_VOICES];
     int            free_voice_count;
     // to avoid some unnecessary parameter passing
@@ -488,7 +489,7 @@ struct Kasaria
 
 
 // ------------- Utility functions (utils.c) -------------
-FILE *open_file(Kasaria *tm, char *name, int decompress, int noise_mode);
+FILE *open_file(Kasaria *tm, const char *name, int decompress, int noise_mode);
 void add_to_pathlist(Kasaria *tm, char *s);
 void free_pathlist(Kasaria *tm);
 void close_file(FILE *fp);

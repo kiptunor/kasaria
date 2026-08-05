@@ -87,6 +87,12 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
         int chunk    = remaining > async_midi_player->buffer_period_size ? async_midi_player->buffer_period_size : remaining;
         int rendered = ksr_play_midi_raw(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play MIDI in realtime and get the generated audio (as Raw PCM)
 
+        if(async_midi_player->is_midi_player_paused)
+        {
+            memset(raw_audio, 0, chunk * 2 * sizeof(float));
+            continue; // not return — finish filling the rest of the buffer
+        }
+
         if(!rendered)
         {
             memset(out, 0, remaining * 2 * sizeof(float));
@@ -759,7 +765,7 @@ void ksr_reset(Kasaria *ksr)
     reset_midi(ksr);
 }
 
-int ksr_load_midi_file(Kasaria *ksr, char *filename)
+int ksr_load_midi_file(Kasaria *ksr, const char *filename)
 {
     if(!ksr || !filename)
         return 0;
@@ -836,6 +842,16 @@ int ksr_reload_midi(Kasaria *ksr)
     return 0;
 }
 
+int ksr_pause_midi(Kasaria *ksr)
+{
+    if(!ksr)
+        return 1;
+
+    ksr->is_midi_player_paused = !ksr->is_midi_player_paused;
+    
+    return 0;
+}
+
 int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
 {
     int convert;
@@ -844,6 +860,9 @@ int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
 
     while(count > 0)
     {
+        // while(ksr->is_midi_player_paused)
+        //     ma_sleep(100);
+        
         // Handle all events that should happen at this time
         while(ksr->current_event->time <= ksr->current_sample)
         {

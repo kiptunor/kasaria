@@ -111,7 +111,7 @@ static FILE *try_to_open(char *name, int decompress, int noise_mode)
 }
 
 // This is meant to find and open files for reading, possibly piping them through a decompressor.
-FILE *open_file(Kasaria *ksr, char *name, int decompress, int noise_mode)
+FILE *open_file(Kasaria *ksr, const char *name, int decompress, int noise_mode)
 {
     FILE     *fp;
     PathList *plp = ksr->pathlist;
