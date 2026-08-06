@@ -34,6 +34,9 @@ playmidi.c -- random stuff in need of rearrangement
 #include <string.h>
 #include <strings.h>
 
+#define __USE_POSIX199309
+#include <time.h>
+
 
 #include "ext_deps/ulog/src/ulog.h"
 
@@ -134,6 +137,8 @@ Kasaria *ksr_init(void)
     ksr->buffer_period_size            = 488;
 
     ksr->is_midi_player_paused = false;
+    ksr->is_midi_player_active = false;
+    ksr->wall_clock_last_ns = 0;
 
     default_compressor_settings(ksr);
 
@@ -864,12 +869,24 @@ int ksr_get_song_copyright(Kasaria *ksr, char *buffer, long count)
     return len;
 }
 
+u64 monotonic_ns(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
+}
+
 double ksr_get_midi_player_pos(Kasaria *ksr)
 {
-    if(!ksr)
-        return 0;
+if(!ksr)
+        return 0.0;
 
-    return ksr->current_midi_player_position;
+    f64 base = (f64)ksr->current_sample / (f64)ksr->play_mode.rate;
+
+    if(ksr->is_midi_player_active && !ksr->is_midi_player_paused && !ksr->is_midi_ended && ksr->phase_valid)
+        return (f64)monotonic_ns() / 1e9 + ksr->phase_ema;
+
+    return base; // paused / ended / inactive → exact, frozen
 }
 
 int ksr_millis2samples(Kasaria *ksr, long millis)

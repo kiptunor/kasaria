@@ -70,6 +70,7 @@ Kasaria *async_midi_player; // Required only for the async MIDI player
 
 void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
+    /*
     (void)pInput;
 
     if(async_midi_player->is_midi_ended)
@@ -89,7 +90,14 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
 
         if(async_midi_player->is_midi_player_paused)
         {
-            memset(raw_audio, 0, chunk * 2 * sizeof(float));
+            //memset(raw_audio, 0, chunk * 2 * sizeof(float));
+            for(int i = 0; i < chunk; i++)
+            {
+                out[i * 2 + 0] = 0.0f;
+                out[i * 2 + 1] = 0.0f;
+            }
+            out       += chunk * 2;
+            remaining -= chunk;
             continue; // not return — finish filling the rest of the buffer
         }
 
@@ -107,6 +115,43 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
         out       += chunk * 2;
         remaining -= chunk;
     }
+    */
+    (void)pInput;
+    
+        // Paused / ended: never advance the sequencer or position, just output silence.
+        if(!async_midi_player ||
+               !async_midi_player->is_midi_loaded ||
+               !async_midi_player->current_event ||
+               async_midi_player->is_midi_ended ||
+               async_midi_player->is_midi_player_paused)
+        {
+            memset(pOutput, 0, frameCount * 2 * sizeof(float));
+            return;
+        }
+    
+        float  raw_audio[async_midi_player->buffer_period_size * 2];
+        float *out       = (float *)pOutput;
+        int    remaining = frameCount;
+    
+        while(remaining > 0)
+        {
+            int chunk    = remaining > async_midi_player->buffer_period_size ? async_midi_player->buffer_period_size : remaining;
+            int rendered = ksr_play_midi_raw(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk);
+    
+            if(!rendered)
+            {
+                memset(out, 0, remaining * 2 * sizeof(float));
+                return;
+            }
+    
+            for(int i = 0; i < chunk; i++)
+            {
+                out[i * 2 + 0] = raw_audio[i * 2 + 0];
+                out[i * 2 + 1] = raw_audio[i * 2 + 1];
+            }
+            out       += chunk * 2;
+            remaining -= chunk;
+        }
 }
 
 static void seek_forward(Kasaria *ksr, long until_time)
@@ -801,8 +846,11 @@ void ksr_unload_midi(Kasaria *ksr)
         return;
 
     ulog_debug("Unload MIDI");
+
+    if(ksr->is_audio_started)
+        ma_device_stop(&ksr->audio_device);
     
-    reset_midi(ksr);
+    
     if(ksr->event_list)
     {
         free(ksr->event_list);
@@ -820,6 +868,32 @@ void ksr_unload_midi(Kasaria *ksr)
     ksr->events_midi    = 0;
     ksr->sample_count   = 0;
     ksr->current_sample = 0;
+
+    ksr->is_audio_started = false;
+    
+    ksr->current_event        = NULL;
+    ksr->is_midi_loaded       = false;
+    ksr->is_midi_ended        = false;
+    ksr->is_midi_player_active= false;
+    ksr->phase_valid          = 0;
+
+    reset_midi(ksr);
+
+    if(ksr->event_list)
+        {
+            free(ksr->event_list);
+            ksr->event_list = NULL;
+        }
+    
+        if(ksr->fp_midi)
+        {
+            close_file(ksr->fp_midi);
+            ksr->fp_midi = NULL;
+        }
+    
+        ksr->events_midi  = 0;
+        ksr->sample_count = 0;
+        
     memset(ksr->song_title, 0, sizeof(ksr->song_title));
     memset(ksr->song_copyright, 0, sizeof(ksr->song_copyright));
     memset(ksr->last_smf, 0, sizeof(ksr->last_smf));
@@ -842,33 +916,58 @@ int ksr_reload_midi(Kasaria *ksr)
     return 0;
 }
 
-int ksr_pause_midi(Kasaria *ksr)
+static void ksr_mark_pos_ns(Kasaria *ksr)
+{
+    //ksr->wall_clock_last_ns = monotonic_ns();
+    u64 now = monotonic_ns();
+        f64 y   = (f64)ksr->current_sample / (f64)ksr->play_mode.rate;
+        f64 x   = (f64)now / 1e9;
+    
+        if(!ksr->phase_valid)
+        {
+            ksr->phase_ema   = y - x;          // first sample: take it as-is
+            ksr->phase_valid = 1;
+        }
+        else
+            ksr->phase_ema += 0.2 * ((y - x) - ksr->phase_ema); // one-pole filter on the phase
+    
+        ksr->wall_clock_last_ns = now;
+}
+
+bool ksr_pause_midi(Kasaria *ksr)
 {
     if(!ksr)
         return 1;
 
-    ksr->is_midi_player_paused = !ksr->is_midi_player_paused;
-    
-    return 0;
+    bool pause_ret;
+
+    pause_ret = ksr->is_midi_player_paused = !ksr->is_midi_player_paused;
+    if(!ksr->is_midi_player_paused)
+    {
+        ksr->phase_valid = 0;
+        ksr_mark_pos_ns(ksr);
+    }
+
+    return pause_ret;
 }
 
 int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
 {
     int convert;
-    if(!ksr || !buffer || (type > AUDIO_ULAW || type < AUDIO_CHAR))
+    if(!ksr || !buffer || !ksr->current_event || !ksr->is_midi_loaded || (type > AUDIO_ULAW || type < AUDIO_CHAR))
         return 0;
+
+    ksr->is_midi_player_active = true;
 
     while(count > 0)
     {
-        // while(ksr->is_midi_player_paused)
-        //     ma_sleep(100);
-        
         // Handle all events that should happen at this time
         while(ksr->current_event->time <= ksr->current_sample)
         {
             if(ksr->current_event->type == ME_EOT)
             {
                 ksr->is_midi_ended = true;
+                ksr->is_midi_player_active = false;
                 break;
             }
 
@@ -876,10 +975,8 @@ int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
             ksr->current_event++;
         }
 
-        // ksr->current_midi_player_position = (double)ksr->current_event->time / (double)ksr->play_mode.rate;
-        // ksr->current_midi_player_position = (double)ksr->current_sample / (double)ksr->play_mode.rate;
-        ksr->current_midi_player_position = (double)(ksr->current_sample - ksr->dev_config.periodSizeInFrames) / (double)ksr->play_mode.rate; // idfk if it's correct
         convert = ksr->current_event->time - ksr->current_sample;
+        
         if(convert > count || convert <= 0) // I could prob count the number of events here ??
             convert = count;
 
@@ -946,6 +1043,7 @@ int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
             ksr_all_notes_off(ksr);
 
         ksr->current_sample += convert;
+        ksr_mark_pos_ns(ksr);
         count               -= convert;
     }
     return 1;
@@ -970,8 +1068,12 @@ int ksr_play_midi(Kasaria *ksr, bool wait_midi_ending)
 
     async_midi_player = ksr; // Get the current synth context for the async player
 
+    ksr->is_midi_ended         = false;
+    ksr->is_midi_player_paused = false;
+    ksr->phase_valid           = 0;
+
     ulog_info("Starting MIDI playback...");
-    ma_device_start(&async_midi_player->audio_device);
+    ma_device_start(&async_midi_player->audio_device); // This may cause the midi player to get stuck when trying to play the midi again
 
     // Wait for the MIDI playback to finish (This is required if this function is called on the main thread so it won't exit)
     if(wait_midi_ending)
@@ -983,6 +1085,14 @@ int ksr_play_midi(Kasaria *ksr, bool wait_midi_ending)
         ma_device_stop(&ksr->audio_device);
     
     return 1;
+}
+
+bool ksr_is_midi_player_active(Kasaria *ksr)
+{
+    if(!ksr)
+        return 0;
+    
+    return ksr->is_midi_player_active;
 }
 
 bool ksr_is_midi_ended(Kasaria *ksr)
@@ -1004,6 +1114,9 @@ int ksr_seek_midi(Kasaria *ksr, long time)
 
     skip_to(ksr, 0);
     skip_to(ksr, ksr_millis2samples(ksr, time));
+
+    ksr->phase_valid = 0;
+    
     return ksr_get_current_time(ksr);
 }
 

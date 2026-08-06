@@ -416,7 +416,7 @@ struct Kasaria
     PlayMode       play_mode;
     f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
     f32           *buffer_pointer;
-    f32            current_midi_player_position;
+    volatile f32            current_midi_player_position;
     Channel        channel[16];
     Voice          voice[MAX_VOICES];
     Voice         *voice_by_channel_note[16][128][2];
@@ -448,8 +448,12 @@ struct Kasaria
     bool           is_midi_loaded;
     bool           is_midi_ended;
     bool           is_midi_player_paused;
+    bool           is_midi_player_active;
     int            free_voice_stack[MAX_VOICES];
     int            free_voice_count;
+    u64 wall_clock_last_ns;
+    f64  phase_ema;
+    int  phase_valid;
     // to avoid some unnecessary parameter passing
     MidiEventList *evlist;
     long           event_count;
@@ -560,4 +564,7 @@ void reset_controllers(Kasaria *ksr, int c);
 void reset_midi(Kasaria *ksr);
 void free_voice_push(Kasaria *ksr, int i);
 
+
+
+u64 monotonic_ns(void);
 #endif
