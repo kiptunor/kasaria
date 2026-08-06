@@ -527,7 +527,7 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
     our_event_count = 0;
     st = at = sample_cum = 0;
     //counting_time        = 2; // We strip any silence before the first NOTE ON.
-    counting_time        = 0;
+    counting_time        = 0; // Todo: Add a function in the API
 
     for(i = 0; i < ksr->event_count && meep != NULL; i++)
     {

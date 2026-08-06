@@ -36,6 +36,9 @@ playmidi.c -- random stuff in need of rearrangement
 #include <stdio.h>
 #include <stdlib.h>
 
+#define __USE_POSIX199309
+#include <time.h>
+
 
 #ifndef _WIN32_WCE
     #include <string.h>
@@ -70,15 +73,19 @@ Kasaria *async_midi_player; // Required only for the async MIDI player
 
 void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
-    /*
     (void)pInput;
-
-    if(async_midi_player->is_midi_ended)
+    
+    // Paused / ended: never advance the sequencer or position, just output silence.
+    if(!async_midi_player ||
+           !async_midi_player->is_midi_loaded ||
+           !async_midi_player->current_event ||
+           async_midi_player->is_midi_ended ||
+           async_midi_player->is_midi_player_paused)
     {
         memset(pOutput, 0, frameCount * 2 * sizeof(float));
         return;
     }
-
+    
     float  raw_audio[async_midi_player->buffer_period_size * 2];
     float *out       = (float *)pOutput;
     int    remaining = frameCount;
@@ -86,20 +93,7 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
     while(remaining > 0)
     {
         int chunk    = remaining > async_midi_player->buffer_period_size ? async_midi_player->buffer_period_size : remaining;
-        int rendered = ksr_play_midi_raw(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play MIDI in realtime and get the generated audio (as Raw PCM)
-
-        if(async_midi_player->is_midi_player_paused)
-        {
-            //memset(raw_audio, 0, chunk * 2 * sizeof(float));
-            for(int i = 0; i < chunk; i++)
-            {
-                out[i * 2 + 0] = 0.0f;
-                out[i * 2 + 1] = 0.0f;
-            }
-            out       += chunk * 2;
-            remaining -= chunk;
-            continue; // not return — finish filling the rest of the buffer
-        }
+        int rendered = ksr_play_midi_raw(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk);
 
         if(!rendered)
         {
@@ -115,43 +109,6 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
         out       += chunk * 2;
         remaining -= chunk;
     }
-    */
-    (void)pInput;
-    
-        // Paused / ended: never advance the sequencer or position, just output silence.
-        if(!async_midi_player ||
-               !async_midi_player->is_midi_loaded ||
-               !async_midi_player->current_event ||
-               async_midi_player->is_midi_ended ||
-               async_midi_player->is_midi_player_paused)
-        {
-            memset(pOutput, 0, frameCount * 2 * sizeof(float));
-            return;
-        }
-    
-        float  raw_audio[async_midi_player->buffer_period_size * 2];
-        float *out       = (float *)pOutput;
-        int    remaining = frameCount;
-    
-        while(remaining > 0)
-        {
-            int chunk    = remaining > async_midi_player->buffer_period_size ? async_midi_player->buffer_period_size : remaining;
-            int rendered = ksr_play_midi_raw(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk);
-    
-            if(!rendered)
-            {
-                memset(out, 0, remaining * 2 * sizeof(float));
-                return;
-            }
-    
-            for(int i = 0; i < chunk; i++)
-            {
-                out[i * 2 + 0] = raw_audio[i * 2 + 0];
-                out[i * 2 + 1] = raw_audio[i * 2 + 1];
-            }
-            out       += chunk * 2;
-            remaining -= chunk;
-        }
 }
 
 static void seek_forward(Kasaria *ksr, long until_time)
@@ -920,18 +877,18 @@ static void ksr_mark_pos_ns(Kasaria *ksr)
 {
     //ksr->wall_clock_last_ns = monotonic_ns();
     u64 now = monotonic_ns();
-        f64 y   = (f64)ksr->current_sample / (f64)ksr->play_mode.rate;
-        f64 x   = (f64)now / 1e9;
+    f64 y   = (f64)ksr->current_sample / (f64)ksr->play_mode.rate;
+    f64 x   = (f64)now / 1e9;
     
-        if(!ksr->phase_valid)
-        {
-            ksr->phase_ema   = y - x;          // first sample: take it as-is
-            ksr->phase_valid = 1;
-        }
-        else
-            ksr->phase_ema += 0.2 * ((y - x) - ksr->phase_ema); // one-pole filter on the phase
-    
-        ksr->wall_clock_last_ns = now;
+    if(!ksr->phase_valid)
+    {
+        ksr->phase_ema   = y - x;          // first sample: take it as-is
+        ksr->phase_valid = 1;
+    }
+    else
+        ksr->phase_ema += 0.2 * ((y - x) - ksr->phase_ema); // one-pole filter on the phase
+
+    ksr->wall_clock_last_ns = now;
 }
 
 bool ksr_pause_midi(Kasaria *ksr)
@@ -1047,6 +1004,26 @@ int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
         count               -= convert;
     }
     return 1;
+}
+
+u64 monotonic_ns(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
+}
+
+double ksr_get_midi_player_pos(Kasaria *ksr)
+{
+    if(!ksr)
+        return 0.0;
+
+    f64 base = (f64)ksr->current_sample / (f64)ksr->play_mode.rate;
+
+    if(ksr->is_midi_player_active && !ksr->is_midi_player_paused && !ksr->is_midi_ended && ksr->phase_valid)
+        return (f64)monotonic_ns() / 1e9 + ksr->phase_ema;
+
+    return base; // paused / ended / inactive → exact, frozen
 }
 
 int ksr_play_midi(Kasaria *ksr, bool wait_midi_ending)
