@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     int rate     = ksr_get_sample_rate(converter);
     int channels = ksr_get_mono(converter) ? 1 : 2;
     
-    ma_encoder_config config = ma_encoder_config_init(ma_encoding_format_wav, ma_format_f32, 2, rate);
+    ma_encoder_config config = ma_encoder_config_init(ma_encoding_format_wav, ma_format_f32, channels, rate);
     ma_encoder encoder;
     ma_result result = ma_encoder_init_file(argv[2], &config, &encoder);
     if(result != MA_SUCCESS)
@@ -64,15 +64,12 @@ int main(int argc, char *argv[])
     {
         long frames = total < chunk ? total : chunk;
         if(!ksr_play_midi_raw(converter, AUDIO_FLOAT, (unsigned char*)buf, frames))
-            break;                                  /* render error */
+            break;
     
-        ma_uint64 framesWritten;
-        ma_encoder_write_pcm_frames(&encoder, buf, frames, &framesWritten);
+        ma_encoder_write_pcm_frames(&encoder, buf, frames, NULL);
         total -= frames;
     }
 
-    //ma_uint64 ns = ma_timer_uninit(&timer);
-    //double secs  = (double)ns / 1000000000.0;
     printf("Converted in %.3f s\n", ma_timer_get_time_in_seconds(&timer));
     
     ma_encoder_uninit(&encoder);
