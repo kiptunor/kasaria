@@ -39,9 +39,9 @@
 #define KASARIA_INTERNAL_H
 
 
-#include <stdio.h>
-#include <stdbool.h>
 #include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 
 
@@ -52,10 +52,6 @@
 #include "config.h"
 #include "kasaria.h"
 #include "ksr_sf2.h"
-
-
-
-
 
 
 
@@ -101,57 +97,57 @@
 
 
 // Noise modes for open_file
-#define OF_SILENT  0
-#define OF_NORMAL  1
-#define OF_VERBOSE 2
+#define OF_SILENT             0
+#define OF_NORMAL             1
+#define OF_VERBOSE            2
 
 // Order of the FIR filter = 20 should be enough !
-#define ORDER      20
-#define ORDER2     ORDER / 2
+#define ORDER                 20
+#define ORDER2                ORDER / 2
 
 // Midi events
-#define ME_NONE              0
-#define ME_NOTEON            1
-#define ME_NOTEOFF           2
-#define ME_KEYPRESSURE       3
-#define ME_MAINVOLUME        4
-#define ME_PAN               5
-#define ME_SUSTAIN           6
-#define ME_EXPRESSION        7
-#define ME_PITCHWHEEL        8
-#define ME_PROGRAM           9
-#define ME_MONO              10
-#define ME_PITCH_SENS        11
-#define ME_ALL_SOUNDS_OFF    12
-#define ME_RESET_CONTROLLERS 13
-#define ME_ALL_NOTES_OFF     14
-#define ME_TONE_BANK         15
-#define ME_POLY              16
-#define ME_TEMPO             17
-#define ME_EOT               99
+#define ME_NONE               0
+#define ME_NOTEON             1
+#define ME_NOTEOFF            2
+#define ME_KEYPRESSURE        3
+#define ME_MAINVOLUME         4
+#define ME_PAN                5
+#define ME_SUSTAIN            6
+#define ME_EXPRESSION         7
+#define ME_PITCHWHEEL         8
+#define ME_PROGRAM            9
+#define ME_MONO               10
+#define ME_PITCH_SENS         11
+#define ME_ALL_SOUNDS_OFF     12
+#define ME_RESET_CONTROLLERS  13
+#define ME_ALL_NOTES_OFF      14
+#define ME_TONE_BANK          15
+#define ME_POLY               16
+#define ME_TEMPO              17
+#define ME_EOT                99
 
 // Data format encoding bits
-#define PE_MONO         0x01 // versus stereo
-#define PE_SIGNED       0x02 // versus unsigned
-#define PE_16BIT        0x04 // versus 8-bit
-#define PE_ULAW         0x08 // versus linear
-#define PE_BYTESWAP     0x10 // versus the other way
+#define PE_MONO               0x01 // versus stereo
+#define PE_SIGNED             0x02 // versus unsigned
+#define PE_16BIT              0x04 // versus 8-bit
+#define PE_ULAW               0x08 // versus linear
+#define PE_BYTESWAP           0x10 // versus the other way
 
-#define SINE_CYCLE_LENGTH 1024
+#define SINE_CYCLE_LENGTH     1024
 
 // Bits in modes:
-#define MODES_16BIT    (1 << 0)
-#define MODES_UNSIGNED (1 << 1)
-#define MODES_LOOPING  (1 << 2)
-#define MODES_PINGPONG (1 << 3)
-#define MODES_REVERSE  (1 << 4)
-#define MODES_SUSTAIN  (1 << 5)
-#define MODES_ENVELOPE (1 << 6)
+#define MODES_16BIT           (1 << 0)
+#define MODES_UNSIGNED        (1 << 1)
+#define MODES_LOOPING         (1 << 2)
+#define MODES_PINGPONG        (1 << 3)
+#define MODES_REVERSE         (1 << 4)
+#define MODES_SUSTAIN         (1 << 5)
+#define MODES_ENVELOPE        (1 << 6)
 
-#define SPECIAL_PROGRAM -1
+#define SPECIAL_PROGRAM       -1
 
 // Causes the instrument's default panning to be used.
-#define NO_PANNING -1
+#define NO_PANNING            -1
 
 
 
@@ -416,7 +412,7 @@ struct Kasaria
     PlayMode       play_mode;
     f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
     f32           *buffer_pointer;
-    volatile f32            current_midi_player_position;
+    volatile f32   current_midi_player_position;
     Channel        channel[16];
     Voice          voice[MAX_VOICES];
     Voice         *voice_by_channel_note[16][128][2];
@@ -451,9 +447,13 @@ struct Kasaria
     bool           is_midi_player_active;
     int            free_voice_stack[MAX_VOICES];
     int            free_voice_count;
-    u64 wall_clock_last_ns;
-    f64  phase_ema;
-    int  phase_valid;
+    int            total_midi_tracks;
+    int            current_loaded_track;
+    bool           skip_initial_midi_silence;
+    short          midi_file_format;
+    u64            wall_clock_last_ns;
+    f64            phase_ema;
+    int            phase_valid;
     // to avoid some unnecessary parameter passing
     MidiEventList *evlist;
     long           event_count;
@@ -493,78 +493,78 @@ struct Kasaria
 
 
 // ------------- Utility functions (utils.c) -------------
-FILE *open_file(Kasaria *tm, const char *name, int decompress, int noise_mode);
-void add_to_pathlist(Kasaria *tm, char *s);
-void free_pathlist(Kasaria *tm);
-void close_file(FILE *fp);
-void skip(FILE *fp, size_t len);
-void *safe_malloc(size_t count);
+FILE       *open_file(Kasaria *tm, const char *name, int decompress, int noise_mode);
+void        add_to_pathlist(Kasaria *tm, char *s);
+void        free_pathlist(Kasaria *tm);
+void        close_file(FILE *fp);
+void        skip(FILE *fp, size_t len);
+void       *safe_malloc(size_t count);
 
 
 // ------------- Filter functions (ksr_filter.c) -------------
-void antialiasing(Sample *sp, long output_rate);
-void audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
+void        antialiasing(Sample *sp, long output_rate);
+void        audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
 
 
 // ------------- SoundFont Instrument functions (ksr_instruments.c) -------------
-int load_missing_instruments(Kasaria *tm);
-void free_instruments(Kasaria *tm);
-//int set_default_instrument(Kasaria *tm, char *name);
-void free_default_instrument(Kasaria *tm);
+int         load_missing_instruments(Kasaria *tm);
+void        free_instruments(Kasaria *tm);
+// int set_default_instrument(Kasaria *tm, char *name);
+void        free_default_instrument(Kasaria *tm);
 Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filename, int bank, int program);
-int preload_soundfont_instruments(Kasaria *ksr);
+int         preload_soundfont_instruments(Kasaria *ksr);
 
 
 // ------------- Voice mixing functions (ksr_voice_mix.c) -------------
-void mix_voice(Kasaria *tm, f32 *buf, int v, long c);
-int recompute_envelope(Kasaria *tm, int v);
-void apply_envelope_to_amp(Kasaria *tm, int v);
+void        mix_voice(Kasaria *tm, f32 *buf, int v, long c);
+int         recompute_envelope(Kasaria *tm, int v);
+void        apply_envelope_to_amp(Kasaria *tm, int v);
 
 
 // ------------- MIDI loading functions (ksr_midi_loader.c) -------------
-MidiEvent *read_midi_file(Kasaria *tm, FILE *mfp, long *count, long *sp);
+MidiEvent  *read_midi_file(Kasaria *tm, FILE *mfp, long *count, long *sp);
 
 
 // ------------- Resampling functions (ksr_resample.c) -------------
-sample_t *resample_voice(Kasaria *tm, int v, long *countptr);
-void pre_resample(Kasaria *tm, Sample *sp);
+sample_t   *resample_voice(Kasaria *tm, int v, long *countptr);
+void        pre_resample(Kasaria *tm, Sample *sp);
 
 
 // ------------- Table functions (ksr_tables.c) -------------
-void init_tables(Kasaria *tm);
-void free_tables(Kasaria *tm);
+void        init_tables(Kasaria *tm);
+void        free_tables(Kasaria *tm);
 
 
 // ------------- Audio callback functions (ksr_midi_player.c) -------------
-void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
+void        _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
 
 
 // ------------- Synth Base functions (ksr_synth_base.c) -------------
-void channel_voice_add(Kasaria *ksr, int ch, int vi);
-void channel_voice_remove(Kasaria *ksr, int ch, int vi);
-void select_sample(Kasaria *ksr, int v, Instrument *ip);
-void recompute_freq(Kasaria *ksr, int v);
-void recompute_amp(Kasaria *ksr, int v);
-void start_note(Kasaria *ksr, MidiEvent *e, int i);
-void kill_note(Kasaria *ksr, int i);
-void note_on(Kasaria *ksr, MidiEvent *e);
-void finish_note(Kasaria *ksr, int i);
-void note_off(Kasaria *ksr, MidiEvent *e);
-void all_notes_off(Kasaria *ksr, int c);
-void all_sounds_off(Kasaria *ksr, int c);
-void adjust_pressure(Kasaria *ksr, MidiEvent *e);
-void adjust_panning(Kasaria *ksr, int c);
-void adjust_pitchbend(Kasaria *ksr, int c);
-void adjust_volume(Kasaria *ksr, int c);
-void do_compute_data(Kasaria *ksr, long count);
-void adjust_amplification(Kasaria *ksr, int amplification);
-void reset_voices(Kasaria *ksr);
-void drop_sustain(Kasaria *ksr, int c);
-void reset_controllers(Kasaria *ksr, int c);
-void reset_midi(Kasaria *ksr);
-void free_voice_push(Kasaria *ksr, int i);
+void        channel_voice_add(Kasaria *ksr, int ch, int vi);
+void        channel_voice_remove(Kasaria *ksr, int ch, int vi);
+void        select_sample(Kasaria *ksr, int v, Instrument *ip);
+void        recompute_freq(Kasaria *ksr, int v);
+void        recompute_amp(Kasaria *ksr, int v);
+void        start_note(Kasaria *ksr, MidiEvent *e, int i);
+void        kill_note(Kasaria *ksr, int i);
+void        note_on(Kasaria *ksr, MidiEvent *e);
+void        finish_note(Kasaria *ksr, int i);
+void        note_off(Kasaria *ksr, MidiEvent *e);
+void        all_notes_off(Kasaria *ksr, int c);
+void        all_sounds_off(Kasaria *ksr, int c);
+void        adjust_pressure(Kasaria *ksr, MidiEvent *e);
+void        adjust_panning(Kasaria *ksr, int c);
+void        adjust_pitchbend(Kasaria *ksr, int c);
+void        adjust_volume(Kasaria *ksr, int c);
+void        do_compute_data(Kasaria *ksr, long count);
+void        adjust_amplification(Kasaria *ksr, int amplification);
+void        reset_voices(Kasaria *ksr);
+void        drop_sustain(Kasaria *ksr, int c);
+void        reset_controllers(Kasaria *ksr, int c);
+void        reset_midi(Kasaria *ksr);
+void        free_voice_push(Kasaria *ksr, int i);
 
 
 
-u64 monotonic_ns(void);
+u64         monotonic_ns(void);
 #endif

@@ -526,8 +526,11 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
 
     our_event_count = 0;
     st = at = sample_cum = 0;
-    //counting_time        = 2; // We strip any silence before the first NOTE ON.
-    counting_time        = 0; // Todo: Add a function in the API
+    // Strip any silence before the first NOTE ON.
+    if(ksr->skip_initial_midi_silence)
+        counting_time        = 2;
+    else
+        counting_time        = 0;
 
     for(i = 0; i < ksr->event_count && meep != NULL; i++)
     {
@@ -700,7 +703,9 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
     ksr->evlist->next       = 0;
     ksr->event_count++;
 
-    MidiEventList *tail = ksr->evlist;
+    MidiEventList *tail   = ksr->evlist;
+
+    ksr->midi_file_format = format;
 
     switch(format)
     {
@@ -718,7 +723,9 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
         int temp_track_counter = 0;
         for(i = 0; i < tracks; i++)
         {
-            temp_track_counter = i;
+            temp_track_counter        = i;
+            ksr->current_loaded_track = temp_track_counter;
+            ksr->total_midi_tracks    = tracks;
             ulog_topic_debug("MIDI Loader", "Reading MIDI track %d / %d", temp_track_counter + 1, tracks);
             if(read_track(ksr, &tail, 0))
             {
@@ -732,6 +739,9 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
         ulog_topic_debug("MIDI Loader", "Format 2 Identified");
         for(i = 0; i < tracks; i++)
         {
+            temp_track_counter        = i;
+            ksr->current_loaded_track = temp_track_counter;
+            ksr->total_midi_tracks    = tracks;
             ulog_topic_debug("MIDI Loader", "Reading MIDI track %d / %d", i, tracks);
             if(read_track(ksr, &tail, 1))
             {
@@ -743,7 +753,39 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
     }
 
     ulog_topic_debug("MIDI Loader", "Sorting Event List...");
-    
+
     sort_event_list(ksr);
     return groom_list(ksr, divisions, count, sp);
+}
+
+int ksr_get_loaded_midi_track(Kasaria *ksr)
+{
+    if(ksr == NULL)
+        return -1;
+
+    return ksr->current_loaded_track;
+}
+
+int ksr_get_midi_track_count(Kasaria *ksr)
+{
+    if(ksr == NULL)
+        return 0;
+
+    return ksr->total_midi_tracks;
+}
+
+short ksr_get_midi_file_format(Kasaria *ksr)
+{
+    if(ksr == NULL)
+        return 0;
+
+    return ksr->midi_file_format;
+}
+
+void ksr_skip_initial_silence(Kasaria *ksr, bool is)
+{
+    if(ksr == NULL)
+        return;
+
+    ksr->skip_initial_midi_silence = is;
 }

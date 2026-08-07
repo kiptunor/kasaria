@@ -80,6 +80,8 @@ void ksr_print_config(Kasaria *ksr)
     ulog_debug("quiet_channels             = %ld", ksr->quietchannels);
     ulog_debug("voice_limit                = %d",  ksr->voices);
     ulog_debug("adjust_panning_immediately = %d",  ksr->adjust_panning_immediately);
+    ulog_debug("skip_initial_silence       = %d",  ksr->skip_initial_midi_silence);
+    
 
     printf("\n------------- [Filters and audio DSP Effects] -------------\n\n");
 
@@ -134,6 +136,7 @@ Kasaria *ksr_init(void)
     ksr->adjust_panning_immediately    = 1;
     ksr->preload_soundfont_instruments = 1;
     ksr->buffer_period_size            = 488;
+    ksr->skip_initial_midi_silence     = false;
 
     ksr->is_midi_player_paused = false;
     ksr->is_midi_player_active = false;
@@ -195,6 +198,7 @@ void ksr_restore_defaults(Kasaria *ksr)
     ksr->adjust_panning_immediately    = 1;
     ksr->preload_soundfont_instruments = 1;
     ksr->buffer_period_size            = 488;
+    ksr->skip_initial_midi_silence     = false;
     ksr->current_midi_player_position  = 0.0f;
 
     default_compressor_settings(ksr);
@@ -218,21 +222,22 @@ KasariaConfig ksr_get_config(Kasaria *ksr)
 {
     KasariaConfig config;
 
-    config.amplification      = ksr->master_volume * 100.0L;
-    config.voice_limit        = ksr->voices;
-    config.audio_frame_size   = ksr->buffer_period_size;
-    config.sample_rate        = ksr->play_mode.rate;
-    config.control_rate       = ksr->control_rate;
-    config.default_program    = ksr->default_program;
-    config.low_note_velocity  = ksr->low_vel_treshold;
-    config.high_note_velocity = ksr->high_vel_treshold;
-    config.immediate_panning  = ksr->adjust_panning_immediately;
-    config.mono_audio         = ksr->play_mode.encoding == 1;
-    config.fast_decay         = ksr->fast_decay;
-    config.antialiasing       = ksr->antialiasing_allowed;
-    config.pre_resample       = ksr->pre_resampling_allowed;
-    config.velocity_skipping  = ksr->note_vel_skipping;
-    config.audio_compressor   = ksr->audio_compressor;
+    config.amplification        = ksr->master_volume * 100.0L;
+    config.voice_limit          = ksr->voices;
+    config.audio_frame_size     = ksr->buffer_period_size;
+    config.sample_rate          = ksr->play_mode.rate;
+    config.control_rate         = ksr->control_rate;
+    config.default_program      = ksr->default_program;
+    config.low_note_velocity    = ksr->low_vel_treshold;
+    config.high_note_velocity   = ksr->high_vel_treshold;
+    config.immediate_panning    = ksr->adjust_panning_immediately;
+    config.mono_audio           = ksr->play_mode.encoding == 1;
+    config.fast_decay           = ksr->fast_decay;
+    config.antialiasing         = ksr->antialiasing_allowed;
+    config.pre_resample         = ksr->pre_resampling_allowed;
+    config.velocity_skipping    = ksr->note_vel_skipping;
+    config.audio_compressor     = ksr->audio_compressor;
+    config.skip_initial_silence = ksr->skip_initial_midi_silence;
     
     return config;
 }
@@ -257,6 +262,7 @@ void ksr_set_config(Kasaria *ksr, KasariaConfig config)
     ksr->pre_resampling_allowed     = config.pre_resample;
     ksr->note_vel_skipping          = config.velocity_skipping;
     ksr->audio_compressor           = config.audio_compressor;
+    ksr->skip_initial_midi_silence  = config.skip_initial_silence;
 }
 
 int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_instruments)
