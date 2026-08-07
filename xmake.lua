@@ -29,6 +29,8 @@ end
 target("kasaria")
     add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
     set_kind("shared")
+    set_toolset("sh", "clang")
+    add_ldflags("-Wl,--as-needed")
     add_links("m")
     add_files("src/**.c")
 
