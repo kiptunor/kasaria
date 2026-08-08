@@ -480,6 +480,9 @@ struct Kasaria
     int                channel_voice_count[16];
     int                channel_voice_list[16][MAX_VOICES * 2];
 
+    unsigned char skip_note_vel[16][128];    // velocity of a skipped note
+    unsigned char skip_note_active[16][128];
+
     ma_device_config   dev_config;
     ma_device          audio_device;
     int                audio_init_scope;

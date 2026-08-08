@@ -423,9 +423,21 @@ void kill_note(Kasaria *ksr, int i)
 void note_on(Kasaria *ksr, MidiEvent *e)
 {
     // Skip notes based on their velocity (Only the ones within the threshold values)
+    //if(ksr->note_vel_skipping)
+    //    if(e->vel >= ksr->low_vel_treshold && e->vel <= ksr->high_vel_treshold)
+    //        return;
+
     if(ksr->note_vel_skipping)
         if(e->vel >= ksr->low_vel_treshold && e->vel <= ksr->high_vel_treshold)
+        {
+            ksr->skip_note_vel[e->channel][e->key] = e->vel;
+            ksr->skip_note_active[e->channel][e->key] = 1;
             return;
+        }
+    
+    // A real note is sounding now; cancel any pending skipped marker
+    ksr->skip_note_active[e->channel][e->key] = 0;
+    ksr->skip_note_vel[e->channel][e->key] = 0;
     
     // Retrigger: kill any existing voice on same channel+key
     if(ksr->channel[e->channel].mono)
@@ -499,6 +511,14 @@ void finish_note(Kasaria *ksr, int i)
 void note_off(Kasaria *ksr, MidiEvent *e)
 {
     int k;
+
+    if(ksr->skip_note_active[e->channel][e->key])
+    {
+        ksr->skip_note_active[e->channel][e->key] = 0;
+        ksr->skip_note_vel[e->channel][e->key] = 0;
+        return;
+    }
+    
     for(k = 0; k < 2; k++)
     {
         Voice *v = ksr->voice_by_channel_note[e->channel][e->key][k];
