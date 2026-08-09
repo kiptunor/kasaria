@@ -308,17 +308,17 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     ksr->voice[i].sample_offset                     = 0;
     ksr->voice[i].sample_increment                  = 0; // make sure it isn't negative
 
-    ksr->voice[i].tremolo_phase                     = 0;
-    ksr->voice[i].tremolo_phase_increment           = ksr->voice[i].sample->tremolo_phase_increment;
-    ksr->voice[i].tremolo_sweep                     = ksr->voice[i].sample->tremolo_sweep_increment;
-    ksr->voice[i].tremolo_sweep_position            = 0;
-
-    ksr->voice[i].vibrato_sweep                     = ksr->voice[i].sample->vibrato_sweep_increment;
-    ksr->voice[i].vibrato_sweep_position            = 0;
-    ksr->voice[i].vibrato_control_ratio             = ksr->voice[i].sample->vibrato_control_ratio;
-    ksr->voice[i].vibrato_control_counter = ksr->voice[i].vibrato_phase = 0;
-    for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
-        ksr->voice[i].vibrato_sample_increment[j] = 0;
+    //ksr->voice[i].tremolo_phase                     = 0;
+    //ksr->voice[i].tremolo_phase_increment           = ksr->voice[i].sample->tremolo_phase_increment;
+    //ksr->voice[i].tremolo_sweep                     = ksr->voice[i].sample->tremolo_sweep_increment;
+    //ksr->voice[i].tremolo_sweep_position            = 0;
+    //
+    //ksr->voice[i].vibrato_sweep                     = ksr->voice[i].sample->vibrato_sweep_increment;
+    //ksr->voice[i].vibrato_sweep_position            = 0;
+    //ksr->voice[i].vibrato_control_ratio             = ksr->voice[i].sample->vibrato_control_ratio;
+    //ksr->voice[i].vibrato_control_counter = ksr->voice[i].vibrato_phase = 0;
+    //for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
+    //    ksr->voice[i].vibrato_sample_increment[j] = 0;
 
     if(ksr->channel[e->channel].panning != NO_PANNING)
         ksr->voice[i].panning = ksr->channel[e->channel].panning;
@@ -370,18 +370,18 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                     ksr->voice[stereo_v].sample_increment           = 0;
                     ksr->voice[stereo_v].orig_frequency             = ksr->voice[i].orig_frequency;
 
-                    ksr->voice[stereo_v].tremolo_phase              = 0;
-                    ksr->voice[stereo_v].tremolo_phase_increment    = candidate->tremolo_phase_increment;
-                    ksr->voice[stereo_v].tremolo_sweep              = candidate->tremolo_sweep_increment;
-                    ksr->voice[stereo_v].tremolo_sweep_position     = 0;
-
-                    ksr->voice[stereo_v].vibrato_sweep              = candidate->vibrato_sweep_increment;
-                    ksr->voice[stereo_v].vibrato_sweep_position     = 0;
-                    ksr->voice[stereo_v].vibrato_control_ratio      = candidate->vibrato_control_ratio;
-                    ksr->voice[stereo_v].vibrato_control_counter    = 0;
-                    ksr->voice[stereo_v].vibrato_phase              = 0;
-                    for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
-                        ksr->voice[stereo_v].vibrato_sample_increment[j] = 0;
+                    //ksr->voice[stereo_v].tremolo_phase              = 0;
+                    //ksr->voice[stereo_v].tremolo_phase_increment    = candidate->tremolo_phase_increment;
+                    //ksr->voice[stereo_v].tremolo_sweep              = candidate->tremolo_sweep_increment;
+                    //ksr->voice[stereo_v].tremolo_sweep_position     = 0;
+                    //
+                    //ksr->voice[stereo_v].vibrato_sweep              = candidate->vibrato_sweep_increment;
+                    //ksr->voice[stereo_v].vibrato_sweep_position     = 0;
+                    //ksr->voice[stereo_v].vibrato_control_ratio      = candidate->vibrato_control_ratio;
+                    //ksr->voice[stereo_v].vibrato_control_counter    = 0;
+                    //ksr->voice[stereo_v].vibrato_phase              = 0;
+                    //for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
+                    //    ksr->voice[stereo_v].vibrato_sample_increment[j] = 0;
 
                     if(ksr->channel[e->channel].panning != NO_PANNING)
                         ksr->voice[stereo_v].panning = ksr->channel[e->channel].panning;
