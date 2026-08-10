@@ -422,12 +422,12 @@ Instrument *load_soundfont_instrument(Kasaria *ksr, SFInfo *sf, const char *file
             sample->modes                   = MODES_16BIT | MODES_ENVELOPE | loop_mode;
             sample->note_to_use             = (bank >= 128) ? root_key : 0;
 
-            sample->tremolo_sweep_increment = 0;
-            sample->tremolo_phase_increment = 0;
-            sample->tremolo_depth           = 0;
-            sample->vibrato_sweep_increment = 0;
-            sample->vibrato_control_ratio   = 0;
-            sample->vibrato_depth           = 0;
+            //sample->tremolo_sweep_increment = 0;
+            //sample->tremolo_phase_increment = 0;
+            //sample->tremolo_depth           = 0;
+            //sample->vibrato_sweep_increment = 0;
+            //sample->vibrato_control_ratio   = 0;
+            //sample->vibrato_depth           = 0;
 
             attack_tc                       = sf_find_gen(inst_zone, SF_ATTACKENV1, -12000);
             decay_tc                        = sf_find_gen(inst_zone, SF_DECAYENV1, -12000);
