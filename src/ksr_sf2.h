@@ -56,12 +56,16 @@
 
 
 
-
+#include <stdio.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 
 #ifndef KSR_SF2_H
 #define KSR_SF2_H
+
+
+typedef off_t off_size_t;
 
 // chunk record header
 typedef struct _SFChunk
@@ -143,6 +147,7 @@ typedef struct _SFInfo
 
     // raw INFO chunk list
     long          infopos, infosize;
+    off_size_t lowbitpos;
 
     // preset headers
     int           npresets;
@@ -155,7 +160,7 @@ typedef struct _SFInfo
     // instrument headers
     int           ninsts;
     SFInstHdr    *inst;
-
+    int use_rom;
 } SFInfo;
 
     // SF2 generator IDs
@@ -204,14 +209,22 @@ typedef struct _SFInfo
     #define SF_ROOTKEY              58
 
     // SF2 sample types
-    #define SF_SAMPLETYPE_MONO      1
-    #define SF_SAMPLETYPE_RIGHT     2
-    #define SF_SAMPLETYPE_LEFT      4
-    #define SF_SAMPLETYPE_LINKED    8
-    #define SF_SAMPLETYPE_ROMMONO   0x8001
-    #define SF_SAMPLETYPE_ROMRIGHT  0x8002
-    #define SF_SAMPLETYPE_ROMLEFT   0x8004
-    #define SF_SAMPLETYPE_ROMLINKED 0x8008
+    #define SF_SAMPLETYPE_MONO       1
+    #define SF_SAMPLETYPE_RIGHT      2
+    #define SF_SAMPLETYPE_LEFT       4
+    #define SF_SAMPLETYPE_LINKED     8
+    #define SF_SAMPLETYPE_ROMMONO    0x8001
+    #define SF_SAMPLETYPE_ROMRIGHT   0x8002
+    #define SF_SAMPLETYPE_ROMLEFT    0x8004
+    #define SF_SAMPLETYPE_ROMLINKED  0x8008
+    #define SF_SAMPLETYPE_ROM        0x8000
+    #define SF_SAMPLETYPE_MONO       1
+    #define SF_SAMPLETYPE_RIGHT      2
+    #define SF_SAMPLETYPE_LEFT       4
+    #define SF_SAMPLETYPE_LINKED     8
+    #define SF_SAMPLETYPE_COMPRESSED 0x10
+    #define SF_SAMPLERATE_MAX        400000
+    #define SF_SAMPLERATE_MIN        400
 
 
 /*----------------------------------------------------------------
@@ -219,7 +232,7 @@ typedef struct _SFInfo
  *----------------------------------------------------------------*/
 
 // sffile.c
-extern int  load_soundfont(SFInfo *sf, const char *filename);
+extern int load_soundfont(SFInfo *sf, FILE *fp);
 extern void free_soundfont(SFInfo *sf);
 extern void correct_samples(SFInfo *sf);
 

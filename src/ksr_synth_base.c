@@ -26,9 +26,11 @@ playmidi.c -- random stuff in need of rearrangement
 
 #include <string.h>
 
+#include <stdint.h>
+#include <time.h>
+
 #include "ext_deps/ulog/src/ulog.h"
 #include "ksr_internal.h"
-
 
 
 
@@ -296,6 +298,31 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         else
             ksr->voice[i].orig_frequency = freq_table[e->key & 0x7F];
         select_sample(ksr, i, ip);
+
+        /*
+        ulog_debug(
+            "SF2 ENV: voice=%d sample=%p modes=0x%x envelope=%s "
+            "delay=%d rates=[%ld,%ld,%ld,%ld,%ld,%ld] "
+            "offsets=[%ld,%ld,%ld,%ld,%ld,%ld]",
+            i,
+            (void *)ksr->voice[i].sample,
+            ksr->voice[i].sample->modes,
+            (ksr->voice[i].sample->modes & MODES_ENVELOPE) ? "ON" : "OFF",
+            ksr->voice[i].sample->envelope_delay,
+            ksr->voice[i].sample->envelope_rate[0],
+            ksr->voice[i].sample->envelope_rate[1],
+            ksr->voice[i].sample->envelope_rate[2],
+            ksr->voice[i].sample->envelope_rate[3],
+            ksr->voice[i].sample->envelope_rate[4],
+            ksr->voice[i].sample->envelope_rate[5],
+            ksr->voice[i].sample->envelope_offset[0],
+            ksr->voice[i].sample->envelope_offset[1],
+            ksr->voice[i].sample->envelope_offset[2],
+            ksr->voice[i].sample->envelope_offset[3],
+            ksr->voice[i].sample->envelope_offset[4],
+            ksr->voice[i].sample->envelope_offset[5]
+        );
+        */
     }
 
     channel_voice_add(ksr, e->channel, i);
@@ -647,7 +674,8 @@ void reset_midi(Kasaria *ksr)
         reset_controllers(ksr, i);
         // The rest of these are unaffected by the Reset All Controllers event
         ksr->channel[i].program   = ksr->default_program;
-        ksr->channel[i].panning   = NO_PANNING;
+        //ksr->channel[i].panning   = NO_PANNING;
+        ksr->channel[i].panning   = 64;
         ksr->channel[i].pitchsens = 2;
         ksr->channel[i].bank      = 0; // tone bank or drum set
         ksr->rpn_msb[i]           = 0xff;
@@ -672,6 +700,18 @@ void do_compute_data(Kasaria *ksr, long count)
     //int active = 0;
     for(i = 0; i < ksr->voices; i++)
     {
+        /*
+        ulog_debug(
+               "VOICE CHECK: i=%d status=%d sample=%p data=%p count=%ld",
+               i,
+               ksr->voice[i].status,
+               (void *)ksr->voice[i].sample,
+               ksr->voice[i].sample
+                   ? (void *)ksr->voice[i].sample->data
+                   : NULL,
+               count
+           );
+           */
         if(ksr->voice[i].status != VOICE_FREE)
         {
             mix_voice(ksr, ksr->buffer_pointer, i, count);

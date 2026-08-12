@@ -21,6 +21,15 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+
+
+
+
+
+
+#define DEFAULT_SOUNDFONT_ORDER 0
+#define MAP_BANK_COUNT 768
+
 /* Filename extension, followed by command to run decompressor so that
    output is written to stdout. Terminate the list with a 0.
 

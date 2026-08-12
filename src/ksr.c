@@ -272,6 +272,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
 
     ulog_topic_debug("SF2", "Loading soundfont file: %s", filename);
 
+    /*
     ksr->preload_soundfont_instruments = preload_instruments;
 
     const char *ext                    = strrchr(filename, '.');
@@ -290,11 +291,11 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
         return 0;
     }
 
-    if(ksr->sf_loaded)
-        free_soundfont(&ksr->sf_info);
+    //if(ksr->sf_loaded)
+    //    free_soundfont(&ksr->sf_info);
 
-    if(load_soundfont(&ksr->sf_info, filename) != 0)
-        return 0;
+    // if(load_soundfont(&ksr->sf_info, filename) != 0)
+    //     return 0;
 
     strncpy(ksr->sf_filename, filename, sizeof(ksr->sf_filename) - 1);
     ksr->sf_filename[sizeof(ksr->sf_filename) - 1] = '\0';
@@ -302,7 +303,113 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
 
     if(ksr->preload_soundfont_instruments)
         preload_soundfont_instruments(ksr);
+    */
+
+    /*
+    Instrument *inst;
+    
+    inst = extract_soundfont(ksr, filename, 0, 0, -1);
     return 1;
+    */
+
+    FILE *fp;
+        const char *ext;
+    
+        if(!ksr || !filename)
+            return 0;
+    
+        ulog_topic_debug(
+            "SF2",
+            "Loading soundfont file: %s",
+            filename
+        );
+    
+        /*
+         * Check file extension.
+         */
+        ext = strrchr(filename, '.');
+    
+        if(ext)
+            ext++;
+    
+        if(!ext || strcasecmp(ext, "sf2") != 0)
+        {
+            ulog_error("Unsupported soundfont format!");
+            return 0;
+        }
+    
+        /*
+         * Open the SF2 file.
+         */
+        fp = fopen(filename, "rb");
+    
+        if(!fp)
+        {
+            ulog_error(
+                "Can't open soundfont file: %s",
+                filename
+            );
+            return 0;
+        }
+    
+        /*
+         * Release the previously loaded soundfont.
+         */
+        if(ksr->sf_loaded)
+        {
+            free_soundfont(ksr->sf_info);
+            ksr->sf_loaded = 0;
+        }
+    
+        /*
+         * Parse the SF2 file.
+         *
+         * The new loader operates on FILE *, not a filename.
+         */
+        if(!ksr->sf_info)
+        {
+            ksr->sf_info = safe_malloc(sizeof(SFInfo));
+        
+            if(!ksr->sf_info)
+            {
+                ulog_topic_error("SF2", "Failed to allocate SFInfo");
+                fclose(fp);
+                return 0;
+            }
+        
+            memset(ksr->sf_info, 0, sizeof(SFInfo));
+        }
+        if(load_soundfont(ksr->sf_info, fp) != 0)
+        {
+            fclose(fp);
+            return 0;
+        }
+    
+        fclose(fp);
+    
+        /*
+         * Remember the filename for diagnostics / bookkeeping.
+         */
+        strncpy(
+            ksr->sf_filename,
+            filename,
+            sizeof(ksr->sf_filename) - 1
+        );
+    
+        ksr->sf_filename[
+            sizeof(ksr->sf_filename) - 1
+        ] = '\0';
+    
+        ksr->sf_loaded = 1;
+    
+        /*
+         * Build the ToneBank instruments from the newly
+         * loaded SFInfo.
+         */
+        if(preload_instruments)
+            preload_soundfont_instruments(ksr);
+    
+        return 1;
 }
 
 void ksr_set_audio_frame_size(Kasaria *ksr, int size)

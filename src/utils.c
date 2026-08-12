@@ -34,7 +34,7 @@ common.c
 
 
 
-
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -45,9 +45,24 @@ common.c
 
 
 #include "ksr_internal.h"
+#include "ext_deps/ulog/src/ulog.h"
 
 // I guess "rb" should be right for any libc
 #define OPEN_MODE "rb"
+
+
+
+
+
+
+
+
+
+
+int fp_equals(float a, float b, float tolerance)
+{
+    return ((a + tolerance > b) && (b > a - tolerance)) ? 1 : 0;
+}
 
 /* Try to open a file for reading. If the filename ends in one of the
 defined compressor extensions, pipe the file through the decompressor */
@@ -57,8 +72,14 @@ static FILE *try_to_open(char *name, int decompress, int noise_mode)
 
     fp = fopen(name, OPEN_MODE); // First just check that the file exists
 
+    ulog_debug("try_to_open: fopen(%s) -> %p fd=%d",
+               name, (void *)fp, fp ? fileno(fp) : -1);
+
     if(!fp)
         return 0;
+
+    ulog_debug("OPEN: name=%s fp=%p fd=%d",
+               name, (void *)fp, fileno(fp));
 
 #ifdef DECOMPRESSOR_LIST
     if(decompress)
@@ -127,7 +148,11 @@ FILE *open_file(Kasaria *ksr, const char *name, int decompress, int noise_mode)
     ksr->current_filename[1023] = '\0';
 
     if((fp = try_to_open(ksr->current_filename, decompress, noise_mode)))
+    {
+        ulog_debug("OPEN_FILE returning fp=%p fd=%d",
+                       (void *)fp, fileno(fp));
         return fp;
+    }
 
     if(name[0] != PATH_SEP)
     {
@@ -190,6 +215,34 @@ void *safe_malloc(size_t count)
     return NULL;
 }
 
+void *safe_large_malloc(size_t count)
+{
+    void *p;
+    static int errflag = 0;
+
+    if (errflag)
+	exit(10);
+	
+    if (count == 0)
+      /* Some malloc routine return NULL if count is zero, such as
+       * malloc routine from libmalloc.a of Solaris.
+       * But TiMidity doesn't want to return NULL even if count is zero.
+       */
+      count = 1;
+    if ((p = (void*) malloc(count)) != NULL)
+      return p;
+    errflag = 1;
+    //ctl->cmsg(CMSG_FATAL, VERB_NORMAL,
+    //      "Sorry. Couldn't malloc Lm %lu bytes.", (unsigned long)count);
+
+#ifdef ABORT_AT_FATAL
+    abort();
+#endif /* ABORT_AT_FATAL */
+    exit(10);
+    /*NOTREACHED*/
+	return 0;
+}
+
 // This adds a directory to the path list
 void add_to_pathlist(Kasaria *ksr, char *s)
 {
@@ -211,4 +264,191 @@ void free_pathlist(Kasaria *ksr)
         plp = next;
     }
     ksr->pathlist = 0;
+}
+
+const char *url_unexpand_home_dir(const char *fname)
+{
+    static char path[BUFSIZ];
+    const char *dir, *p;
+    int dirlen;
+
+    if(!IS_PATH_SEP(fname[0]))
+	    return fname;
+
+    if((dir = getenv("HOME")) == NULL)
+	    if((dir = getenv("home")) == NULL)
+	        return fname;
+    
+    dirlen = strlen(dir);
+    
+    if(dirlen == 0 || dirlen >= sizeof(path) - 2)
+	    return fname;
+    
+    memcpy(path, dir, dirlen);
+    
+    if(!IS_PATH_SEP(path[dirlen - 1]))
+	    path[dirlen++] = PATH_SEP;
+
+#ifndef __W32__
+    if(strncmp(path, fname, dirlen))
+#else
+    if(strncasecmp(path, fname, dirlen))
+#endif /* __W32__ */
+	    return fname;
+
+    path[0] = '~';
+    path[1] = '/';
+    p = fname + dirlen;
+    
+    if(strlen(p) >= sizeof(path) - 3)
+	    return fname;
+    
+    path[2] = '\0';
+    strcat(path, p);
+    
+    return path;
+}
+
+static MBlockNode *free_mblock_list = NULL;
+#define ADDRALIGN 8
+/* #define DEBUG */
+
+void init_mblock(MBlockList *mblock)
+{
+    mblock->first = NULL;
+    mblock->allocated = 0;
+}
+
+static MBlockNode *new_mblock_node(size_t n)
+{
+    MBlockNode *p;
+
+    if(n > MIN_MBLOCK_SIZE)
+    {
+	if((p = (MBlockNode *)safe_malloc(n + sizeof(MBlockNode))) == NULL)
+	    return NULL;
+	p->block_size = n;
+    }
+    else if(free_mblock_list == NULL)
+    {
+	if((p = (MBlockNode *)safe_malloc(sizeof(MBlockNode) + MIN_MBLOCK_SIZE)) == NULL)
+	    return NULL;
+	p->block_size = MIN_MBLOCK_SIZE;
+    }
+    else
+    {
+	p = free_mblock_list;
+	free_mblock_list = free_mblock_list->next;
+    }
+
+    p->offset = 0;
+    p->next = NULL;
+
+    return p;
+}
+
+static int enough_block_memory(MBlockList *mblock, size_t n)
+{
+    size_t newoffset;
+
+    if(mblock->first == NULL)
+	return 0;
+
+    newoffset = mblock->first->offset + n;
+
+    if(newoffset < mblock->first->offset) /* exceed representable in size_t */
+	return 0;
+
+    if(newoffset > mblock->first->block_size)
+	return 0;
+
+    return 1;
+}
+
+void *new_segment(MBlockList *mblock, size_t nbytes)
+{
+    MBlockNode *p;
+    void *addr;
+
+    /* round up to ADDRALIGN */
+    nbytes = ((nbytes + ADDRALIGN - 1) & ~(ADDRALIGN - 1));
+    if(!enough_block_memory(mblock, nbytes))
+    {
+	p = new_mblock_node(nbytes);
+	p->next = mblock->first;
+	mblock->first = p;
+	mblock->allocated += p->block_size;
+    }
+    else
+	p = mblock->first;
+
+    addr = (void *)(p->buffer + p->offset);
+    p->offset += nbytes;
+
+#ifdef DEBUG
+    if(((unsigned long)addr) & (ADDRALIGN-1))
+    {
+	fprintf(stderr, "Bad address: 0x%x\n", addr);
+	exit(1);
+    }
+#endif /* DEBUG */
+
+    return addr;
+}
+
+static void reuse_mblock1(MBlockNode *p)
+{
+    if(p->block_size > MIN_MBLOCK_SIZE)
+	safe_free(p);
+    else /* p->block_size <= MIN_MBLOCK_SIZE */
+    {
+	p->next = free_mblock_list;
+	free_mblock_list = p;
+    }
+}
+
+void reuse_mblock(MBlockList *mblock)
+{
+    MBlockNode *p;
+
+    if((p = mblock->first) == NULL)
+	return;			/* There is nothing to collect memory */
+
+    while(p)
+    {
+	MBlockNode *tmp;
+
+	tmp = p;
+	p = p->next;
+	reuse_mblock1(tmp);
+    }
+    init_mblock(mblock);
+}
+
+char *strdup_mblock(MBlockList *mblock, const char *str)
+{
+    int len;
+    char *p;
+
+    len = strlen(str);
+    p = (char *)new_segment(mblock, len + 1); /* for '\0' */
+    memcpy(p, str, len + 1);
+    return p;
+}
+
+int free_global_mblock(void)
+{
+    int cnt;
+
+    cnt = 0;
+    while(free_mblock_list)
+    {
+	MBlockNode *tmp;
+
+	tmp = free_mblock_list;
+	free_mblock_list = free_mblock_list->next;
+	safe_free(tmp);
+	cnt++;
+    }
+    return cnt;
 }

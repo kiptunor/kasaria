@@ -8,6 +8,7 @@ Most important
 - [ ] Fix audio glithces when using the raw midi event sender functions (Difficult to figure it out)
 - [ ] Replace the logging library with a different one (Maybe)
 - [ ] Cleanup in the Kasaria struct members
+- [ ] Add navigation comments in the entire codebase based on the context
 - [ ] Add API functions to read NPS, Polyphony, Tempo Changes
 - [ ] Add API function and type for reading MIDI Info (PPQ, Tracks, Format, Note count)
 - [ ] Implement both load midi and soundfont from memory functions

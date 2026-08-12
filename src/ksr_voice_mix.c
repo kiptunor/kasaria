@@ -39,6 +39,8 @@ mix.c */
 
 #include <malloc.h>
 
+
+#include "ext_deps/ulog/src/ulog.h"
 #include "ksr_internal.h"
 
 
@@ -678,6 +680,27 @@ void mix_voice(Kasaria *ksr, f32 *buf, int v, long c)
     // Prob this is where I have to handle SF2 effects
     Voice    *vp = ksr->voice + v;
     sample_t *sp;
+
+    // ulog_debug(
+    //     "VOICE PAN: v=%d pan=%d volume=%f",
+    //     v,
+    //     vp->panning,
+    //     vp->sample->volume
+    // );
+
+    /*
+    ulog_debug(
+        "VOICE: v=%d vp=%p sample=%p data=%p c=%ld offset=%ld increment=%ld",
+        v,
+        (void *)vp,
+        (void *)vp->sample,
+        vp->sample ? (void *)vp->sample->data : NULL,
+        c,
+        vp->sample_offset,
+        vp->sample_increment
+    );
+    */
+    
     if(vp->status == VOICE_DIE)
     {
         if(c >= MAX_DIE_TIME)

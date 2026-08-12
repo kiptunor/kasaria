@@ -37,11 +37,18 @@
 
 #ifndef KASARIA_INTERNAL_H
 #define KASARIA_INTERNAL_H
+#define _GNU_SOURCE
+#define _FILE_OFFSET_BITS 64
+
+
+#include <stdio.h>
+#include <stdlib.h>
 
 
 #include <math.h>
 #include <stdbool.h>
-#include <stdio.h>
+
+
 
 
 
@@ -65,6 +72,13 @@
 
 
 
+#ifdef PATH_SEP2
+#define IS_PATH_SEP(c) ((c) == PATH_SEP || (c) == PATH_SEP2)
+#else
+#define IS_PATH_SEP(c) ((c) == PATH_SEP)
+#endif
+
+#define safe_free free
 
 #ifndef PI
     #define PI 3.14159265
@@ -78,9 +92,49 @@
     #define FSCALENEG(a, b) ((a) * (1.0L / (double)(1 << (b))))
 #endif
 
+#define FP_EQ(a, b) (fp_equals(a, b, 0.001f))
+#define FP_EQ_0(a) (FP_EQ(a, 0.0f))
+#define FP_NE_0(a) ((a) > 0.0 || (a) < 0.0)
+
+#define RANGE(lo,hi)	(((hi)&0xff) << 8 | ((lo)&0xff))
+#define LOWNUM(val)	((val) & 0xff)
+#define HIGHNUM(val)	(((val) >> 8) & 0xff)
+
 #define ISDRUMCHANNEL(tm, c)  ((tm->drumchannels & (1 << (c))))
 #define ISQUIETCHANNEL(tm, c) ((tm->quietchannels & (1 << (c))))
 #define MAGIC_LOAD_INSTRUMENT ((Instrument *)(-1))
+#define DIV_200 (double)(0.005) // 1/200
+#define DIV_1000 (double)(0.001) // 1/1000
+#define DIV_1200 (double)(8.3333333333333333333333333333333e-4) // 1/1200
+#define DIV_1024 (double)(0.0009765625)
+#define DIV_100 (double)(0.01) // 1/100
+#define DIV_127 (double)(0.007874015748031496062992125984252) // 1/127
+
+#define divi_2(i) ((i) / 2)
+#define divi_4(i) ((i) / 4)
+#define divi_8(i) ((i) / 8)
+#define divi_16(i) ((i) / 16)
+#define divi_32(i) ((i) / 32)
+#define divi_64(i) ((i) / 64)
+#define divi_128(i) ((i) / 128)
+#define divi_256(i) ((i) / 256)
+#define divi_512(i) ((i) / 512)
+#define divi_1024(i) ((i) / 1024)
+#define divi_2048(i) ((i) / 2048)
+#define divi_4096(i) ((i) / 4096)
+
+enum {
+	SAMPLE_TYPE_INT16 = 0, // def sample_t int16 int8
+//	SAMPLE_TYPE_INT8,
+	SAMPLE_TYPE_INT32,
+//	SAMPLE_TYPE_INT64,
+	SAMPLE_TYPE_FLOAT,
+	SAMPLE_TYPE_DOUBLE,
+};
+
+
+#define MAX_ELEMENT 8
+#define HPF_PARAM_NUM 3
 
 // Voice status options:
 #define VOICE_FREE            0
@@ -104,6 +158,7 @@
 // Order of the FIR filter = 20 should be enough !
 #define ORDER                 20
 #define ORDER2                ORDER / 2
+#define INST_SF2              1
 
 // Midi events
 #define ME_NONE               0
@@ -143,6 +198,13 @@
 #define MODES_REVERSE         (1 << 4)
 #define MODES_SUSTAIN         (1 << 5)
 #define MODES_ENVELOPE        (1 << 6)
+#define MODES_CLAMPED	      (1<<7) /* ?? (for last envelope??) */
+/* Flags not defined by GUS */
+#define MODES_RELEASE         (1<<8)
+#define MODES_TRIGGER_RANDOM      (1<<9)
+#define MODES_NO_NOTEOFF          (1<<10)
+#define MODES_TRIGGER_RELEASE     (1<<11)
+#define MODES_KEYSWITCH           (1<<12)
 
 #define SPECIAL_PROGRAM       -1
 
@@ -151,6 +213,10 @@
 
 
 
+
+#define DEFALT_REVERB_SEND 127
+#define DEFALT_CHORUS_SEND 127
+#define DEFALT_DELAY_SEND  127
 
 
 // Anything but PANNED_MYSTERY only uses the left volume
@@ -239,12 +305,57 @@ typedef struct
     char      panning;
     char      note_to_use;
     long      data_alloced;
+    int       data_type;
+    u16       sample_type;
+
+    i16 tremolo_delay, tremolo_sweep, tremolo_freq;
+    i16 vibrato_delay, vibrato_sweep, vibrato_freq;
+    i16 tremolo_to_amp, tremolo_to_pitch, tremolo_to_fc;
+    i16 vibrato_to_amp, vibrato_to_pitch, vibrato_to_fc;
+
+    i16 modenv_to_pitch, modenv_to_fc,
+	  envelope_keyf[6], envelope_velf[6], modenv_keyf[6], modenv_velf[6];
+    i8 envelope_velf_bpo, modenv_velf_bpo, envelope_keyf_bpo, modenv_keyf_bpo,
+	  key_to_fc_bpo, vel_to_fc_threshold;	/* in notes */
+    i32 pitch_envelope[9];
+
+    i32 envelope_delay, modenv_delay;	/* in samples */
+
+    i32 modenv_rate[6], modenv_offset[6];
+
+    i16 vel_to_fc, key_to_fc; /* in cents, [-12000, 12000] */
+    i16 vel_to_resonance;
+
+    i32 cutoff_freq, cutoff_low_limit, cutoff_low_keyf;	/* in Hz, [1, 20000] */
+    i16 resonance;
+    i64 offset;
+
+    f64 cfg_amp;
+
+    i8 inst_type;
+    int lpf_type;
+    i8 keep_voice;
+    i8 def_pan;
+    i8 low_key, high_key, root_key;
+    int hpf[HPF_PARAM_NUM];
+    i32 sf_sample_index, sf_sample_link;	/* for stereo SoundFont */
+
+    i32 seq_length;	/* length of the round robin, 0 == disabled */
+    i32 seq_position;	/* 1-based position within the round robin, 0 == disabled */
+    f64 rt_decay;
+    u8 low_vel, high_vel;
+    f64 sample_pan;
+    i16 scale_freq;	/* in notes */
+    i16 scale_factor;	/* in 1024divs/key */
+    f64 tune;
 } Sample;
 
 typedef struct
 {
     int     samples;
+    int     type;
     Sample *sample;
+    char *instname;
 } Instrument;
 
 typedef struct
@@ -252,11 +363,47 @@ typedef struct
     char       *name;
     Instrument *instrument;
     int         note, amp, pan, strip_loop, strip_envelope, strip_tail;
+
+    int trempitchnum, tremfcnum, tremdelaynum, tremfreqnum, tremsweepnum, tremampnum;
+	i16 *trempitch, *tremfc, *tremdelay, *tremfreq, *tremsweep, *tremamp;
+	int vibfcnum, vibampnum, vibdelaynum, vibfreqnum, vibsweepnum, vibpitchnum;
+	i16 *vibfc, *vibamp, *vibdelay, *vibfreq, *vibsweep, *vibpitch;
+
+	//i16 amp;
+	i8 amp_normalize;
+	i8 lokey, hikey, lovel, hivel;
+	i16 rnddelay;
+
+	i8 loop_timeout,
+	font_preset, font_keynote, legato, tva_level, play_note, damper_mode;
+
+	int fclownum, fclowkeyfnum, fcmulnum, fcaddnum;
+	i16 *fclow, *fclowkeyf, *fcmul, *fcadd;
+	i16 vel_to_fc, key_to_fc, vel_to_resonance;
+
+	i8 reverb_send, chorus_send, delay_send;
+	i8 rx_note_off;
+	i8 keep_voice;
+
+	int lpf_type;
+	int hpfnum;
+	int **hpf;
+
+	i8 element_num;
+	i8 def_pan;
+	int sample_pan, sample_width;
+	i32 seq_length;
+	i32 seq_position;
+
+	int vfxe_num;
 } ToneBankElement;
 
 typedef struct
 {
     ToneBankElement tone[128];
+
+    //ToneBankElement *tone[128][MAX_ELEMENT]; // But it requires this
+    //AlternateAssign *alt;
 } ToneBank;
 
 
@@ -393,8 +540,11 @@ typedef struct
     SoundFontEffects sf2_effects;
 } Voice;
 
+
+
 struct Kasaria
 {
+    int opt_pre_resamplation;
     char           current_filename[1024];
     PathList      *pathlist; // The paths in this list will be tried whenever we're reading a file
     ToneBank      *tonebank[128];
@@ -454,11 +604,13 @@ struct Kasaria
     u64            wall_clock_last_ns;
     f64            phase_ema;
     int            phase_valid;
+    int            opt_modulation_envelope;
     // to avoid some unnecessary parameter passing
     MidiEventList *evlist;
     long           event_count;
     FILE          *fp;
     long           at;
+    SFInfo         *sf_info;
     /*
         These would both fit into 32 bits, but they are often added in
         large multiples, so it's simpler to have two roomy ints */
@@ -474,7 +626,7 @@ struct Kasaria
 #endif
     char               def_instr_name[256];
     int                sf_loaded;
-    SFInfo             sf_info;
+    //SFInfo             sf_info;
     char               sf_filename[1024];
     CompressorSettings compressor_settings;
     int                channel_voice_count[16];
@@ -489,7 +641,24 @@ struct Kasaria
 };
 
 
+#define MIN_MBLOCK_SIZE 8192
 
+typedef struct _MBlockNode
+{
+    size_t block_size;
+    size_t offset;
+    struct _MBlockNode *next;
+#ifndef MBLOCK_NOPAD
+    void *pad;
+#endif /* MBLOCK_NOPAD */
+    char buffer[1];
+} MBlockNode;
+
+typedef struct _MBlockList
+{
+    MBlockNode *first;
+    size_t allocated;
+} MBlockList;
 
 
 
@@ -502,6 +671,7 @@ void        free_pathlist(Kasaria *tm);
 void        close_file(FILE *fp);
 void        skip(FILE *fp, size_t len);
 void       *safe_malloc(size_t count);
+const char *url_unexpand_home_dir(const char *fname);
 
 
 // ------------- Filter functions (ksr_filter.c) -------------
@@ -514,8 +684,10 @@ int         load_missing_instruments(Kasaria *tm);
 void        free_instruments(Kasaria *tm);
 // int set_default_instrument(Kasaria *tm, char *name);
 void        free_default_instrument(Kasaria *tm);
-Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filename, int bank, int program);
+//Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filename, int bank, int program);
 int         preload_soundfont_instruments(Kasaria *ksr);
+void alloc_instrument_bank(int dr, int bk);
+
 
 
 // ------------- Voice mixing functions (ksr_voice_mix.c) -------------
@@ -566,8 +738,19 @@ void        drop_sustain(Kasaria *ksr, int c);
 void        reset_controllers(Kasaria *ksr, int c);
 void        reset_midi(Kasaria *ksr);
 void        free_voice_push(Kasaria *ksr, int i);
-
+Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset);
+int load_font(Kasaria *ksr, SFInfo *sf, int pridx);
 
 
 u64         monotonic_ns(void);
+
+Instrument *extract_soundfont(Kasaria *ksr, const char *sf_file, int bank, int preset, int keynote);
+
+extern void init_mblock(MBlockList *mblock);
+extern void *new_segment(MBlockList *mblock, size_t nbytes);
+extern void reuse_mblock(MBlockList *mblock);
+extern char *strdup_mblock(MBlockList *mblock, const char *str);
+extern int free_global_mblock(void);
+int fp_equals(float a, float b, float tolerance);
+void *safe_large_malloc(size_t count);
 #endif

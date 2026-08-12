@@ -273,10 +273,10 @@ SoundFontEffects default_sf2_effects = {
  * load a soundfont file
  *================================================================*/
 
-int load_soundfont(SFInfo *sf, const char *filename)
+int load_soundfont(SFInfo *sf, FILE *fp)
 {
     SFChunk chunk;
-    FILE   *fp;
+    //FILE   *fp;
 
     sf->preset  = NULL;
     sf->sample  = NULL;
@@ -286,10 +286,10 @@ int load_soundfont(SFInfo *sf, const char *filename)
     prbags.bag = inbags.bag = NULL;
     prbags.gen = inbags.gen = NULL;
 
-    fp                      = fopen(filename, "rb");
+    //fp                      = fopen(filename, "rb");
     if(!fp)
     {
-        ulog_topic_error("SF2", "Failed to open soundfont '%s': %s", filename, strerror(errno));
+        ulog_topic_error("SF2", "Failed to open soundfont: %s", strerror(errno));
         return -1;
     }
 
@@ -297,7 +297,7 @@ int load_soundfont(SFInfo *sf, const char *filename)
     READCHUNK(&chunk, fp);
     if(chunkid(chunk.id) != RIFF_ID)
     {
-        ulog_topic_error("SF2", "'%s' Is not a RIFF file", filename);
+        ulog_topic_error("SF2", "SoundFont Is not a RIFF file");
         fclose(fp);
         return -1;
     }
@@ -305,7 +305,7 @@ int load_soundfont(SFInfo *sf, const char *filename)
     READID(chunk.id, fp);
     if(chunkid(chunk.id) != SFBK_ID)
     {
-        ulog_topic_error("SF2", "'%s' Is not a SoundFont file", filename);
+        ulog_topic_error("SF2", "Is not a SoundFont file");
         fclose(fp);
         return -1;
     }
@@ -321,12 +321,14 @@ int load_soundfont(SFInfo *sf, const char *filename)
         }
         else
         {
-            ulog_topic_error("SF2", "'%s' Has incorrect chunk id levels: %4.4s %4d", filename, chunk.id, chunk.size);
+            ulog_topic_error("SF2", "Has incorrect chunk id levels: %4.4s %4d", chunk.id, chunk.size);
             FSKIP(chunk.size, fp);
         }
     }
 
-    fclose(fp);
+    // Why the soundfont loader keept failing ???
+    // because of this little shtty function was called at the worst time
+    //fclose(fp);
 
     // parse layer structure
     convert_layers(sf);
