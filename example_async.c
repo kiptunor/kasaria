@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
         which means that if the midi uses multiple banks the second soundfont can provide them if the first soundfont
         doesn't have a preset for the required MIDI bank
     */
-    //ksr_load_soundfont_file(synth, "Arachno SoundFont Version 1.0.sf2", true); 
+    ksr_load_soundfont_file(synth, "Arachno SoundFont Version 1.0.sf2", true); 
 
 
     if(!ksr_load_midi_file(synth, argv[1])) // Try to load a midi file

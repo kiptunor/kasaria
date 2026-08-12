@@ -227,7 +227,7 @@ i32 sf_default_viblfo_freq = 8176;
 i8 sf_config_lfo_swap     = 0; // 0:ModLfo to Tremolo , VibLfo to Vibrato , 1:swap
 i8 sf_config_addrs_offset = 0; // 1:on
 
-#define SF2_24BIT 1
+#define SF2_24BIT 0
 
 #define FILENAME_NORMALIZE(fname) url_unexpand_home_dir(fname)
 #define FILENAME_REDUCED(fname)   url_unexpand_home_dir(fname)
@@ -953,14 +953,6 @@ Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset)
             if(ksr->sf_info->preset[pridx].preset != preset)
                 continue;
     
-            ulog_debug(
-                "SF2: building instrument "
-                "bank=%d preset=%d pridx=%d",
-                bank,
-                preset,
-                pridx
-            );
-    
             /*
              * Build the internal InstList/SampleList representation.
              *
@@ -1663,8 +1655,6 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 				sample->data         = (sample_t *)safe_large_malloc(sizeof(sample_t) * (frames + 128));
 				
 				memset(sample->data, 0, sizeof(sample_t) * (frames + 128));
-
-				printf("SAMPLE_TYPE_INT16=%d\n", SAMPLE_TYPE_INT16);
 				
 				sample->data_alloced = 1;
 				sample->data_type    = SAMPLE_TYPE_INT16;
@@ -1688,25 +1678,6 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
         max = sample->data[n];
 				}
 				
-				ulog_debug(
-    "SAMPLE BYTES: %02x %02x %02x %02x %02x %02x %02x %02x",
-    ((unsigned char *)sample->data)[0],
-    ((unsigned char *)sample->data)[1],
-    ((unsigned char *)sample->data)[2],
-    ((unsigned char *)sample->data)[3],
-    ((unsigned char *)sample->data)[4],
-    ((unsigned char *)sample->data)[5],
-    ((unsigned char *)sample->data)[6],
-    ((unsigned char *)sample->data)[7]
-				);
-				
-				ulog_debug(
-    "SAMPLE VALUES: %d %d %d %d",
-    sample->data[0],
-    sample->data[1],
-    sample->data[2],
-    sample->data[3]
-				);
 
 #ifndef LITTLE_ENDIAN
 				for(j = 0; j < frames; j++)
@@ -1809,12 +1780,6 @@ static int is_ordered(SFInsts *rec, int bank, int preset, int keynote)
 
 int load_font(Kasaria *ksr, SFInfo *sf, int pridx)
 {
-    ulog_debug(
-        "SF2 LOAD_FONT: pridx=%d bank=%d preset=%d",
-        pridx,
-        sf->preset[pridx].bank,
-        sf->preset[pridx].preset
-    );
 	SFPresetHdr *preset = &sf->preset[pridx];
 	int rc, j, nlayers;
 	SFGenLayer *layp, *globalp;
@@ -2144,7 +2109,6 @@ static SFSampleInfo *get_sampleinfo(SFInfo *sf, LayerTable *tbl)
 
 static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
 {
-    ulog_debug("Make patch");
     int bank, preset, keynote;
     int keynote_from, keynote_to, done;
     int addr, order;
@@ -2463,15 +2427,6 @@ static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable
 	    sp->samplerate = SF_SAMPLERATE_MAX;
 	else if(sp->samplerate < SF_SAMPLERATE_MIN)
 	    sp->samplerate = SF_SAMPLERATE_MIN;
-
-	ulog_debug(
-    "SF2 RATE: sf_sample=%d sp->samplerate=%ld "
-    "min=%d max=%d",
-    tbl->val[SF_sampleId],
-    sp->samplerate,
-    SF_SAMPLERATE_MIN,
-    SF_SAMPLERATE_MAX
-	);
 
 	
     vp->v.sample_rate = sp->samplerate;
@@ -2976,9 +2931,11 @@ static void convert_volume_envelope(Kasaria *ksr, SampleList *vp, LayerTable *tb
     vp->hold             = to_rate(ksr, 1, tbl->set[SF_holdEnv2] ? tbl->val[SF_holdEnv2] : -12000);
     vp->sustain          = calc_volenv_sustain(tbl->set[SF_sustainEnv2] ? tbl->val[SF_sustainEnv2] : 0);
     vp->decay            = to_rate(ksr, 65534 - vp->sustain, tbl->set[SF_decayEnv2] ? tbl->val[SF_decayEnv2] : -12000);
-    vp->release          = get_sf_release(ksr, tbl->set[SF_releaseEnv2] ? tbl->val[SF_releaseEnv2] : -12000); // elion chg
+    //vp->release          = get_sf_release(ksr, tbl->set[SF_releaseEnv2] ? tbl->val[SF_releaseEnv2] : -12000); // elion chg
     vp->v.envelope_delay = (ksr->play_mode.rate * to_msec((f64)(tbl->set[SF_delayEnv2] ? tbl->val[SF_delayEnv2] : -12000)) * 0.001);
-    
+
+
+    vp->release = to_rate(ksr, 65535, -12000);
 	// convert modulation envelope
 	tmp = to_msec(tbl->set[SF_attackEnv1] ? tbl->val[SF_attackEnv1] : -12000);
 	
@@ -3003,9 +2960,6 @@ static void convert_volume_envelope(Kasaria *ksr, SampleList *vp, LayerTable *tb
         tbl->set[SF_delayEnv2]
     );
     vp->v.modes |= MODES_ENVELOPE;
-
-    
-    ulog_debug("SF2 SAMPLE: sample=%p modes=0x%x " "looping=%d envelope=%d pingpong=%d " "rate=%ld", (void *)vp, vp->v.modes, !!(vp->v.modes & MODES_LOOPING), !!(vp->v.modes & MODES_ENVELOPE), !!(vp->v.modes & MODES_PINGPONG), vp->v.sample_rate );
 }
 
 

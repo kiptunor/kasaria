@@ -776,6 +776,8 @@ void free_default_instrument(Kasaria *ksr)
 
 int preload_soundfont_instruments(Kasaria *ksr)
 {
+    ulog_debug("Preloading soundfont instruments");
+    
     int i;
         int bank;
         int program;

@@ -378,6 +378,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             Sample *candidate = &ip->sample[si];
             if(candidate == primary)
                 continue;
+            /*
             if(candidate->low_freq == primary->low_freq && candidate->high_freq == primary->high_freq && candidate->panning != primary->panning)
             {
                 int stereo_v;
@@ -435,6 +436,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                 }
                 //break;
             }
+            */
         }
     }
 }
