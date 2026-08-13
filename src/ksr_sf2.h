@@ -161,70 +161,68 @@ typedef struct _SFInfo
     int           ninsts;
     SFInstHdr    *inst;
     int use_rom;
-} SFInfo;
+}SFInfo;
 
-    // SF2 generator IDs
-    #define SF_STARTADDRS           0
-    #define SF_ENDADDRS             1
-    #define SF_STARTLOOP            2
-    #define SF_ENDLOOP              3
-    #define SF_STARTADDRSHI         4
-    #define SF_LFO1TOPITCH          5
-    #define SF_LFO2TOPITCH          6
-    #define SF_ENV1TOPITCH          7
-    #define SF_INITFILTERFC         8
-    #define SF_INITFILTERQ          9
-    #define SF_LFO1TOFILTERFC       10
-    #define SF_ENV1TOFILTERFC       11
-    #define SF_ENDADDRSHI           12
-    #define SF_LFO1TOVOLUME         13
-    #define SF_PAN                  17
-    #define SF_DELAYLFO1            21
-    #define SF_FREQLFO1             22
-    #define SF_DELAYLFO2            23
-    #define SF_FREQLFO2             24
-    #define SF_DELAYENV1            25
-    #define SF_ATTACKENV1           26
-    #define SF_HOLDENV1             27
-    #define SF_DECAYENV1            28
-    #define SF_SUSTAINENV1          29
-    #define SF_RELEASEENV1          30
-    #define SF_DELAYENV2            33
-    #define SF_ATTACKENV2           34
-    #define SF_HOLDENV2             35
-    #define SF_DECAYENV2            36
-    #define SF_SUSTAINENV2          37
-    #define SF_RELEASEENV2          38
-    #define SF_INSTRUMENT           41
-    #define SF_KEYRANGE             43
-    #define SF_VELRANGE             44
-    #define SF_STARTLOOPHI          45
-    #define SF_INITATTEN            48
-    #define SF_ENDLOOPHI            50
-    #define SF_COARSETUNE           51
-    #define SF_FINETUNE             52
-    #define SF_SAMPLEID             53
-    #define SF_SAMPLEFLAGS          54
-    #define SF_SCALE_TUNING         56
-    #define SF_ROOTKEY              58
+// SF2 generator IDs
+#define SF_STARTADDRS           0
+#define SF_ENDADDRS             1
+#define SF_STARTLOOP            2
+#define SF_ENDLOOP              3
+#define SF_STARTADDRSHI         4
+#define SF_LFO1TOPITCH          5
+#define SF_LFO2TOPITCH          6
+#define SF_ENV1TOPITCH          7
+#define SF_INITFILTERFC         8
+#define SF_INITFILTERQ          9
+#define SF_LFO1TOFILTERFC       10
+#define SF_ENV1TOFILTERFC       11
+#define SF_ENDADDRSHI           12
+#define SF_LFO1TOVOLUME         13
+#define SF_PAN                  17
+#define SF_DELAYLFO1            21
+#define SF_FREQLFO1             22
+#define SF_DELAYLFO2            23
+#define SF_FREQLFO2             24
+#define SF_DELAYENV1            25
+#define SF_ATTACKENV1           26
+#define SF_HOLDENV1             27
+#define SF_DECAYENV1            28
+#define SF_SUSTAINENV1          29
+#define SF_RELEASEENV1          30
+#define SF_DELAYENV2            33
+#define SF_ATTACKENV2           34
+#define SF_HOLDENV2             35
+#define SF_DECAYENV2            36
+#define SF_SUSTAINENV2          37
+#define SF_RELEASEENV2          38
+#define SF_INSTRUMENT           41
+#define SF_KEYRANGE             43
+#define SF_VELRANGE             44
+#define SF_STARTLOOPHI          45
+#define SF_INITATTEN            48
+#define SF_ENDLOOPHI            50
+#define SF_COARSETUNE           51
+#define SF_FINETUNE             52
+#define SF_SAMPLEID             53
+#define SF_SAMPLEFLAGS          54
+#define SF_SCALE_TUNING         56
+#define SF_ROOTKEY              58
 
-    // SF2 sample types
-    #define SF_SAMPLETYPE_MONO       1
-    #define SF_SAMPLETYPE_RIGHT      2
-    #define SF_SAMPLETYPE_LEFT       4
-    #define SF_SAMPLETYPE_LINKED     8
-    #define SF_SAMPLETYPE_ROMMONO    0x8001
-    #define SF_SAMPLETYPE_ROMRIGHT   0x8002
-    #define SF_SAMPLETYPE_ROMLEFT    0x8004
-    #define SF_SAMPLETYPE_ROMLINKED  0x8008
-    #define SF_SAMPLETYPE_ROM        0x8000
-    #define SF_SAMPLETYPE_MONO       1
-    #define SF_SAMPLETYPE_RIGHT      2
-    #define SF_SAMPLETYPE_LEFT       4
-    #define SF_SAMPLETYPE_LINKED     8
-    #define SF_SAMPLETYPE_COMPRESSED 0x10
-    #define SF_SAMPLERATE_MAX        400000
-    #define SF_SAMPLERATE_MIN        400
+// SF2 sample types
+#define SF_SAMPLETYPE_MONO       1
+#define SF_SAMPLETYPE_LINKED     8
+#define SF_SAMPLETYPE_ROMMONO    0x8001
+#define SF_SAMPLETYPE_ROMRIGHT   0x8002
+#define SF_SAMPLETYPE_ROMLEFT    0x8004
+#define SF_SAMPLETYPE_ROMLINKED  0x8008
+#define SF_SAMPLETYPE_ROM        0x8000
+#define SF_SAMPLETYPE_MONO       1
+#define SF_SAMPLETYPE_RIGHT      2
+#define SF_SAMPLETYPE_LEFT       4
+#define SF_SAMPLETYPE_LINKED     8
+#define SF_SAMPLETYPE_COMPRESSED 0x10
+#define SF_SAMPLERATE_MAX        400000
+#define SF_SAMPLERATE_MIN        400
 
 
 /*----------------------------------------------------------------

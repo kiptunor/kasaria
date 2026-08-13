@@ -1,5 +1,5 @@
 /*
-    TiMidity++ -- MIDI to WAVE converter and player
+    Kasaria -- A powerful and High efficiency MIDI Synth based on TiMidity
     Copyright (C) 1999-2005 Masanao Izumo <iz@onicos.co.jp>
     Copyright (C) 1995 Tuukka Toivonen <tt@cgs.fi>
     Copyright (C) 2026 Kiptunor
@@ -159,7 +159,8 @@ typedef struct _LayerItem
 }LayerItem;
 
 /* copy policy */
-enum {
+enum
+{
 	L_INHRT,	/* add to global */
 	L_OVWRT,	/* overwrite on global */
 	L_RANGE,	/* range */
@@ -168,7 +169,8 @@ enum {
 };
 
 /* data type */
-enum {
+enum
+{
 	T_NOP,		/* nothing */
 	T_NOCONV,	/* no conversion */
 	T_OFFSET,	/* address offset */
@@ -194,7 +196,8 @@ enum {
 	T_EOT		/* end of type */
 };
 
-enum EnumOverWriteMode {//elion add
+enum EnumOverWriteMode
+{ //elion add
 	EOWM_ENABLE_VIBRATO = 1, 
 	EOWM_ENABLE_TREMOLO = 2,
 	EOWM_ENABLE_CUTOFF = 4, 
@@ -208,7 +211,7 @@ LayerItem layer_items[SF_EOF];
 ///r
 i8 sf_attenuation_neg  = 0;
 f64 sf_attenuation_pow = 10.0; // sb xfi
-f64 sf_attenuation_mul = 0.002; // sb xfi
+f64 sf_attenuation_mul = 0.005; // sb xfi
 f64 sf_attenuation_add = 0;
 
 i32 sf_limit_volenv_attack = 6;
@@ -227,7 +230,7 @@ i32 sf_default_viblfo_freq = 8176;
 i8 sf_config_lfo_swap     = 0; // 0:ModLfo to Tremolo , VibLfo to Vibrato , 1:swap
 i8 sf_config_addrs_offset = 0; // 1:on
 
-#define SF2_24BIT 0
+#define SF2_24BIT 1
 
 #define FILENAME_NORMALIZE(fname) url_unexpand_home_dir(fname)
 #define FILENAME_REDUCED(fname)   url_unexpand_home_dir(fname)
@@ -393,11 +396,11 @@ typedef struct OverrideTiMidityData
 
 	struct tag_delay
 	{
-		float delay;
-		double level, feedback;
+		f32 delay;
+		f64 level, feedback;
 	}delay_param;
 
-	double compThr, compSlope, compLook, compWTime, compATime, compRTime;
+	f64 compThr, compSlope, compLook, compWTime, compATime, compRTime;
 
 	unsigned char EnableVolMidCtrl;
 	short DriverRVolume;
@@ -449,7 +452,7 @@ static void set_rootfreq(SampleList *vp);
 static i32 to_offset(i32 offset);
 static i32 to_rate(Kasaria *ksr, i32 diff, int timecent);
 static i32 calc_rate(Kasaria *ksr, i32 diff, double msec);
-static double to_msec(int timecent);
+static f64 to_msec(int timecent);
 static i32 calc_sustain(int sust_cB);
 static void convert_volume_envelope(Kasaria *ksr, SampleList *vp, LayerTable *tbl);
 static void convert_tremolo(SampleList *vp, LayerTable *tbl);
@@ -471,14 +474,6 @@ static int sbk_tremolo(int gen, int val);
 static int sbk_volsust(int gen, int val);
 static int sbk_modsust(int gen, int val);
 
-// Todo: Get the source files instead
-/*
-void init_mblock(MBlockList *mblock)
-{
-    mblock->first = NULL;
-    mblock->allocated = 0;
-}
-*/
 
 /*----------------------------------------------------------------*/
 
@@ -654,7 +649,8 @@ static int sbk_tm_key(int gen, int val)
 /* lfo frequency */
 static int sbk_freq(int gen, int val)
 {
-	if(val == 0) {
+	if(val == 0)
+	{
 		if(gen == SF_freqLfo1)
 			return -725;
 		else /* SF_freqLfo2*/
@@ -723,6 +719,7 @@ int sbk_to_sf2(int oper, int amount)
 		fprintf(stderr, "illegal gen item type %d\n", item->type);
 		return amount;
 	}
+	
 	if(sbk_convertors[item->type])
 		return sbk_convertors[item->type](oper, amount);
 	
@@ -754,7 +751,6 @@ static SFInsts *new_soundfont(const char *sf_file)
 			/* remove the record from the chain to reuse */
 			if(prev)
 				prev->next = sf->next;
-				
 			else if(sfrecs == sf)
 				sfrecs = sf->next;
 			
@@ -861,168 +857,124 @@ char *soundfont_preset_name(int bank, int preset, int keynote, const char **sndf
 Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset)
 {
     SFInsts *rec;
-        Instrument *inst = NULL;
-        int pridx;
+    Instrument *inst = NULL;
+    int pridx;
     
-        if(!ksr || !ksr->sf_loaded || !ksr->sf_info)
-            return NULL;
-    
-        /*
-         * Create the private SFInsts record.
-         *
-         * SFInsts remains completely internal to sndfont.c.
-         */
-        rec = new_soundfont(ksr->sf_filename);
-    
-        if(!rec)
-        {
-            ulog_error("SF2: failed to create soundfont record");
-            return NULL;
-        }
-    
-        /*
-         * This is required by make_patch(), is_excluded(),
-         * is_ordered(), etc.
-         */
-        current_sfrec = rec;
-    
-        /*
-         * Open the SF2 again for sample data.
-         *
-         * load_soundfont() has already parsed the SF2 into
-         * ksr->sf_info, but load_from_file() still needs rec->tf
-         * to read the actual sample data.
-         */
-        rec->tf = fopen(ksr->sf_filename, "rb");
-    
-        if(!rec->tf)
-        {
-            ulog_error(
-                "SF2: failed to open soundfont samples: %s",
-                ksr->sf_filename
-            );
-    
-            current_sfrec = NULL;
-            end_soundfont(rec);
-            return NULL;
-        }
-    
-        /*
-         * Copy the information that load_from_file() needs.
-         *
-         * This mirrors init_sf().
-         */
-        rec->samplepos  = ksr->sf_info->samplepos;
-        rec->lowbitpos  = ksr->sf_info->lowbitpos;
-        rec->samplesize = ksr->sf_info->samplesize;
-    
-        /*
-         * load_from_file() accesses:
-         *
-         *     rec->inst_namebuf[ip->pr_idx]
-         *
-         * so create it exactly like init_sf() does.
-         */
-        rec->inst_namebuf =
-            (char **)SFMalloc(
-                rec,
-                ksr->sf_info->npresets * sizeof(char *)
-            );
-    
-        for(pridx = 0;
-            pridx < ksr->sf_info->npresets;
-            pridx++)
-        {
-            rec->inst_namebuf[pridx] =
-                (char *)SFStrdup(
-                    rec,
-                    ksr->sf_info->preset[pridx].hdr.name
-                );
-        }
-    
-        /*
-         * Find the requested preset.
-         */
-        for(pridx = 0;
-            pridx < ksr->sf_info->npresets;
-            pridx++)
-        {
-            if(ksr->sf_info->preset[pridx].bank != bank)
-                continue;
-    
-            if(ksr->sf_info->preset[pridx].preset != preset)
-                continue;
-    
-            /*
-             * Build the internal InstList/SampleList representation.
-             *
-             * current_sfrec MUST point to rec here.
-             */
-            if(load_font(ksr, ksr->sf_info, pridx) != AWE_RET_OK)
-            {
-                ulog_debug(
-                    "SF2: load_font failed "
-                    "bank=%d preset=%d",
-                    bank,
-                    preset
-                );
-    
-                continue;
-            }
-    
-            /*
-             * Convert the internal InstList into the public
-             * Instrument structure and load the sample data.
-             */
-            inst = try_load_soundfont(
-                ksr,
-                rec,
-                -1,       /* order */
-                bank,
-                preset,
-                -1        /* keynote */
-            );
-    
-            if(inst)
-            {
-                ulog_debug(
-                    "SF2: instrument loaded "
-                    "bank=%d preset=%d inst=%p",
-                    bank,
-                    preset,
-                    (void *)inst
-                );
-    
-                /*
-                 * IMPORTANT:
-                 *
-                 * Do not destroy rec here.
-                 *
-                 * load_from_file() has used rec to construct the
-                 * Instrument and its samples, and rec owns the
-                 * associated SF2 state.
-                 */
-                return inst;
-            }
-    
-            ulog_debug(
-                "SF2: try_load_soundfont returned NULL "
-                "bank=%d preset=%d",
-                bank,
-                preset
-            );
-        }
-    
-        /*
-         * Nothing was loaded.
-         */
-        ulog_debug(
-            "SF2: no instrument found for bank=%d preset=%d",
-            bank,
-            preset
-        );
-    
+    if(!ksr || !ksr->sf_loaded || !ksr->sf_info)
         return NULL;
+    
+    /*
+     * Create the private SFInsts record.
+     *
+     * SFInsts remains completely internal to sndfont.c.
+     */
+    rec = new_soundfont(ksr->sf_filename);
+
+    if(!rec)
+    {
+        ulog_error("SF2: failed to create soundfont record");
+        return NULL;
+    }
+    
+    /*
+     * This is required by make_patch(), is_excluded(),
+     * is_ordered(), etc.
+     */
+    current_sfrec = rec;
+    
+    /*
+     * Open the SF2 again for sample data.
+     *
+     * load_soundfont() has already parsed the SF2 into
+     * ksr->sf_info, but load_from_file() still needs rec->tf
+     * to read the actual sample data.
+     */
+    rec->tf = fopen(ksr->sf_filename, "rb");
+    
+    if(!rec->tf)
+    {
+        ulog_error("SF2: failed to open soundfont samples: %s", ksr->sf_filename);
+
+        current_sfrec = NULL;
+        end_soundfont(rec);
+        return NULL;
+    }
+    
+    /*
+     * Copy the information that load_from_file() needs.
+     *
+     * This mirrors init_sf().
+     */
+    rec->samplepos  = ksr->sf_info->samplepos;
+    rec->lowbitpos  = ksr->sf_info->lowbitpos;
+    rec->samplesize = ksr->sf_info->samplesize;
+    
+    /*
+     * load_from_file() accesses:
+     *
+     *     rec->inst_namebuf[ip->pr_idx]
+     *
+     * so create it exactly like init_sf() does.
+     */
+    rec->inst_namebuf = (char **)SFMalloc(rec, ksr->sf_info->npresets * sizeof(char *));
+    
+    for(pridx = 0; pridx < ksr->sf_info->npresets; pridx++)
+        rec->inst_namebuf[pridx] = (char *)SFStrdup(rec, ksr->sf_info->preset[pridx].hdr.name);
+    
+    
+    /*
+     * Find the requested preset.
+     */
+    for(pridx = 0; pridx < ksr->sf_info->npresets; pridx++)
+    {
+        if(ksr->sf_info->preset[pridx].bank != bank)
+            continue;
+        
+        if(ksr->sf_info->preset[pridx].preset != preset)
+            continue;
+        
+        /*
+         * Build the internal InstList/SampleList representation.
+         *
+         * current_sfrec MUST point to rec here.
+         */
+        if(load_font(ksr, ksr->sf_info, pridx) != AWE_RET_OK)
+        {
+            ulog_debug("SF2: load_font failed " "bank=%d preset=%d", bank, preset);
+            continue;
+        }
+        
+        /*
+         * Convert the internal InstList into the public
+         * Instrument structure and load the sample data.
+         */
+        inst = try_load_soundfont(ksr, rec, -1, bank, preset, -1);
+        
+        if(inst)
+        {
+            ulog_debug("SF2: instrument loaded " "bank=%d preset=%d inst=%p", bank, preset, (void *)inst);
+            
+            /*
+             * IMPORTANT:
+             *
+             * Do not destroy rec here.
+             *
+             * load_from_file() has used rec to construct the
+             * Instrument and its samples, and rec owns the
+             * associated SF2 state.
+             */
+            return inst;
+        }
+        
+        ulog_debug("SF2: try_load_soundfont returned NULL " "bank=%d preset=%d", bank, preset);
+    }
+    
+    /*
+     * Nothing was loaded.
+     */
+    ulog_debug("SF2: no instrument found for bank=%d preset=%d", bank, preset);
+    
+    return NULL;
 }
 
 static void init_sf(Kasaria *ksr, SFInsts *rec)
@@ -1042,15 +994,8 @@ static void init_sf(Kasaria *ksr, SFInsts *rec)
 		return;
 	}
 
-	fprintf(stderr, "OPEN: fp=%p fd=%d\n",
-        (void *)rec->tf, fileno(rec->tf));
-	
-	fprintf(stderr, "OPEN: flags=%x\n",
-        ((struct _IO_FILE *)rec->tf)->_flags);
-
 	if(load_soundfont(&sfinfo, rec->tf))
 	{
-	    ulog_trace("End soundfont here!!!");
 	    end_soundfont(rec);
 	    return;
 	}
@@ -1073,6 +1018,7 @@ static void init_sf(Kasaria *ksr, SFInsts *rec)
 		{
 			if(is_excluded(rec, bank, preset, -1))
 				continue;
+			
 			alloc_instrument_bank(0, bank);
 		}
 		else
@@ -1117,6 +1063,7 @@ static void init_sf(Kasaria *ksr, SFInsts *rec)
 void init_load_soundfont(Kasaria *ksr)
 {
     SFInsts *rec;
+    
     for(rec = sfrecs; rec; rec = rec->next)
 	    if(rec->fname)
 	        init_sf(ksr, rec);
@@ -1177,25 +1124,21 @@ Instrument *try_load_soundfont(Kasaria *ksr, SFInsts *rec, int order, int bank, 
 			end_soundfont(rec);
 			return NULL;
 		}
-		ulog_debug("AFTER OPEN: rec=%p tf=%p fd=%d",
-           (void *)rec,
-           (void *)rec->tf,
-           fileno(rec->tf));
 		// if(!opt_sf_close_each_file)
 		// 	if(!IS_URL_SEEK_SAFE(rec->tf->url))
 		// 		rec->tf->url = url_cache_open(rec->tf->url, 1);
 	}
 
 	addr = INSTHASH(bank, preset, keynote);
-	for(ip = rec->instlist[addr]; ip; ip = ip->next) {
+	
+	for(ip = rec->instlist[addr]; ip; ip = ip->next)
 		if(ip->pat.bank == bank && ip->pat.preset == preset && (keynote < 0 || ip->pat.keynote == keynote) && (order < 0 || ip->order == order))
 			break;
-	}
+	
 
 	if(ip && ip->samples)
 		inst = load_from_file(ksr, rec, ip);
 
-	ulog_trace("opt_sf_close_each_file=%d", opt_sf_close_each_file);
 	if(opt_sf_close_each_file)
 	{
 		close_file(rec->tf);
@@ -1270,7 +1213,7 @@ static f64 calc_volume(LayerTable *tbl)
 		v = 1440;
 	else if(v < -1440)
 		v = -1440;
-	return pow(2.0, (double)v * -DIV_160); // DIV_160 = -6/960			
+	return pow(2.0, (f64)v * -DIV_160); // DIV_160 = -6/960			
 #elif 1 // table 
 	if (v < 0) { // -att
 		v = abs(v);
@@ -1311,9 +1254,9 @@ static i32 to_offset(i32 offset)
 /* calculate ramp rate in fractional unit;
  * diff = 16bit, time = msec
  */
-static i32 calc_rate(Kasaria *ksr, i32 diff, double msec)
+static i32 calc_rate(Kasaria *ksr, i32 diff, f64 msec)
 {
-    double rate;
+    f64 rate;
 
     if(FP_EQ_0(msec))
         return (i32)SF_ENVRATE_MAX + 1;
@@ -1322,7 +1265,8 @@ static i32 calc_rate(Kasaria *ksr, i32 diff, double msec)
         diff = 1;
     
     diff <<= 14;
-    rate = ((double)diff / ksr->play_mode.rate) * ksr->control_ratio * 1000.0 / msec;
+    rate = ((f64)diff / ksr->play_mode.rate) * ksr->control_ratio * 1000.0 / msec;
+    
     if(ksr->fast_decay)
         rate *= 2;
     
@@ -1340,7 +1284,7 @@ static i32 calc_rate(Kasaria *ksr, i32 diff, double msec)
  */
 static i32 to_rate(Kasaria *ksr, i32 diff, int timecent)
 {
-    double rate;
+    f64 rate;
 
     if(timecent == -12000)	/* instantaneous attack */
 	    return (i32)SF_ENVRATE_MAX + 1;
@@ -1365,9 +1309,9 @@ static i32 to_rate(Kasaria *ksr, i32 diff, int timecent)
 /*
  * convert timecents to sec
  */
-static double to_msec(int timecent)
+static f64 to_msec(int timecent)
 {
-    return timecent == -12000 ? 0 : 1000.0 * pow(2.0, (double)timecent * DIV_1200);
+    return timecent == -12000 ? 0 : 1000.0 * pow(2.0, (f64)timecent * DIV_1200);
 }
 
 /*
@@ -1381,8 +1325,7 @@ static i32 calc_volenv_sustain(int sust_cB)
 	if(sust_cB <= 0)
 	    return 65533;
 	else if(sust_cB >= 1440)
-	    return 0;
-					
+	    return 0;			
 	else
 	    return (1440 - sust_cB) * 65533 / 1440;
 	
@@ -1413,7 +1356,45 @@ static i32 calc_modenv_sustain(int sust_dcent)
 	return ((1000 - sust_dcent) * 65533 / 1000);
 }
 
-///r
+static int dump_wav_counter = 0;
+
+static void dump_sample_wav(Sample *sample)
+{
+    char path[128];
+    FILE *w;
+    long frames;
+    u32  rate, data_len;
+
+    frames   = sample->data_length >> FRACTION_BITS;
+    rate     = (u32)sample->sample_rate;
+    data_len = (u32)(frames * 2);
+
+    snprintf(path, sizeof(path), "/home/andre/Full_Grand_Piano_Samples_pcm/ksr_sample_%02d_%uHz.wav", dump_wav_counter++, rate);
+
+    w = fopen(path, "wb");
+    if(!w)
+        return;
+
+    fwrite("RIFF", 1, 4, w);
+    { u32 c = 36 + data_len; fwrite(&c, 4, 1, w); }
+    fwrite("WAVE", 1, 4, w);
+    fwrite("fmt ", 1, 4, w);
+    { u32 c = 16;         fwrite(&c, 4, 1, w); }
+    { u16 c = 1;          fwrite(&c, 2, 1, w); }   /* PCM */
+    { u16 c = 1;          fwrite(&c, 2, 1, w); }   /* mono */
+    fwrite(&rate, 4, 1, w);
+    { u32 c = rate * 2;   fwrite(&c, 4, 1, w); }   /* byte rate */
+    { u16 c = 2;          fwrite(&c, 2, 1, w); }   /* block align */
+    { u16 c = 16;         fwrite(&c, 2, 1, w); }   /* bits */
+    fwrite("data", 1, 4, w);
+    fwrite(&data_len, 4, 1, w);
+
+    fwrite(sample->data, 1, data_len, w);
+    fclose(w);
+
+    ulog_info("dumped %s (%ld frames, %u Hz)", path, frames, rate);
+}
+
 static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 {
     ulog_debug("Load from file");
@@ -1568,7 +1549,7 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 			f32 *tmp_data;
 
 			frames               = divi_2(sp->len);
-		    sample->data         = (sample_t*)safe_large_malloc(sizeof(float) * (frames + 128));
+		    sample->data         = (sample_t*)safe_large_malloc(sizeof(f32) * (frames + 128));
 		    sample->data_alloced = 1;
 			sample->data_type    = SAMPLE_TYPE_FLOAT;
 			highbit              = (u16 *)safe_large_malloc(sizeof(i16) * frames); // 16bit
@@ -1659,7 +1640,7 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 				sample->data_alloced = 1;
 				sample->data_type    = SAMPLE_TYPE_INT16;
 
-			
+							
 
 				//fseek(tf, sp->start, SEEK_SET);
 				fseek(tf, (long)sp->start, SEEK_SET);
@@ -1667,16 +1648,19 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 				//fread(sample->data, sp->len, 1, tf);
 				size_t got = fread(sample->data, 1, sp->len, tf);
 
-				int16_t min = INT16_MAX;
-				int16_t max = INT16_MIN;
-				
-				for (i64 n = 0; n < frames; n++) {
-    if (sample->data[n] < min)
-        min = sample->data[n];
-				
-    if (sample->data[n] > max)
-        max = sample->data[n];
-				}
+				long   n;
+                short  maxamp = 1, a;
+                short *p      = (short *)sample->data;
+                for(n = 0; n < frames; n++)
+                {
+                    a = *p++;
+                    if(a < 0) a = -a;
+                    if(a > maxamp) maxamp = a;
+                }
+                sample->volume = 32768.0 / (f64)maxamp * sample->volume;
+
+				//if(dump_wav_counter < 40)   // Could be an useful feature to add in the API
+                //    dump_sample_wav(sample);
 				
 
 #ifndef LITTLE_ENDIAN
@@ -1684,11 +1668,12 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 					sample->data[j] = (i16)(LE_SHORT(tmp_data[j]));
 #endif
 				/* set a small blank loop at the tail for avoiding abnormal loop. */
-			sample->data[frames] = sample->data[frames + 1] = sample->data[frames + 2] = 0;
-				memset(&sample->data[frames], 0, sizeof(sample_t) * 128);
+			    //sample->data[frames] = sample->data[frames + 1] = sample->data[frames + 2] = 0;
+				//memset(&sample->data[frames], 0, sizeof(sample_t) * 128);
 
-				// if(ksr->antialiasing_allowed)
-				// 	antialiasing((i16 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, play_mode->rate);
+				if(ksr->antialiasing_allowed)
+					//antialiasing((i16 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, ksr->play_mode.rate);
+					antialiasing(sample, ksr->play_mode.rate);
 			}
 		//}
 
@@ -2102,8 +2087,10 @@ static SFSampleInfo *get_sampleinfo(SFInfo *sf, LayerTable *tbl)
     sample = &sf->sample[tbl->val[SF_sampleId]];
 	if(sfrom_load < 1)
 		return sample;
+	
 	if(!(sample->sampletype & SF_SAMPLETYPE_ROM))
 		return sample;
+	
 	return &(sfrom_sfinfo.sample[tbl->val[SF_sampleId]]);
 }
 
@@ -2140,14 +2127,6 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
 
         // ctl->cmsg(CMSG_INFO, VERB_DEBUG_SILLY, "SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
         ulog_debug("SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
-
-        ulog_debug(
-            "SF make_patch: current_sfrec=%p bank=%d preset=%d keynote=%d",
-            (void *)current_sfrec,
-            bank,
-            preset,
-            keynote
-        );
         if(is_excluded(current_sfrec, bank, preset, keynote))
         {
             // ctl->cmsg(CMSG_INFO, VERB_DEBUG_SILLY, " * Excluded");
@@ -2165,11 +2144,9 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
         addr = INSTHASH(bank, preset, keynote);
         
         for(ip = current_sfrec->instlist[addr]; ip; ip = ip->next)
-        {
             if(ip->pat.bank == bank && ip->pat.preset == preset && (keynote < 0 || keynote == ip->pat.keynote))
                 break;
-        }
-
+        
         if(!ip)
         {
             ip                            = (InstList*)SFMalloc(current_sfrec, sizeof(InstList));
@@ -2579,7 +2556,7 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
     
 	if(tbl->set[SF_velocity] && (int)tbl->val[SF_velocity] != 0)
 	{
-		   //ctl->cmsg(CMSG_INFO, VERB_DEBUG, "error: fixed-velocity is not supported.");
+		//ctl->cmsg(CMSG_INFO, VERB_DEBUG, "error: fixed-velocity is not supported.");
 		ulog_debug("error: fixed-velocity is not supported.");
 	}
 	
@@ -2608,7 +2585,8 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
 		    	vp->v.sf_sample_link = last_sample_list->v.sf_sample_index;
 		}
 	}
-	else if(sample->sampletype & SF_SAMPLETYPE_RIGHT){
+	else if(sample->sampletype & SF_SAMPLETYPE_RIGHT)
+	{
 		if (last_sample_list &&
 		    last_sample_list->v.sf_sample_link == 0 &&
 		    (last_sample_type & SF_SAMPLETYPE_LEFT) &&
@@ -2737,7 +2715,7 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
 		{
 		    if(tbl->set[SF_env1ToFilterFc] && (int)tbl->val[SF_env1ToFilterFc] > 0)
 			{
-			    val *= pow(2.0, (double)tbl->val[SF_env1ToFilterFc] * DIV_1200);
+			    val *= pow(2.0, (f64)tbl->val[SF_env1ToFilterFc] * DIV_1200);
 			    if(val > 20000)
 				    val = 20000;
 			}
@@ -2783,7 +2761,7 @@ static void reset_last_sample_info(void)
 
 static int abscent_to_Hz(int abscents)
 {
-	return (int)(8.176 * pow(2.0, (double)abscents * DIV_1200));
+	return (int)(8.176 * pow(2.0, (f64)abscents * DIV_1200));
 }
 
 /*----------------------------------------------------------------*/
@@ -2798,7 +2776,7 @@ static void set_rootkey(SFInfo *sf, SampleList *vp, LayerTable *tbl)
 	int is_rom = 0;
 	
 	/* scale factor */
-	vp->v.scale_factor = 1024 * (double) tbl->val[SF_scaleTuning] / 100 + 0.5;
+	vp->v.scale_factor = 1024 * (f64) tbl->val[SF_scaleTuning] / 100 + 0.5;
 	/* set initial root key & fine tune */
 	if(sf->version == 1 && tbl->set[SF_samplePitch])
 	{
@@ -2824,6 +2802,7 @@ static void set_rootkey(SFInfo *sf, SampleList *vp, LayerTable *tbl)
 //	vp->tune += (int32)tbl->val[SF_fineTune];
 	if(tbl->set[SF_coarseTune])
 		vp->tune += (i32)tbl->val[SF_coarseTune] * 100;
+	
 	if(tbl->set[SF_fineTune])
 		vp->tune += (i32)tbl->val[SF_fineTune];
 
@@ -2837,16 +2816,16 @@ static void set_rootfreq(SampleList *vp)
 {	
 	vp->v.scale_freq = vp->root;
 	vp->v.root_key = vp->root;
-	vp->v.tune = pow(2.0, (double)vp->tune * DIV_1200);
+	vp->v.tune = pow(2.0, (f64)vp->tune * DIV_1200);
 #if 1 // use tune
 	vp->v.root_freq = freq_table[vp->root];
 #else // not use tune , include root_freq
-	vp->v.root_freq = (double)freq_table[vp->root] / vp->v.tune + 0.5;
+	vp->v.root_freq = (f64)freq_table[vp->root] / vp->v.tune + 0.5;
 #endif
 
 #if 0
 	int root = vp->root;
-	int tune = 0.5 - 256.0 * (double)vp->tune * DIV_100;
+	int tune = 0.5 - 256.0 * (f64)vp->tune * DIV_100;
 
 	/* 0 <= tune < 255 */
 	while(tune < 0)
@@ -2857,17 +2836,17 @@ static void set_rootfreq(SampleList *vp)
 	
 	if(root < 0)
 	{
-		vp->v.root_freq = (double)freq_table[0] * (double) bend_fine[tune] / bend_coarse[-root] + 0.5;
+		vp->v.root_freq = (f64)freq_table[0] * (f64) bend_fine[tune] / bend_coarse[-root] + 0.5;
 		vp->v.scale_freq = 0;		/* scale freq */
 	}
 	else if(root > 127)
 	{
-		vp->v.root_freq = (double)freq_table[127] * (double) bend_fine[tune] * bend_coarse[root - 127] + 0.5;
+		vp->v.root_freq = (f64)freq_table[127] * (f64) bend_fine[tune] * bend_coarse[root - 127] + 0.5;
 		vp->v.scale_freq = 127;		/* scale freq */
 	}
 	else
 	{
-		vp->v.root_freq = (double)freq_table[root] * (double) bend_fine[tune] + 0.5;
+		vp->v.root_freq = (f64)freq_table[root] * (f64) bend_fine[tune] + 0.5;
 		vp->v.scale_freq = root;	/* scale freq */
 	}
 /*
@@ -2949,16 +2928,6 @@ static void convert_volume_envelope(Kasaria *ksr, SampleList *vp, LayerTable *tb
     vp->modrelease     = get_sf_release(ksr, tbl->set[SF_releaseEnv1] ? tbl->val[SF_releaseEnv1] : -12000); // elion chg
     vp->v.modenv_delay = (ksr->play_mode.rate * to_msec((f64)(tbl->set[SF_delayEnv1] ? tbl->val[SF_delayEnv1] : -12000)) * 0.001);
 
-    ulog_debug(
-        "SF2 ENV FLAGS: attack=%d hold=%d decay=%d sustain=%d "
-        "release=%d delay=%d",
-        tbl->set[SF_attackEnv2],
-        tbl->set[SF_holdEnv2],
-        tbl->set[SF_decayEnv2],
-        tbl->set[SF_sustainEnv2],
-        tbl->set[SF_releaseEnv2],
-        tbl->set[SF_delayEnv2]
-    );
     vp->v.modes |= MODES_ENVELOPE;
 }
 

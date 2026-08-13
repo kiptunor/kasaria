@@ -681,25 +681,6 @@ void mix_voice(Kasaria *ksr, f32 *buf, int v, long c)
     Voice    *vp = ksr->voice + v;
     sample_t *sp;
 
-    // ulog_debug(
-    //     "VOICE PAN: v=%d pan=%d volume=%f",
-    //     v,
-    //     vp->panning,
-    //     vp->sample->volume
-    // );
-
-    /*
-    ulog_debug(
-        "VOICE: v=%d vp=%p sample=%p data=%p c=%ld offset=%ld increment=%ld",
-        v,
-        (void *)vp,
-        (void *)vp->sample,
-        vp->sample ? (void *)vp->sample->data : NULL,
-        c,
-        vp->sample_offset,
-        vp->sample_increment
-    );
-    */
     
     if(vp->status == VOICE_DIE)
     {

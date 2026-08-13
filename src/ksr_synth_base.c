@@ -298,31 +298,6 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         else
             ksr->voice[i].orig_frequency = freq_table[e->key & 0x7F];
         select_sample(ksr, i, ip);
-
-        /*
-        ulog_debug(
-            "SF2 ENV: voice=%d sample=%p modes=0x%x envelope=%s "
-            "delay=%d rates=[%ld,%ld,%ld,%ld,%ld,%ld] "
-            "offsets=[%ld,%ld,%ld,%ld,%ld,%ld]",
-            i,
-            (void *)ksr->voice[i].sample,
-            ksr->voice[i].sample->modes,
-            (ksr->voice[i].sample->modes & MODES_ENVELOPE) ? "ON" : "OFF",
-            ksr->voice[i].sample->envelope_delay,
-            ksr->voice[i].sample->envelope_rate[0],
-            ksr->voice[i].sample->envelope_rate[1],
-            ksr->voice[i].sample->envelope_rate[2],
-            ksr->voice[i].sample->envelope_rate[3],
-            ksr->voice[i].sample->envelope_rate[4],
-            ksr->voice[i].sample->envelope_rate[5],
-            ksr->voice[i].sample->envelope_offset[0],
-            ksr->voice[i].sample->envelope_offset[1],
-            ksr->voice[i].sample->envelope_offset[2],
-            ksr->voice[i].sample->envelope_offset[3],
-            ksr->voice[i].sample->envelope_offset[4],
-            ksr->voice[i].sample->envelope_offset[5]
-        );
-        */
     }
 
     channel_voice_add(ksr, e->channel, i);
@@ -335,17 +310,17 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     ksr->voice[i].sample_offset                     = 0;
     ksr->voice[i].sample_increment                  = 0; // make sure it isn't negative
 
-    //ksr->voice[i].tremolo_phase                     = 0;
-    //ksr->voice[i].tremolo_phase_increment           = ksr->voice[i].sample->tremolo_phase_increment;
-    //ksr->voice[i].tremolo_sweep                     = ksr->voice[i].sample->tremolo_sweep_increment;
-    //ksr->voice[i].tremolo_sweep_position            = 0;
-    //
-    //ksr->voice[i].vibrato_sweep                     = ksr->voice[i].sample->vibrato_sweep_increment;
-    //ksr->voice[i].vibrato_sweep_position            = 0;
-    //ksr->voice[i].vibrato_control_ratio             = ksr->voice[i].sample->vibrato_control_ratio;
-    //ksr->voice[i].vibrato_control_counter = ksr->voice[i].vibrato_phase = 0;
-    //for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
-    //    ksr->voice[i].vibrato_sample_increment[j] = 0;
+    ksr->voice[i].tremolo_phase                     = 0;
+    ksr->voice[i].tremolo_phase_increment           = ksr->voice[i].sample->tremolo_phase_increment;
+    ksr->voice[i].tremolo_sweep                     = ksr->voice[i].sample->tremolo_sweep_increment;
+    ksr->voice[i].tremolo_sweep_position            = 0;
+    
+    ksr->voice[i].vibrato_sweep                     = ksr->voice[i].sample->vibrato_sweep_increment;
+    ksr->voice[i].vibrato_sweep_position            = 0;
+    ksr->voice[i].vibrato_control_ratio             = ksr->voice[i].sample->vibrato_control_ratio;
+    ksr->voice[i].vibrato_control_counter           = ksr->voice[i].vibrato_phase = 0;
+    for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
+        ksr->voice[i].vibrato_sample_increment[j] = 0;
 
     if(ksr->channel[e->channel].panning != NO_PANNING)
         ksr->voice[i].panning = ksr->channel[e->channel].panning;
@@ -378,8 +353,8 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             Sample *candidate = &ip->sample[si];
             if(candidate == primary)
                 continue;
-            /*
-            if(candidate->low_freq == primary->low_freq && candidate->high_freq == primary->high_freq && candidate->panning != primary->panning)
+    
+            if(candidate->sample_type == SF_SAMPLETYPE_RIGHT && candidate->sf_sample_index == primary->sf_sample_link)
             {
                 int stereo_v;
                 
@@ -398,18 +373,18 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                     ksr->voice[stereo_v].sample_increment           = 0;
                     ksr->voice[stereo_v].orig_frequency             = ksr->voice[i].orig_frequency;
 
-                    //ksr->voice[stereo_v].tremolo_phase              = 0;
-                    //ksr->voice[stereo_v].tremolo_phase_increment    = candidate->tremolo_phase_increment;
-                    //ksr->voice[stereo_v].tremolo_sweep              = candidate->tremolo_sweep_increment;
-                    //ksr->voice[stereo_v].tremolo_sweep_position     = 0;
-                    //
-                    //ksr->voice[stereo_v].vibrato_sweep              = candidate->vibrato_sweep_increment;
-                    //ksr->voice[stereo_v].vibrato_sweep_position     = 0;
-                    //ksr->voice[stereo_v].vibrato_control_ratio      = candidate->vibrato_control_ratio;
-                    //ksr->voice[stereo_v].vibrato_control_counter    = 0;
-                    //ksr->voice[stereo_v].vibrato_phase              = 0;
-                    //for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
-                    //    ksr->voice[stereo_v].vibrato_sample_increment[j] = 0;
+                    ksr->voice[stereo_v].tremolo_phase              = 0;
+                    ksr->voice[stereo_v].tremolo_phase_increment    = candidate->tremolo_phase_increment;
+                    ksr->voice[stereo_v].tremolo_sweep              = candidate->tremolo_sweep_increment;
+                    ksr->voice[stereo_v].tremolo_sweep_position     = 0;
+                    
+                    ksr->voice[stereo_v].vibrato_sweep              = candidate->vibrato_sweep_increment;
+                    ksr->voice[stereo_v].vibrato_sweep_position     = 0;
+                    ksr->voice[stereo_v].vibrato_control_ratio      = candidate->vibrato_control_ratio;
+                    ksr->voice[stereo_v].vibrato_control_counter    = 0;
+                    ksr->voice[stereo_v].vibrato_phase              = 0;
+                    for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
+                        ksr->voice[stereo_v].vibrato_sample_increment[j] = 0;
 
                     if(ksr->channel[e->channel].panning != NO_PANNING)
                         ksr->voice[stereo_v].panning = ksr->channel[e->channel].panning;
@@ -434,9 +409,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                     }
                     break;
                 }
-                //break;
             }
-            */
         }
     }
 }
@@ -452,10 +425,6 @@ void kill_note(Kasaria *ksr, int i)
 void note_on(Kasaria *ksr, MidiEvent *e)
 {
     // Skip notes based on their velocity (Only the ones within the threshold values)
-    //if(ksr->note_vel_skipping)
-    //    if(e->vel >= ksr->low_vel_treshold && e->vel <= ksr->high_vel_treshold)
-    //        return;
-
     if(ksr->note_vel_skipping)
         if(e->vel >= ksr->low_vel_treshold && e->vel <= ksr->high_vel_treshold)
         {

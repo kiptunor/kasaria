@@ -37,6 +37,7 @@ resample.c
 #include <malloc.h>
 
 #include "ksr_internal.h"
+#include "ext_deps/ulog/src/ulog.h"
 
 
 
@@ -50,8 +51,7 @@ resample.c
 
 
 
-
-#define KSR_USE_RESAMPLE_SIMD 0 // Makes efficiency worse for some reason idk
+#define KSR_USE_RESAMPLE_SIMD 1 // Makes efficiency worse for some reason idk
 
 
 
