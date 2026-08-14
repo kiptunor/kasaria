@@ -29,7 +29,7 @@ playmidi.c -- random stuff in need of rearrangement
 #include <stdint.h>
 #include <time.h>
 
-#include "ext_deps/ulog/src/ulog.h"
+#include "ext_deps/log_c/log.h"
 #include "ksr_internal.h"
 
 
@@ -43,7 +43,7 @@ playmidi.c -- random stuff in need of rearrangement
 
 void reset_voices(Kasaria *ksr)
 {
-    ulog_debug("Reset voices");
+    log_debug("Reset voices");
    
     for(int i = 0; i < MAX_VOICES; i++)    // ← MAX_VOICES, not ksr->voices
         ksr->voice[i].status = VOICE_FREE;
@@ -640,7 +640,7 @@ void reset_controllers(Kasaria *ksr, int c)
 
 void reset_midi(Kasaria *ksr)
 {
-    ulog_debug("Reset MIDI state");
+    log_debug("Reset MIDI state");
     int i;
     for(i = 0; i < 16; i++)
     {

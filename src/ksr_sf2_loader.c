@@ -58,7 +58,7 @@
 
 #include <stdio.h>
 
-#include "ext_deps/ulog/src/ulog.h"
+#include "ext_deps/log_c/log.h"
 #include "../src/ksr_internal.h"
 #include "../src/ksr_sf2.h"
 
@@ -501,7 +501,7 @@ static void load_sfrom(Kasaria *ksr)
 	if((tf = open_file(ksr, sf_file, 1, OF_VERBOSE)) == NULL)
 	{
 		//ctl->cmsg(CMSG_WARNING, VERB_NOISY, "Can't open SFROM.SF2");
-		ulog_warn("Can't open SFROM.SF2");
+		log_warn("Can't open SFROM.SF2");
 		sfrom_load = -1;
 		return;
 	}
@@ -512,7 +512,7 @@ static void load_sfrom(Kasaria *ksr)
 		close_file(tf);
 		tf = NULL;
 		// ctl->cmsg(CMSG_WARNING, VERB_NOISY, "SFROM : load_soundfont() error");
-		ulog_warn("SFROM : load_soundfont() error");
+		log_warn("SFROM : load_soundfont() error");
 		sfrom_load = -1;
 	    return;
 	}
@@ -526,7 +526,7 @@ static void load_sfrom(Kasaria *ksr)
 		close_file(tf);
 		tf = NULL;
 		// ctl->cmsg(CMSG_WARNING, VERB_NOISY, "SFROM : malloc error");
-		ulog_warn("SFROM : malloc error");
+		log_warn("SFROM : malloc error");
 		sfrom_load = -1;
 		return;
 	}
@@ -872,7 +872,7 @@ Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset)
 
     if(!rec)
     {
-        ulog_error("SF2: failed to create soundfont record");
+        log_error("SF2: failed to create soundfont record");
         return NULL;
     }
     
@@ -893,7 +893,7 @@ Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset)
     
     if(!rec->tf)
     {
-        ulog_error("SF2: failed to open soundfont samples: %s", ksr->sf_filename);
+        log_error("SF2: failed to open soundfont samples: %s", ksr->sf_filename);
 
         current_sfrec = NULL;
         end_soundfont(rec);
@@ -940,7 +940,7 @@ Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset)
          */
         if(load_font(ksr, ksr->sf_info, pridx) != AWE_RET_OK)
         {
-            ulog_debug("SF2: load_font failed " "bank=%d preset=%d", bank, preset);
+            log_debug("SF2: load_font failed " "bank=%d preset=%d", bank, preset);
             continue;
         }
         
@@ -952,7 +952,7 @@ Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset)
         
         if(inst)
         {
-            ulog_debug("SF2: instrument loaded " "bank=%d preset=%d inst=%p", bank, preset, (void *)inst);
+            log_debug("SF2: instrument loaded " "bank=%d preset=%d inst=%p", bank, preset, (void *)inst);
             
             /*
              * IMPORTANT:
@@ -966,13 +966,13 @@ Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset)
             return inst;
         }
         
-        ulog_debug("SF2: try_load_soundfont returned NULL " "bank=%d preset=%d", bank, preset);
+        log_debug("SF2: try_load_soundfont returned NULL " "bank=%d preset=%d", bank, preset);
     }
     
     /*
      * Nothing was loaded.
      */
-    ulog_debug("SF2: no instrument found for bank=%d preset=%d", bank, preset);
+    log_debug("SF2: no instrument found for bank=%d preset=%d", bank, preset);
     
     return NULL;
 }
@@ -983,13 +983,13 @@ static void init_sf(Kasaria *ksr, SFInsts *rec)
 	int i;
 
 	// ctl->cmsg(CMSG_INFO, VERB_NOISY, "Init soundfonts `%s'", FILENAME_REDUCED(rec->fname));
-	ulog_info("Init soundfonts `%s'", FILENAME_REDUCED(rec->fname));
+	log_info("Init soundfonts `%s'", FILENAME_REDUCED(rec->fname));
 	
 
 	if((rec->tf = open_file(ksr, rec->fname, 1, OF_VERBOSE)) == NULL)
 	{
 		// ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "Can't open soundfont file %s", FILENAME_REDUCED(rec->fname));
-		ulog_error("Can't open soundfont file %s", FILENAME_REDUCED(rec->fname));
+		log_error("Can't open soundfont file %s", FILENAME_REDUCED(rec->fname));
 		end_soundfont(rec);
 		return;
 	}
@@ -1024,7 +1024,7 @@ static void init_sf(Kasaria *ksr, SFInsts *rec)
 		else
 		{
 			//ctl->cmsg(CMSG_ERROR, VERB_VERBOSE, "%s: bank/preset is out of range [bank = %d, preset = %d]", FILENAME_REDUCED(rec->fname), bank, preset);
-			ulog_error("%s: bank/preset is out of range [bank = %d, preset = %d]", FILENAME_REDUCED(rec->fname), bank, preset);
+			log_error("%s: bank/preset is out of range [bank = %d, preset = %d]", FILENAME_REDUCED(rec->fname), bank, preset);
 			continue;
 		}
 		load_font(ksr, &sfinfo, i);
@@ -1107,7 +1107,7 @@ Instrument *extract_soundfont(Kasaria *ksr, const char *sf_file, int bank, int p
 
 Instrument *try_load_soundfont(Kasaria *ksr, SFInsts *rec, int order, int bank, int preset, int keynote)
 {
-    ulog_debug("Try load soundfont");
+    log_debug("Try load soundfont");
 	InstList *ip;
 	Instrument *inst = NULL;
 	int addr;
@@ -1120,7 +1120,7 @@ Instrument *try_load_soundfont(Kasaria *ksr, SFInsts *rec, int order, int bank, 
 		if((rec->tf = open_file(ksr, rec->fname, 1, OF_VERBOSE)) == NULL)
 		{
 			// ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "Can't open soundfont file %s", FILENAME_REDUCED(rec->fname));
-			ulog_error("Can't open soundfont file %s", FILENAME_REDUCED(rec->fname));
+			log_error("Can't open soundfont file %s", FILENAME_REDUCED(rec->fname));
 			end_soundfont(rec);
 			return NULL;
 		}
@@ -1392,12 +1392,12 @@ static void dump_sample_wav(Sample *sample)
     fwrite(sample->data, 1, data_len, w);
     fclose(w);
 
-    ulog_info("dumped %s (%ld frames, %u Hz)", path, frames, rate);
+    log_info("dumped %s (%ld frames, %u Hz)", path, frames, rate);
 }
 
 static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 {
-    ulog_debug("Load from file");
+    log_debug("Load from file");
 	SampleList *sp;
 	Instrument *inst;
 	i32 i;
@@ -1427,7 +1427,7 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 		i32 j;
 
 		//ctl->cmsg(CMSG_INFO, VERB_DEBUG, "Rate=%d LV=%d HV=%d LK=%d HK=%d RK=%d Tune=%f Pan=%f [%d]", sp->v.sample_rate, sp->v.low_vel, sp->v.high_vel, sp->v.low_key, sp->v.high_key,  sp->v.root_key, sp->v.tune, sp->v.sample_pan, sp->start);
-		ulog_debug("Rate=%d LV=%d HV=%d LK=%d HK=%d RK=%d Tune=%f Pan=%f [%d]", sp->v.sample_rate, sp->v.low_vel, sp->v.high_vel, sp->v.low_key, sp->v.high_key,  sp->v.root_key, sp->v.tune, sp->v.sample_pan, sp->start);
+		log_debug("Rate=%d LV=%d HV=%d LK=%d HK=%d RK=%d Tune=%f Pan=%f [%d]", sp->v.sample_rate, sp->v.low_vel, sp->v.high_vel, sp->v.low_key, sp->v.high_key,  sp->v.root_key, sp->v.tune, sp->v.sample_pan, sp->start);
 		
 		memcpy(sample, &sp->v, sizeof(Sample));
 		sample->data = NULL;
@@ -1467,7 +1467,7 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 				sample->data_alloced = 0;
 				
 				// ctl->cmsg(CMSG_INFO, VERB_DEBUG, " * Cached");
-				ulog_debug(" * Cached");
+				log_debug(" * Cached");
 				continue;
 			}
 		}
@@ -1821,7 +1821,7 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 	{
 	//	fprintf(stderr, "parse_layer: too deep instrument level\n");
 		//ctl->cmsg(CMSG_INFO, VERB_DEBUG, "parse_layer: too deep instrument level :%d", pridx);///r c214
-		ulog_debug("parse_layer: too deep instrument level :%d", pridx);
+		log_debug("parse_layer: too deep instrument level :%d", pridx);
 		return AWE_RET_ERR;
 	}
 
@@ -2106,7 +2106,7 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
     if(sample->sampletype & SF_SAMPLETYPE_ROM && sfrom_load < 1) /* is ROM sample? */
     {
 	    // ctl->cmsg(CMSG_INFO, VERB_DEBUG, "preset %d is ROM sample: 0x%x", pridx, sample->sampletype);
-		ulog_debug("preset %d is ROM sample: 0x%x", pridx, sample->sampletype);
+		log_debug("preset %d is ROM sample: 0x%x", pridx, sample->sampletype);
 	    return AWE_RET_SKIP;
     }
     
@@ -2127,11 +2127,11 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
 	    int pat_keynote = (bank == 128) ? -1 : keynote;
 
         // ctl->cmsg(CMSG_INFO, VERB_DEBUG_SILLY, "SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
-        ulog_debug("SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
+        log_debug("SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
         if(is_excluded(current_sfrec, bank, preset, keynote))
         {
             // ctl->cmsg(CMSG_INFO, VERB_DEBUG_SILLY, " * Excluded");
-            ulog_debug(" * Excluded");
+            log_debug(" * Excluded");
             continue;
         }
         else
@@ -2558,7 +2558,7 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
 	if(tbl->set[SF_velocity] && (int)tbl->val[SF_velocity] != 0)
 	{
 		//ctl->cmsg(CMSG_INFO, VERB_DEBUG, "error: fixed-velocity is not supported.");
-		ulog_debug("error: fixed-velocity is not supported.");
+		log_debug("error: fixed-velocity is not supported.");
 	}
 	
 	vp->v.sample_type     = sample->sampletype;
@@ -2673,7 +2673,7 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
 			vp->v.sample_pan = (f64)val * DIV_1000;
 		
 		// ctl->cmsg(CMSG_ERROR, VERB_NOISY, "error: linkedSample is not supported.");
-		ulog_debug("error: linkedSample is not supported.");
+		log_debug("error: linkedSample is not supported.");
 	}
 
 	memset(vp->v.envelope_keyf, 0, sizeof(vp->v.envelope_keyf));

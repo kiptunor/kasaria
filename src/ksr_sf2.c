@@ -68,7 +68,7 @@
 #endif
 #include <stdlib.h>
 
-#include "ext_deps/ulog/src/ulog.h"
+#include "ext_deps/log_c/log.h"
 
 #include "ksr_internal.h"
 #include "ksr_sf2.h"
@@ -289,7 +289,7 @@ int load_soundfont(SFInfo *sf, FILE *fp)
     //fp                      = fopen(filename, "rb");
     if(!fp)
     {
-        ulog_topic_error("SF2", "Failed to open soundfont: %s", strerror(errno));
+        log_error("Failed to open soundfont: %s", strerror(errno));
         return -1;
     }
 
@@ -297,7 +297,7 @@ int load_soundfont(SFInfo *sf, FILE *fp)
     READCHUNK(&chunk, fp);
     if(chunkid(chunk.id) != RIFF_ID)
     {
-        ulog_topic_error("SF2", "SoundFont Is not a RIFF file");
+        log_error("SoundFont Is not a RIFF file");
         fclose(fp);
         return -1;
     }
@@ -305,7 +305,7 @@ int load_soundfont(SFInfo *sf, FILE *fp)
     READID(chunk.id, fp);
     if(chunkid(chunk.id) != SFBK_ID)
     {
-        ulog_topic_error("SF2", "Is not a SoundFont file");
+        log_error("Is not a SoundFont file");
         fclose(fp);
         return -1;
     }
@@ -321,7 +321,7 @@ int load_soundfont(SFInfo *sf, FILE *fp)
         }
         else
         {
-            ulog_topic_error("SF2", "Has incorrect chunk id levels: %4.4s %4d", chunk.id, chunk.size);
+            log_error("Has incorrect chunk id levels: %4.4s %4d", chunk.id, chunk.size);
             FSKIP(chunk.size, fp);
         }
     }

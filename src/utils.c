@@ -45,7 +45,7 @@ common.c
 
 
 #include "ksr_internal.h"
-#include "ext_deps/ulog/src/ulog.h"
+// #include "ext_deps/log_c/log.h"
 
 // I guess "rb" should be right for any libc
 #define OPEN_MODE "rb"
@@ -72,14 +72,8 @@ static FILE *try_to_open(char *name, int decompress, int noise_mode)
 
     fp = fopen(name, OPEN_MODE); // First just check that the file exists
 
-    ulog_debug("try_to_open: fopen(%s) -> %p fd=%d",
-               name, (void *)fp, fp ? fileno(fp) : -1);
-
     if(!fp)
         return 0;
-
-    ulog_debug("OPEN: name=%s fp=%p fd=%d",
-               name, (void *)fp, fileno(fp));
 
 #ifdef DECOMPRESSOR_LIST
     if(decompress)
@@ -148,11 +142,8 @@ FILE *open_file(Kasaria *ksr, const char *name, int decompress, int noise_mode)
     ksr->current_filename[1023] = '\0';
 
     if((fp = try_to_open(ksr->current_filename, decompress, noise_mode)))
-    {
-        ulog_debug("OPEN_FILE returning fp=%p fd=%d",
-                       (void *)fp, fileno(fp));
         return fp;
-    }
+    
 
     if(name[0] != PATH_SEP)
     {

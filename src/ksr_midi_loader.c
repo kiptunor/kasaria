@@ -41,7 +41,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
     #include <string.h>
 #endif
 
-#include "ext_deps/ulog/src/ulog.h"
+#include "ext_deps/log_c/log.h"
 
 #include "ksr_internal.h"
 
@@ -665,13 +665,13 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
 
     if(memcmp(tmp, "MThd", 4) || len < 6)
     {
-        ulog_topic_error("MIDI Loader", "MIDI File does not have track header!");
+        log_error("MIDI File does not have track header!");
         return 0;
     }
 
     if(fread(&format, 2, 1, ksr->fp) != 1 || fread(&tracks, 2, 1, ksr->fp) != 1 || fread(&divisions_tmp, 2, 1, ksr->fp) != 1)
     {
-        ulog_topic_error("MIDI Loader", "Incompatible MIDI File Format!!");
+        log_error("Incompatible MIDI File Format!!");
         return 0;
     }
 
@@ -689,7 +689,7 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
 
     if(format < 0 || format > 2)
     {
-        ulog_topic_error("MIDI Loader", "Invalid MIDI File Format!");
+        log_error("Invalid MIDI File Format!");
         return 0;
     }
 
@@ -710,7 +710,7 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
     switch(format)
     {
     case 0:
-        ulog_topic_debug("MIDI Loader", "Format 0 Identified (Single Track)");
+        log_debug("Format 0 Identified (Single Track)");
         if(read_track(ksr, &tail, 0))
         {
             free_midi_list(ksr);
@@ -719,14 +719,14 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
         break;
 
     case 1:
-        ulog_topic_debug("MIDI Loader", "Format 1 Identified (Multichannel Track)");
+        log_debug("Format 1 Identified (Multichannel Track)");
         int temp_track_counter = 0;
         for(i = 0; i < tracks; i++)
         {
             temp_track_counter        = i;
             ksr->current_loaded_track = temp_track_counter;
             ksr->total_midi_tracks    = tracks;
-            ulog_topic_debug("MIDI Loader", "Reading MIDI track %d / %d", temp_track_counter + 1, tracks);
+            log_debug("Reading MIDI track %d / %d", temp_track_counter + 1, tracks);
             if(read_track(ksr, &tail, 0))
             {
                 free_midi_list(ksr);
@@ -736,13 +736,13 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
         break;
 
     case 2:
-        ulog_topic_debug("MIDI Loader", "Format 2 Identified");
+        log_debug("Format 2 Identified");
         for(i = 0; i < tracks; i++)
         {
             temp_track_counter        = i;
             ksr->current_loaded_track = temp_track_counter;
             ksr->total_midi_tracks    = tracks;
-            ulog_topic_debug("MIDI Loader", "Reading MIDI track %d / %d", i, tracks);
+            log_debug("Reading MIDI track %d / %d", i, tracks);
             if(read_track(ksr, &tail, 1))
             {
                 free_midi_list(ksr);
@@ -752,7 +752,7 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
         break;
     }
 
-    ulog_topic_debug("MIDI Loader", "Sorting Event List...");
+    log_debug("Sorting Event List...");
 
     sort_event_list(ksr);
     return groom_list(ksr, divisions, count, sp);

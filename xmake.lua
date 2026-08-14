@@ -27,7 +27,7 @@ function copy_soundfonts(target)
 end
 
 target("kasaria")
-    add_defines("ULOG_BUILD_CONFIG_HEADER_ENABLED")
+    add_defines("LOGC__USER_SETTINGS")
     set_kind("shared")
     set_toolset("sh", "clang")
     add_ldflags("-Wl,--as-needed")

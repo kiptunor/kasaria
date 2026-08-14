@@ -40,7 +40,7 @@ mix.c */
 #include <malloc.h>
 
 
-#include "ext_deps/ulog/src/ulog.h"
+#include "ext_deps/log_c/log.h"
 #include "ksr_internal.h"
 
 

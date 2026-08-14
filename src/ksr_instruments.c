@@ -44,7 +44,7 @@ With the current changes the old GUS Patch code is replaced by the SF2 soundfont
     #include <malloc.h>
 #endif
 
-#include "ext_deps/ulog/src/ulog.h"
+#include "ext_deps/log_c/log.h"
 
 #include "ksr_internal.h"
 #include "ksr_sf2.h"
@@ -100,7 +100,7 @@ int alloc_tone_bank_element(ToneBankElement *tone)
 	if(tone == NULL)
 	{
 		// ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "alloc_tone_bank_element: ToneBankElement malloc error.");
-		ulog_error("alloc_tone_bank_element: ToneBankElement malloc error.");
+		log_error("alloc_tone_bank_element: ToneBankElement malloc error.");
 		return 1; // error
 	}
 	
@@ -122,7 +122,7 @@ void alloc_instrument_bank(int dr, int bk)
 		    if(drumset[bk] == NULL)
 		    {
 		        //ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "alloc_instrument_bank: ToneBank malloc error. drumset");
-		        ulog_error("alloc_instrument_bank: ToneBank malloc error. drumset");
+		        log_error("alloc_instrument_bank: ToneBank malloc error. drumset");
 		        return;
 		    }
 			
@@ -131,7 +131,7 @@ void alloc_instrument_bank(int dr, int bk)
 		    if(alloc_tone_bank_element(&b->tone[0]))
 		    {
 		        //ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "alloc_instrument_bank: ToneBankElement malloc error. drumset");
-		        ulog_error("alloc_instrument_bank: ToneBankElement malloc error. drumset");
+		        log_error("alloc_instrument_bank: ToneBankElement malloc error. drumset");
 		        return;
 		    }
 	    }
@@ -145,7 +145,7 @@ void alloc_instrument_bank(int dr, int bk)
 		    if(tonebank[bk] == NULL)
 		    {
 		        // ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "alloc_instrument_bank: ToneBank malloc error. tonebank");
-		        ulog_error("alloc_instrument_bank: ToneBank malloc error. tonebank");
+		        log_error("alloc_instrument_bank: ToneBank malloc error. tonebank");
 		        return;
 		    }
 			
@@ -154,7 +154,7 @@ void alloc_instrument_bank(int dr, int bk)
 		    if(alloc_tone_bank_element(&b->tone[0]))
 		    {
 		        // ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "alloc_instrument_bank: ToneBankElement malloc error. tonebank");
-		        ulog_error("alloc_instrument_bank: ToneBankElement malloc error. tonebank");
+		        log_error("alloc_instrument_bank: ToneBankElement malloc error. tonebank");
 		        return;
 		    }
 	    }
@@ -238,7 +238,7 @@ static void free_instrument(Instrument *ip)
 
 void free_default_instrument(Kasaria *ksr)
 {
-    ulog_debug("Clear default instrument");
+    log_debug("Clear default instrument");
     if(ksr->default_instrument)
     {
         free_instrument(ksr->default_instrument);
@@ -249,7 +249,7 @@ void free_default_instrument(Kasaria *ksr)
 
 int preload_soundfont_instruments(Kasaria *ksr)
 {
-    ulog_debug("Preloading soundfont instruments");
+    log_debug("Preloading soundfont instruments");
     
     int i;
     int bank;
@@ -259,7 +259,7 @@ int preload_soundfont_instruments(Kasaria *ksr)
     if(!ksr || !ksr->sf_loaded || !ksr->sf_info)
         return 0;
     
-    ulog_topic_debug("SF2", "Preloading soundfont instruments");
+    log_debug("Preloading soundfont instruments");
     
     for(i = 0; i < ksr->sf_info->npresets; i++)
     {
@@ -275,7 +275,7 @@ int preload_soundfont_instruments(Kasaria *ksr)
         
             if(!inst)
             {
-                ulog_error("SF2: drum load failed bank=%d program=%d", bank, program);
+                log_error("SF2: drum load failed bank=%d program=%d", bank, program);
                 continue;
             }
             
@@ -312,7 +312,7 @@ int preload_soundfont_instruments(Kasaria *ksr)
         if(inst)
             ksr->tonebank[bank]->tone[program].instrument = inst;
         else
-            ulog_error("SF2: failed to load instrument bank=%d program=%d", bank, program);
+            log_error("SF2: failed to load instrument bank=%d program=%d", bank, program);
     }
     
     return 1;

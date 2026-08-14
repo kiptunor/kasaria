@@ -44,7 +44,7 @@ playmidi.c -- random stuff in need of rearrangement
     #include <string.h>
 #endif
 
-#include "ext_deps/ulog/src/ulog.h"
+#include "ext_deps/log_c/log.h"
 
 #define MINIAUDIO_IMPLEMENTATION
 #include "ext_deps/miniaudio/miniaudio.h"
@@ -792,7 +792,7 @@ int ksr_load_midi_file(Kasaria *ksr, const char *filename)
     strncpy(ksr->last_smf, filename, 1023);
     ksr->last_smf[1023] = '\0';
     ksr->is_midi_loaded = true;
-    ulog_info("Loaded MIDI: %s", ksr->last_smf);
+    log_info("Loaded MIDI: %s", ksr->last_smf);
     
     return 1;
 }
@@ -802,7 +802,7 @@ void ksr_unload_midi(Kasaria *ksr)
     if(!ksr)
         return;
 
-    ulog_debug("Unload MIDI");
+    log_debug("Unload MIDI");
 
     if(ksr->is_audio_started)
         ma_device_stop(&ksr->audio_device);
@@ -1033,13 +1033,13 @@ int ksr_play_midi(Kasaria *ksr, bool wait_midi_ending)
 
     if(!ksr->is_audio_init)
     {
-        ulog_error("Audio device not initialized");
+        log_error("Audio device not initialized");
         return 0;
     }
 
     if(!ksr->is_midi_loaded)
     {
-        ulog_error("No MIDI File was loaded!");
+        log_error("No MIDI File was loaded!");
         return 0;
     }
 
@@ -1049,7 +1049,7 @@ int ksr_play_midi(Kasaria *ksr, bool wait_midi_ending)
     ksr->is_midi_player_paused = false;
     ksr->phase_valid           = 0;
 
-    ulog_info("Starting MIDI playback...");
+    log_info("Starting MIDI playback...");
     ma_device_start(&async_midi_player->audio_device); // This may cause the midi player to get stuck when trying to play the midi again
 
     // Wait for the MIDI playback to finish (This is required if this function is called on the main thread so it won't exit)

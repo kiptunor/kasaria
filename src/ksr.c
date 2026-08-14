@@ -37,7 +37,7 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
-#include "ext_deps/ulog/src/ulog.h"
+#include "ext_deps/log_c/log.h"
 
 #include "ksr_internal.h"
 
@@ -69,37 +69,37 @@ void default_compressor_settings(Kasaria *ksr)
 
 void ksr_print_config(Kasaria *ksr)
 {
-    ulog_debug("fast_decay                 = %d",  ksr->fast_decay);
-    ulog_debug("antialiasing_allowed       = %d",  ksr->antialiasing_allowed);
-    ulog_debug("pre_resampling_allowed     = %d",  ksr->pre_resampling_allowed);
-    ulog_debug("sample_rate                = %ld", ksr->play_mode.rate);
-    ulog_debug("control_rate               = %ld", ksr->control_rate);
-    ulog_debug("control_ratio              = %ld", ksr->control_ratio);
-    ulog_debug("master_volume              = %f",  ksr->master_volume);
-    ulog_debug("drum_channels              = %ld", ksr->drumchannels);
-    ulog_debug("quiet_channels             = %ld", ksr->quietchannels);
-    ulog_debug("voice_limit                = %d",  ksr->voices);
-    ulog_debug("adjust_panning_immediately = %d",  ksr->adjust_panning_immediately);
-    ulog_debug("skip_initial_silence       = %d",  ksr->skip_initial_midi_silence);
+    log_debug("fast_decay                 = %d",  ksr->fast_decay);
+    log_debug("antialiasing_allowed       = %d",  ksr->antialiasing_allowed);
+    log_debug("pre_resampling_allowed     = %d",  ksr->pre_resampling_allowed);
+    log_debug("sample_rate                = %ld", ksr->play_mode.rate);
+    log_debug("control_rate               = %ld", ksr->control_rate);
+    log_debug("control_ratio              = %ld", ksr->control_ratio);
+    log_debug("master_volume              = %f",  ksr->master_volume);
+    log_debug("drum_channels              = %ld", ksr->drumchannels);
+    log_debug("quiet_channels             = %ld", ksr->quietchannels);
+    log_debug("voice_limit                = %d",  ksr->voices);
+    log_debug("adjust_panning_immediately = %d",  ksr->adjust_panning_immediately);
+    log_debug("skip_initial_silence       = %d",  ksr->skip_initial_midi_silence);
     
 
     printf("\n------------- [Filters and audio DSP Effects] -------------\n\n");
 
-    ulog_debug("note_vel_skipping -> enabled           = %d", ksr->note_vel_skipping);
-    ulog_debug("note_vel_skipping -> low_vel_treshold  = %u", ksr->low_vel_treshold);
-    ulog_debug("note_vel_skipping -> high_vel_treshold = %u\n\n", ksr->high_vel_treshold);
+    log_debug("note_vel_skipping -> enabled           = %d", ksr->note_vel_skipping);
+    log_debug("note_vel_skipping -> low_vel_treshold  = %u", ksr->low_vel_treshold);
+    log_debug("note_vel_skipping -> high_vel_treshold = %u\n\n", ksr->high_vel_treshold);
 
-    ulog_debug("compressor -> envelope      = %f", ksr->compressor_settings.envelope);
-    ulog_debug("compressor -> gain          = %f", ksr->compressor_settings.gain);
-    ulog_debug("compressor -> threshold     = %f", ksr->compressor_settings.threshold);
-    ulog_debug("compressor -> ratio         = %f", ksr->compressor_settings.ratio);
-    ulog_debug("compressor -> attack_coeff  = %f", ksr->compressor_settings.attack_coeff);
-    ulog_debug("compressor -> release_coeff = %f", ksr->compressor_settings.release_coeff);
-    ulog_debug("compressor -> makeup_gain   = %f", ksr->compressor_settings.makeup_gain);
-    ulog_debug("compressor -> attack_ms     = %f", ksr->compressor_settings.attack_ms);
-    ulog_debug("compressor -> release_ms    = %f", ksr->compressor_settings.release_ms);
-    ulog_debug("compressor -> sample_rate   = %f", ksr->compressor_settings.sample_rate);
-    ulog_debug("compressor -> makeup_gain   = %f", ksr->compressor_settings.makeup_gain);
+    log_debug("compressor -> envelope      = %f", ksr->compressor_settings.envelope);
+    log_debug("compressor -> gain          = %f", ksr->compressor_settings.gain);
+    log_debug("compressor -> threshold     = %f", ksr->compressor_settings.threshold);
+    log_debug("compressor -> ratio         = %f", ksr->compressor_settings.ratio);
+    log_debug("compressor -> attack_coeff  = %f", ksr->compressor_settings.attack_coeff);
+    log_debug("compressor -> release_coeff = %f", ksr->compressor_settings.release_coeff);
+    log_debug("compressor -> makeup_gain   = %f", ksr->compressor_settings.makeup_gain);
+    log_debug("compressor -> attack_ms     = %f", ksr->compressor_settings.attack_ms);
+    log_debug("compressor -> release_ms    = %f", ksr->compressor_settings.release_ms);
+    log_debug("compressor -> sample_rate   = %f", ksr->compressor_settings.sample_rate);
+    log_debug("compressor -> makeup_gain   = %f", ksr->compressor_settings.makeup_gain);
 }
 
 
@@ -166,9 +166,9 @@ Kasaria *ksr_init(void)
     adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
 
     // ulog_color_config(1);
-    ulog_topic_add("SF2", ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
-    ulog_topic_add("MIDI Loader", ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
-    ulog_info("Kasaria Init\n\n");
+    //ulog_topic_add("SF2", ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
+    //ulog_topic_add("MIDI Loader", ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
+    log_info("Kasaria Init\n\n");
 
     return ksr;
 }
@@ -276,7 +276,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
     if(!ksr || !filename)
         return 0;
     
-    ulog_debug("Loading soundfont file: %s", filename);
+    log_debug("Loading soundfont file: %s", filename);
     
     ext = strrchr(filename, '.');
     
@@ -285,7 +285,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
     
     if(!ext || strcasecmp(ext, "sf2") != 0)
     {
-        ulog_error("Unsupported soundfont format!");
+        log_error("Unsupported soundfont format!");
         return 0;
     }
     
@@ -293,7 +293,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
     
     if(!fp)
     {
-        ulog_error("Can't open soundfont file: %s", filename);
+        log_error("Can't open soundfont file: %s", filename);
         return 0;
     }
     
@@ -309,7 +309,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
     
         if(!ksr->sf_info)
         {
-            ulog_topic_error("SF2", "Failed to allocate SFInfo");
+            log_error("Failed to allocate SFInfo");
             fclose(fp);
             return 0;
         }
@@ -935,7 +935,7 @@ int ksr_init_audio(Kasaria *ksr, int init_scope)
 
     if(ksr->is_audio_init)
     {
-        ulog_warn("Audio device is already initialized");
+        log_warn("Audio device is already initialized");
         return 0;
     }
 
@@ -960,13 +960,13 @@ int ksr_init_audio(Kasaria *ksr, int init_scope)
 
     if(ma_device_init(NULL, &ksr->dev_config, &ksr->audio_device) != MA_SUCCESS)
     {
-        ulog_error("Failed to open audio device");
+        log_error("Failed to open audio device");
         return 1;
     }
 
     ksr->is_audio_init = true;
 
-    ulog_info("Audio device initialized");
+    log_info("Audio device initialized");
 
     return 0;
 }
@@ -988,21 +988,21 @@ int ksr_start_audio(Kasaria *ksr)
     {
         if(ma_device_start(&raw_midi_event_ctx->audio_device) != MA_SUCCESS)
         {
-            ulog_error("Failed to start audio device for raw MIDI events");
+            log_error("Failed to start audio device for raw MIDI events");
             return 1;
         }
-        ulog_info("Audio device started for raw MIDI events");
+        log_info("Audio device started for raw MIDI events");
         return 0;
     }
         
 
     if(ma_device_start(&ksr->audio_device) != MA_SUCCESS)
     {
-        ulog_error("Failed to start audio device for internal midi player");
+        log_error("Failed to start audio device for internal midi player");
         return 1;
     }
 
-    ulog_info("Audio device started for internal midi player");
+    log_info("Audio device started for internal midi player");
     //ksr->is_audio_started = true;
     
     return 0;
@@ -1017,7 +1017,7 @@ int ksr_stop_audio(Kasaria *ksr)
     {
         if(ma_device_stop(&raw_midi_event_ctx->audio_device) != MA_SUCCESS)
         {
-            ulog_error("Failed to stop audio device for raw MIDI events");
+            log_error("Failed to stop audio device for raw MIDI events");
             return 1;
         }
         return 0;
@@ -1026,7 +1026,7 @@ int ksr_stop_audio(Kasaria *ksr)
 
     if(ma_device_stop(&ksr->audio_device) != MA_SUCCESS)
     {
-        ulog_error("Failed to stop audio device for internal midi player");
+        log_error("Failed to stop audio device for internal midi player");
         return 1;
     }
 
@@ -1065,7 +1065,7 @@ void ksr_shutdown(Kasaria *ksr)
     if(!ksr)
         return;
 
-    ulog_info("Kasaria shutdown...");
+    log_info("Kasaria shutdown...");
 
     if(ksr->is_audio_init)
         ma_device_uninit(&ksr->audio_device);

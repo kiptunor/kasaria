@@ -47,7 +47,7 @@ tables were lifted from the rsynth-2.0 sources.  The README says:
 
 #include <stdlib.h>
 
-#include "ext_deps/ulog/src/ulog.h"
+#include "ext_deps/log_c/log.h"
 
 #include "ksr_internal.h"
 
@@ -399,7 +399,7 @@ void init_tables(Kasaria *ksr)
 
 void free_tables(Kasaria *ksr)
 {
-    ulog_debug("Free tables...");
+    log_debug("Free tables...");
 #ifdef LOOKUP_HACK
 #ifdef LOOKUP_INTERPOLATION
     if(ksr->iplookup)
