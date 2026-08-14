@@ -71,7 +71,7 @@
 
 /* In percent. */
 // #define DEFAULT_AMPLIFICATION 	70
-#define DEFAULT_AMPLIFICATION 70
+#define DEFAULT_AMPLIFICATION 100
 
 /* Default sampling rate, default polyphony, and maximum polyphony.
    All but the last can be overridden from the command line. */

@@ -67,7 +67,7 @@ int main(int argc, char **argv)
     }
 
     // Initialize and create an instance synth
-    synth = ksr_init();
+    synth = ksr_init(0);
     if(!synth)
     {
         printf("Failed to initialize Kasaria.\n");

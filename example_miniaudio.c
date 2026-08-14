@@ -59,7 +59,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    synth = ksr_init();
+    synth = ksr_init(0);
     if(!synth)
     {
         printf("Failed to initialize Kasaria.\n");

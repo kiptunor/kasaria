@@ -110,11 +110,13 @@ void init_internal_state(Kasaria *ksr)
     
 }
 
-Kasaria *ksr_init(void)
+Kasaria *ksr_init(bool disable_logs)
 {
     Kasaria *ksr = (Kasaria *)safe_malloc(sizeof(Kasaria));
     if(!ksr)
         return NULL;
+
+    log_set_quiet(disable_logs);
 
     memset(ksr, 0, sizeof(Kasaria));
     ksr->default_program        = DEFAULT_PROGRAM;
@@ -165,12 +167,23 @@ Kasaria *ksr_init(void)
     reset_midi(ksr);
     adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
 
-    // ulog_color_config(1);
-    //ulog_topic_add("SF2", ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
-    //ulog_topic_add("MIDI Loader", ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
     log_info("Kasaria Init\n\n");
 
     return ksr;
+}
+
+void ksr_set_log_level(Kasaria *ksr, int level)
+{
+    if(!ksr)
+        return;
+
+    if(level < 0 || level > 5)
+    {
+        log_error("Uknown log level: %d (Log levels are from 0 to 5)\n", level);
+        return;
+    }
+
+    log_set_level(level);
 }
 
 void ksr_restore_defaults(Kasaria *ksr)

@@ -63,7 +63,7 @@ int KSR_UnprepareLongData(MIDIHDR *mid_hdr, unsigned int size)
 
 void KSR_Init()
 {
-    ksr_inst = ksr_init();
+    ksr_inst = ksr_init(0);
 
     ksr_set_amplification(ksr_inst, 100);
     ksr_set_sample_rate(ksr_inst, SAMPLE_RATE);

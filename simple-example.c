@@ -6,7 +6,7 @@
 
 int main(void)
 {
-    Kasaria *ksr = ksr_init();
+    Kasaria *ksr = ksr_init(0);
     
     ksr_set_amplification(ksr, 100);
     ksr_set_sample_rate(ksr, 48000);

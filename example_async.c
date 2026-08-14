@@ -11,7 +11,7 @@ Kasaria *synth;
 
 int main(int argc, char *argv[])
 {
-    synth = ksr_init(); // Create a synth instance
+    synth = ksr_init(0); // Create a synth instance without disabling logs
 
     
 
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 
     
     ksr_set_max_voices(synth, 5000); // How many voices the synth can use
-    ksr_set_audio_frame_size(synth, 688);
+    //ksr_set_audio_frame_size(synth, 688);
 
     // Initialize and open an audio device
     ksr_init_audio(synth, INTERNAL_MIDI_PLAYER); // Needed for the async midi playback

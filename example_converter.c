@@ -11,7 +11,7 @@ Kasaria *converter;
 
 int main(int argc, char *argv[])
 {
-    converter = ksr_init();
+    converter = ksr_init(0);
 
     ksr_set_fast_decay(converter, true);
     ksr_set_antialiasing(converter, true);
