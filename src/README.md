@@ -6,7 +6,7 @@ Most important
 - [ ] Add more SoundFont Loading settings (Preset, MIDI Bank, XG Bank)
 - [ ] Implement file mapping midi player
 - [ ] Fix audio glithces when using the raw midi event sender functions (Difficult to figure it out)
-- [ ] Replace the logging library with a different one (Maybe)
+- [x] Replace the logging library with a different one (Maybe)
 - [ ] Cleanup in the Kasaria struct members
 - [ ] Add navigation comments in the entire codebase based on the context
 - [ ] Add API functions to read NPS, Polyphony, Tempo Changes

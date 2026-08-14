@@ -249,8 +249,6 @@ void free_default_instrument(Kasaria *ksr)
 
 int preload_soundfont_instruments(Kasaria *ksr)
 {
-    log_debug("Preloading soundfont instruments");
-    
     int i;
     int bank;
     int program;
@@ -258,6 +256,10 @@ int preload_soundfont_instruments(Kasaria *ksr)
     
     if(!ksr || !ksr->sf_loaded || !ksr->sf_info)
         return 0;
+
+    log_debug("SF2 Preset count: %d", ksr->sf_info->npresets);
+    // for(int i = 0; i < ksr->sf_info->npresets; i++)
+    //     log_trace("preset %d: bank=%d preset=%d name=%s", i, ksr->sf_info->preset[i].bank, ksr->sf_info->preset[i].preset, ksr->sf_info->preset[i].hdr.name);
     
     log_debug("Preloading soundfont instruments");
     

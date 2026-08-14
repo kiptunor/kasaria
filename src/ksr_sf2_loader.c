@@ -337,6 +337,21 @@ typedef struct _SFInsts
 	MBlockList pool;
 }SFInsts;
 
+typedef struct SF2SampleCacheEntry
+{
+	struct SF2SampleCacheEntry *next;
+	FILE *tf;        // which file the data was read from
+	i64   start;     // file offset of the sample data
+	i64   lowbit;    // file offset of the low 8 bits (24-bit)
+	Sample sample;   // cached buffer + its properties
+	i32   src_rate;  /* source sample rate, before any resampling          */
+	i64   src_len;   /* source data length, before any resampling          */
+	i32   note_to_use;
+	i32   root_key;
+	i32   play_rate; /* output rate at load time                           */
+}SF2SampleCacheEntry;
+
+
 typedef struct OverrideTiMidityData
 {
 	short overwriteMode;
@@ -408,6 +423,7 @@ typedef struct OverrideTiMidityData
 
 
 OVERRIDETIMIDITYDATA otd = {0};
+static SF2SampleCacheEntry *sf2_sample_cache = NULL;
 
 /*----------------------------------------------------------------*/
 
@@ -952,7 +968,7 @@ Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset)
         
         if(inst)
         {
-            log_debug("SF2: instrument loaded " "bank=%d preset=%d inst=%p", bank, preset, (void *)inst);
+            log_debug("Loading SF2 instrument: bank=%-3d preset=%-3d inst_name=%s", bank, preset, inst->instname);
             
             /*
              * IMPORTANT:
@@ -1107,7 +1123,6 @@ Instrument *extract_soundfont(Kasaria *ksr, const char *sf_file, int bank, int p
 
 Instrument *try_load_soundfont(Kasaria *ksr, SFInsts *rec, int order, int bank, int preset, int keynote)
 {
-    log_debug("Try load soundfont");
 	InstList *ip;
 	Instrument *inst = NULL;
 	int addr;
@@ -1143,6 +1158,17 @@ Instrument *try_load_soundfont(Kasaria *ksr, SFInsts *rec, int order, int bank, 
 	{
 		close_file(rec->tf);
 		rec->tf = NULL;
+	}
+
+	if(inst == NULL)
+	{
+    log_debug("SF2: NULL: fname=%s tf=%s bank=%d preset=%d keynote=%d order=%d",
+              rec->fname ? rec->fname : "(null)",
+              rec->tf ? "open" : "closed", bank, preset, keynote, order);
+    for(int h = 0; h < INSTHASHSIZE; h++)
+        for(InstList *p = rec->instlist[h]; p; p = p->next)
+            log_debug("  bucket %d: bank=%d preset=%d keynote=%d order=%d samples=%d",
+                      h, p->pat.bank, p->pat.preset, p->pat.keynote, p->order, p->samples);
 	}
 
 	return inst;
@@ -1395,9 +1421,73 @@ static void dump_sample_wav(Sample *sample)
     log_info("dumped %s (%ld frames, %u Hz)", path, frames, rate);
 }
 
+static Sample *sf2_sample_cache_find(FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate)
+{
+	SF2SampleCacheEntry *e;
+
+	for(e = sf2_sample_cache; e; e = e->next)
+	{
+		if(e->tf != tf || e->start != start || e->lowbit != lowbit)
+			continue;
+		if(e->src_rate != src_rate || e->src_len != src_len)
+			continue;
+		if(e->note_to_use != note_to_use || e->root_key != root_key ||
+		   e->play_rate != play_rate)
+			continue;
+		return &e->sample;
+	}
+	return NULL;
+}
+
+static void sf2_sample_cache_add(FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate, Sample *sample)
+{
+	SF2SampleCacheEntry *e;
+
+	if(!sample->data)
+		return;                      /* failed load: don't cache garbage */
+
+	e = (SF2SampleCacheEntry *)safe_malloc(sizeof(*e));
+	e->next        = sf2_sample_cache;
+	e->tf          = tf;
+	e->start       = start;
+	e->lowbit      = lowbit;
+	e->src_rate    = src_rate;
+	e->src_len     = src_len;
+	e->note_to_use = note_to_use;
+	e->root_key    = root_key;
+	e->play_rate   = play_rate;
+	memset(&e->sample, 0, sizeof(Sample));
+	e->sample.data         = sample->data;
+	e->sample.data_alloced = 1;   // the cache now owns this buffer
+	e->sample.data_type    = sample->data_type;
+	e->sample.data_length  = sample->data_length;
+	e->sample.sample_rate  = sample->sample_rate;
+	e->sample.loop_start   = sample->loop_start;
+	e->sample.loop_end     = sample->loop_end;
+	e->sample.modes        = sample->modes;
+	e->sample.note_to_use  = sample->note_to_use;
+	sf2_sample_cache = e;
+
+	sample->data_alloced = 0;      /* the instrument only borrows it now */
+}
+
+void free_sf2_sample_cache(void)
+{
+	SF2SampleCacheEntry *e = sf2_sample_cache;
+
+	while(e)
+	{
+		SF2SampleCacheEntry *next = e->next;
+		if(e->sample.data && e->sample.data_alloced)
+			safe_free(e->sample.data);
+		safe_free(e);
+		e = next;
+	}
+	sf2_sample_cache = NULL;
+}
+
 static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 {
-    log_debug("Load from file");
 	SampleList *sp;
 	Instrument *inst;
 	i32 i;
@@ -1425,14 +1515,43 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 		FILE *tf;
 		Sample *sample = inst->sample + i;
 		i32 j;
+		i32 src_rate, note_to_use, root_key, play_rate;
+		i64 src_len;
 
 		//ctl->cmsg(CMSG_INFO, VERB_DEBUG, "Rate=%d LV=%d HV=%d LK=%d HK=%d RK=%d Tune=%f Pan=%f [%d]", sp->v.sample_rate, sp->v.low_vel, sp->v.high_vel, sp->v.low_key, sp->v.high_key,  sp->v.root_key, sp->v.tune, sp->v.sample_pan, sp->start);
-		log_debug("Rate=%d LV=%d HV=%d LK=%d HK=%d RK=%d Tune=%f Pan=%f [%d]", sp->v.sample_rate, sp->v.low_vel, sp->v.high_vel, sp->v.low_key, sp->v.high_key,  sp->v.root_key, sp->v.tune, sp->v.sample_pan, sp->start);
+		//log_debug("Rate=%d LV=%d HV=%d LK=%d HK=%d RK=%d Tune=%f Pan=%f [%d]", sp->v.sample_rate, sp->v.low_vel, sp->v.high_vel, sp->v.low_key, sp->v.high_key,  sp->v.root_key, sp->v.tune, sp->v.sample_pan, sp->start);
 		
 		memcpy(sample, &sp->v, sizeof(Sample));
 		sample->data = NULL;
 		sample->data_alloced = 0;
-				
+
+		src_rate    = sample->sample_rate;
+		src_len     = sample->data_length;
+		note_to_use = sample->note_to_use;
+		root_key    = sample->root_key;
+		play_rate   = ksr->play_mode.rate;
+
+		tf = sp->sfrom ? sfrom_sfrec->tf : rec->tf; ///r
+
+		if(!ksr->pre_resampling_allowed || !sample->note_to_use || (sample->modes & MODES_LOOPING))
+		{
+		    Sample *found = sf2_sample_cache_find(tf, sp->start, sp->lowbit, src_rate, src_len, note_to_use, root_key, play_rate);
+						
+			if(found)
+			{
+				sample->data_type   = found->data_type;
+				sample->data        = found->data;
+				sample->data_alloced = 0;
+				sample->data_length = found->data_length;
+				sample->sample_rate = found->sample_rate;
+				sample->loop_start  = found->loop_start;
+				sample->loop_end    = found->loop_end;
+				sample->modes       = found->modes;
+				continue;
+			}
+		}
+		
+	    /*	
 		if(i > 0 && (!ksr->pre_resampling_allowed || !sample->note_to_use || (sample->modes & MODES_LOOPING)))
 		{
 			SampleList *sps;
@@ -1471,9 +1590,11 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 				continue;
 			}
 		}
+		*/
+		
 
 		
-		tf = sp->sfrom ? sfrom_sfrec->tf : rec->tf; ///r
+		
 
 
 		/*
@@ -1684,7 +1805,9 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 #ifdef LOOKUP_HACK
 		squash_sample_16to8(sample);
 #endif
-	}
+        if(!ksr->pre_resampling_allowed || !sample->note_to_use || (sample->modes & MODES_LOOPING))
+            sf2_sample_cache_add(tf, sp->start, sp->lowbit, src_rate, src_len, note_to_use, root_key, play_rate, sample);
+	} // for
 
 	return inst;
 }
@@ -1827,7 +1950,10 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 
 	/* instrument must be defined */
 	if(!tbl->set[SF_instrument])
+	{
+	    log_trace("parse_layer pridx=%d lvl=%d: SKIP no instrument gen", pridx, level);
 		return AWE_RET_SKIP;
+	}
 
 	inst = &sf->inst[tbl->val[SF_instrument]];
 
@@ -1843,7 +1969,10 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 
 	/* if layer is empty, skip it */
 	if((nlayers = inst->hdr.nlayers) <= 0 || (lay = inst->hdr.layer) == NULL)
+    {
+        log_debug("parse_layer pridx=%d lvl=%d: SKIP inst=%d nlayers=%d", pridx, level, tbl->val[SF_instrument], nlayers);
 		return AWE_RET_SKIP;
+    }
 
 	reset_last_sample_info();
 
@@ -1871,6 +2000,12 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 		{
 			/* recursive loading */
 			merge_table(sf, &ctbl, tbl);
+
+			if(!sanity_range(&ctbl))
+			{
+				log_warn("parse_layer pridx=%d lvl=%d: SKIP zone sanity_range (recursive)", pridx, level);
+				continue;
+			}
 			
 			if(!sanity_range(&ctbl))
 				continue;
@@ -1885,6 +2020,23 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 		else
 		{
 			init_and_merge_table(sf, &ctbl, tbl);
+
+			if(!sanity_range(&ctbl))
+			{
+				log_trace("parse_layer pridx=%d lvl=%d: SKIP zone "
+				          "keyRange=%d(lo=%d hi=%d) velRange=%d(lo=%d hi=%d) sampleId=%d inst=%d",
+				          pridx, level,
+				          ctbl.val[SF_keyRange], LOWNUM(ctbl.val[SF_keyRange]), HIGHNUM(ctbl.val[SF_keyRange]),
+				          ctbl.val[SF_velRange], LOWNUM(ctbl.val[SF_velRange]), HIGHNUM(ctbl.val[SF_velRange]),
+				          ctbl.val[SF_sampleId], tbl->val[SF_instrument]);
+				continue;
+			}
+
+			if(!sanity_range(&ctbl))
+			{
+				log_warn("parse_layer pridx=%d lvl=%d: SKIP zone sanity_range", pridx, level);
+				continue;
+			}
 			
 			if(!sanity_range(&ctbl))
 				continue;
@@ -2058,6 +2210,7 @@ static void init_and_merge_table(SFInfo *sf, LayerTable *dst, LayerTable *src)
 
 static int sanity_range(LayerTable *tbl)
 {
+    /*
 	int lo, hi;
 
 	lo = LOWNUM(tbl->val[SF_keyRange]);
@@ -2072,6 +2225,21 @@ static int sanity_range(LayerTable *tbl)
 	if(lo < 0 || lo > 127 || hi < 0 || hi > 127 || hi < lo)
 		return 0;
 
+	return 1;
+	*/
+
+    int lo, hi;
+    
+	lo = LOWNUM(tbl->val[SF_keyRange]);
+	hi = HIGHNUM(tbl->val[SF_keyRange]);
+	if(lo < 0 || lo > 127 || hi < 0 || hi > 127 || hi < lo)
+		tbl->val[SF_keyRange] = RANGE(0, 127);
+    
+	lo = LOWNUM(tbl->val[SF_velRange]);
+	hi = HIGHNUM(tbl->val[SF_velRange]);
+	if(lo < 0 || lo > 127 || hi < 0 || hi > 127 || hi < lo)
+		tbl->val[SF_velRange] = RANGE(0, 127);
+    
 	return 1;
 }
 
@@ -2127,7 +2295,7 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
 	    int pat_keynote = (bank == 128) ? -1 : keynote;
 
         // ctl->cmsg(CMSG_INFO, VERB_DEBUG_SILLY, "SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
-        log_debug("SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
+        //log_debug("SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
         if(is_excluded(current_sfrec, bank, preset, keynote))
         {
             // ctl->cmsg(CMSG_INFO, VERB_DEBUG_SILLY, " * Excluded");

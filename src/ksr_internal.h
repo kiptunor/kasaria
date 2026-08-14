@@ -745,6 +745,7 @@ int load_font(Kasaria *ksr, SFInfo *sf, int pridx);
 u64         monotonic_ns(void);
 
 Instrument *extract_soundfont(Kasaria *ksr, const char *sf_file, int bank, int preset, int keynote);
+void free_sf2_sample_cache(void);
 
 extern void init_mblock(MBlockList *mblock);
 extern void *new_segment(MBlockList *mblock, size_t nbytes);

@@ -1067,6 +1067,8 @@ void ksr_shutdown(Kasaria *ksr)
 
     log_info("Kasaria shutdown...");
 
+    free_sf2_sample_cache();
+
     if(ksr->is_audio_init)
         ma_device_uninit(&ksr->audio_device);
 
