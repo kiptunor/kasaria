@@ -119,6 +119,7 @@ Kasaria *ksr_init(bool disable_logs)
     log_set_quiet(disable_logs);
 
     memset(ksr, 0, sizeof(Kasaria));
+    ksr->f_mmap = calloc(1, sizeof(FileMap));
     ksr->default_program        = DEFAULT_PROGRAM;
     ksr->antialiasing_allowed   = 1;
     ksr->pre_resampling_allowed = 1;
@@ -1081,6 +1082,8 @@ void ksr_shutdown(Kasaria *ksr)
     log_info("Kasaria shutdown...");
 
     free_sf2_sample_cache();
+
+    free(ksr->f_mmap);
 
     if(ksr->is_audio_init)
         ma_device_uninit(&ksr->audio_device);

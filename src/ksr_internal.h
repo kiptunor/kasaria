@@ -540,7 +540,50 @@ typedef struct
     SoundFontEffects sf2_effects;
 } Voice;
 
+typedef struct
+{
+    u_char  *data;      /* pointer to file bytes (page cache) */
+    size_t   len;
+    int      fd;
+}FileMap;
 
+typedef struct
+{
+    const u_char *data;          /* mapped bytes */
+    size_t        len;
+    const u_char *track_start;   /* first MTrk chunk */
+
+    unsigned format;
+    unsigned ntrks;
+    long     division;           /* ticks per quarter note */
+
+    /* per-track cursors (allocated for ntrks) */
+    const u_char **cur;          /* next byte to read in each track */
+    const u_char **end;          /* end of each MTrk */
+    u_char *laststatus;          /* running status per track */
+    u_char *lastchan;
+    u32    *abs_tick;            /* cumulative ticks per track */
+    u_char *nrpn;                /* RPN/NRPN state per track */
+    u_char (*rpn_msb)[16];
+    u_char (*rpn_lsb)[16];
+    MidiEvent *pending;          /* next raw event per track (k-way merge) */
+    u_char *pending_valid;
+    u_char *alive;
+
+    /* grooming state (what groom_list tracked globally) */
+    long prev_tick;
+    long st;                     /* current sample position */
+    long sample_cum;
+    int  counting_time;
+    long current_program[16];
+    long current_bank[16];
+    long current_set[16];
+
+    /* current decoded event */
+    MidiEvent ev;
+    u_char have;
+    u_char ended;
+} MidiStream;
 
 struct Kasaria
 {
@@ -584,6 +627,7 @@ struct Kasaria
     u_char         rpn_lsb[16];
     MidiEvent     *event_list;
     MidiEvent     *current_event;
+    MidiStream     *stream;
     long           sample_count;
     long           current_sample;
     FILE          *fp_midi;
@@ -605,6 +649,8 @@ struct Kasaria
     f64            phase_ema;
     int            phase_valid;
     int            opt_modulation_envelope;
+    int            midi_loading_mode;
+    FileMap       *f_mmap;
     // to avoid some unnecessary parameter passing
     MidiEventList *evlist;
     long           event_count;
@@ -698,6 +744,7 @@ void        apply_envelope_to_amp(Kasaria *tm, int v);
 
 // ------------- MIDI loading functions (ksr_midi_loader.c) -------------
 MidiEvent  *read_midi_file(Kasaria *tm, FILE *mfp, long *count, long *sp);
+void compute_sample_increment(Kasaria *ksr, long tempo, long divisions);
 
 
 // ------------- Resampling functions (ksr_resample.c) -------------

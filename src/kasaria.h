@@ -201,7 +201,7 @@ KSR_API void ksr_load_soundfont_from_mem(Kasaria *ksr, void *mem, long size, boo
 
 
 // --------------------------- MIDI Player API ---------------------------
-KSR_API int  ksr_load_midi_file(Kasaria *ksr, const char *filename); // MIDI file player, only supports standard MIDI files
+KSR_API int  ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename); // MIDI file player, only supports standard MIDI files
 KSR_API int  ksr_load_midi_from_mem(Kasaria *ksr, void *mem, long size); // Todo
 KSR_API short ksr_get_midi_file_format(Kasaria *ksr);
 KSR_API int  ksr_get_loaded_midi_track(Kasaria *ksr);

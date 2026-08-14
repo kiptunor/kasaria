@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     ksr_set_antialiasing(synth, 1);
 
     printf("Loading midi\n");
-    if(!ksr_load_midi_file(synth, argv[1]))
+    if(!ksr_load_midi_file(synth, MIDI_MEMORY, argv[1]))
     {
         printf("Failed to load MIDI file: %s\n", argv[1]);
         ksr_shutdown(synth);

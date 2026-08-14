@@ -79,7 +79,7 @@ static char *label[] =
 
 
 // Computes how many (fractional) samples one MIDI delta-time unit contains
-static void compute_sample_increment(Kasaria *ksr, long tempo, long divisions)
+void compute_sample_increment(Kasaria *ksr, long tempo, long divisions)
 {
     f64 a;
     a                      = (f64)(tempo) * (f64)(ksr->play_mode.rate) * (65536.0 / 1000000.0) / (f64)(divisions);
