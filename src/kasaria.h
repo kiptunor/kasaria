@@ -189,8 +189,6 @@ KSR_API int ksr_get_song_copyright(Kasaria *ksr, char *buffer, long count);
 
 
 KSR_API int  ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_instruments); // Currently supports only SF2 format (SFZ Support is also planned)
-KSR_API int  ksr_force_instrument_load(Kasaria *ksr);               // Force all instruments to be loaded
-//KSR_API void ksr_preload_instruments(Kasaria *ksr);                 // Preload all instruments
 KSR_API void ksr_load_soundfont_from_mem(Kasaria *ksr, void *mem, long size, bool preload_instruments); // Todo
 
 
