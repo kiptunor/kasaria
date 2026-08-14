@@ -266,24 +266,53 @@ int preload_soundfont_instruments(Kasaria *ksr)
         bank    = ksr->sf_info->preset[i].bank;
         program = ksr->sf_info->preset[i].preset;
 
-        if(bank < 0 || bank > 127 || program < 0 || program > 127)
+        if(program < 0 || program > 127)
             continue;
 
+        if(bank == 128)   // SF2 percussion bank
+        {
+            inst = sndfont_load_instrument(ksr, bank, program);
+        
+            if(!inst)
+            {
+                ulog_error("SF2: drum load failed bank=%d program=%d", bank, program);
+                continue;
+            }
+            
+            if(!ksr->drumset[0])
+            {
+                ksr->drumset[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
+                memset(ksr->drumset[0], 0, sizeof(ToneBank));
+            }
+            
+            for(int k = 0; k < inst->samples; k++)
+            {
+                Sample *sp = &inst->sample[k];
+                for(int key = sp->low_key; key <= sp->high_key && key < 128; key++)
+                    if(key >= 0)
+                        ksr->drumset[0]->tone[key].instrument = inst;
+            }
+            continue;
+        }
+        
+        if(bank < 0 || bank > 127)
+            continue;
+    
         if(!ksr->tonebank[bank])
         {
             ksr->tonebank[bank] = (ToneBank *)safe_malloc(sizeof(ToneBank));
             memset(ksr->tonebank[bank], 0, sizeof(ToneBank));
         }
-
+        
         if(ksr->tonebank[bank]->tone[program].instrument)
             continue;
-
+        
         inst = sndfont_load_instrument(ksr, bank, program);
         
         if(inst)
             ksr->tonebank[bank]->tone[program].instrument = inst;
         else
-            ulog_error("SF2: failed to load instrument " "bank=%d program=%d", bank, program);
+            ulog_error("SF2: failed to load instrument bank=%d program=%d", bank, program);
     }
     
     return 1;

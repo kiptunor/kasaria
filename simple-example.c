@@ -16,7 +16,7 @@ int main(void)
     int r = ksr_load_soundfont_file(ksr, "Full Grand Piano V2.sf2", true);
     printf("SF2 load: %d\n", r);
     
-    ksr_force_instrument_load(ksr);
+    //ksr_force_instrument_load(ksr);
     ksr_reset(ksr);
     
     // Send Note On: ch0, note 60 (C4), velocity 100

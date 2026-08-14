@@ -252,6 +252,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         {
             if(!(ip = ksr->drumset[0]->tone[e->key].instrument))
                 return;
+            
         }
     
         /* For drums, select sample by matching MIDI key to note_to_use/root_key
@@ -260,9 +261,10 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         Sample *best = NULL;
         for(j = 0; j < ip->samples; j++)
         {
-            if(ip->sample[j].note_to_use == e->key)
+            Sample *sp = &ip->sample[j];
+            if(e->key >= sp->low_key && e->key <= sp->high_key)
             {
-                best = &ip->sample[j];
+                best = sp;
                 break;
             }
         }

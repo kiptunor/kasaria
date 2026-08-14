@@ -2124,6 +2124,7 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
 	done = 0;
 	for(keynote = keynote_from; keynote <= keynote_to; keynote++)
 	{
+	    int pat_keynote = (bank == 128) ? -1 : keynote;
 
         // ctl->cmsg(CMSG_INFO, VERB_DEBUG_SILLY, "SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
         ulog_debug("SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
@@ -2141,10 +2142,10 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
         if(order < 0)
             order = current_sfrec->def_order;
         
-        addr = INSTHASH(bank, preset, keynote);
+        addr = INSTHASH(bank, preset, pat_keynote);
         
         for(ip = current_sfrec->instlist[addr]; ip; ip = ip->next)
-            if(ip->pat.bank == bank && ip->pat.preset == preset && (keynote < 0 || keynote == ip->pat.keynote))
+            if(ip->pat.bank == bank && ip->pat.preset == preset && (pat_keynote < 0 || pat_keynote == ip->pat.keynote))
                 break;
         
         if(!ip)
@@ -2154,7 +2155,7 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
             ip->pr_idx                    = pridx;
             ip->pat.bank                  = bank;
             ip->pat.preset                = preset;
-            ip->pat.keynote               = keynote;
+            ip->pat.keynote               = pat_keynote;
             ip->order                     = order;
             ip->samples                   = 0;
             ip->slist                     = NULL;
