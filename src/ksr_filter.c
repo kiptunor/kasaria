@@ -210,6 +210,7 @@ void antialiasing(Sample *sp, long output_rate)
     f64       fir_symetric[ORDER];
     f64       fir_coef[ORDER2];
     f64       freq_cut; // cutoff frequency [0..1.0] FREQ_CUT/SAMP_FREQ
+    long      length;
 
     // No oversampling
     if(output_rate >= sp->sample_rate)
@@ -223,11 +224,13 @@ void antialiasing(Sample *sp, long output_rate)
     for(i = 0; i < ORDER2; i++)
         fir_symetric[ORDER - 1 - i] = fir_symetric[i] = fir_coef[ORDER2 - 1 - i];
 
-    // We apply the filter we have designed on a copy of the patch
-    temp = (sample_t *)safe_malloc(sp->data_length);
-    memcpy(temp, sp->data, sp->data_length);
+    length = sp->data_length >> FRACTION_BITS;
 
-    filter((short *)sp->data, temp, sp->data_length / sizeof(sample_t), fir_symetric);
+    // We apply the filter we have designed on a copy of the patch
+    temp = (sample_t *)safe_malloc(length * sizeof(sample_t));
+    memcpy(temp, sp->data, length * sizeof(sample_t));
+
+    filter((short *)sp->data, temp, length, fir_symetric);
 
     free(temp);
 }
