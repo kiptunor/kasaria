@@ -1388,7 +1388,7 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
         return 1;
     }
 
-    if(loading_mode == MIDI_MAPPING)
+    if(loading_mode == MIDI_MAP)
     {
         log_debug("Opening file: %s", filename);
         struct stat st;
@@ -1457,7 +1457,7 @@ void ksr_unload_midi(Kasaria *ksr)
 
     log_debug("Unload MIDI");
 
-    if(ksr->midi_loading_mode == MIDI_MAPPING)
+    if(ksr->midi_loading_mode == MIDI_MAP)
         ksr_unmap_file(ksr->f_mmap);
 
     stream_free(ksr);
@@ -1583,7 +1583,7 @@ int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
     while(count > 0)
     {
         convert = count;
-        if(ksr->midi_loading_mode == MIDI_MAPPING)
+        if(ksr->midi_loading_mode == MIDI_MAP)
         {
             MidiEvent *e;
 
@@ -1785,7 +1785,7 @@ int ksr_seek_midi(Kasaria *ksr, long time)
         skip_to(ksr, ksr_millis2samples(ksr, time));
     }
 
-    if(ksr->midi_loading_mode == MIDI_MAPPING)
+    if(ksr->midi_loading_mode == MIDI_MAP)
         stream_seek(ksr, ksr_millis2samples(ksr, time));
 
     ksr->phase_valid = 0;
