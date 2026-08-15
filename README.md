@@ -18,4 +18,4 @@ A powerful and high efficiency midi synthesizer based on Timidity 0.2i
 - [X] Builtin Audio Limiter
 
 ## Big thanks to
-Dominexis (for helping me with the earliest optimizarion ideas)
+[Dominexis](https://github.com/Dominexis) for helping me with the earliest optimizarion ideas

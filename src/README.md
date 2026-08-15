@@ -1,10 +1,10 @@
 # Todo
 
 Most important
-- [ ] Fix all SF2 loader bugs and design flaws
-- [ ] Implement SF2 effects
+- [x] Fix all SF2 loader bugs and design flaws (Maybe I did fixed them all idk)
+- [ ] Implement SF2 effects (Failed)
 - [ ] Add more SoundFont Loading settings (Preset, MIDI Bank, XG Bank)
-- [ ] Implement file mapping midi player
+- [x] Implement file mapping midi player
 - [ ] Fix audio glithces when using the raw midi event sender functions (Difficult to figure it out)
 - [x] Replace the logging library with a different one (Maybe)
 - [ ] Cleanup in the Kasaria struct members
