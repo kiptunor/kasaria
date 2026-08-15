@@ -1395,7 +1395,7 @@ static void dump_sample_wav(Sample *sample)
     rate     = (u32)sample->sample_rate;
     data_len = (u32)(frames * 2);
 
-    snprintf(path, sizeof(path), "/home/andre/Full_Grand_Piano_Samples_pcm/ksr_sample_%02d_%uHz.wav", dump_wav_counter++, rate);
+    snprintf(path, sizeof(path), "ksr_sample_%02d_%uHz.wav", dump_wav_counter++, rate);
 
     w = fopen(path, "wb");
     if(!w)
