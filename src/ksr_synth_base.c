@@ -426,6 +426,10 @@ void kill_note(Kasaria *ksr, int i)
 // This thing needs some serious oprimizations
 void note_on(Kasaria *ksr, MidiEvent *e)
 {
+
+    if(!ksr->is_soundfont_loaded)
+        return;
+    
     // Skip notes based on their velocity (Only the ones within the threshold values)
     if(ksr->note_vel_skipping)
         if(e->vel >= ksr->low_vel_treshold && e->vel <= ksr->high_vel_treshold)

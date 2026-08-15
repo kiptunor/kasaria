@@ -143,7 +143,8 @@ Kasaria *ksr_init(bool disable_logs)
 
     ksr->is_midi_player_paused = false;
     ksr->is_midi_player_active = false;
-    ksr->wall_clock_last_ns = 0;
+    ksr->is_soundfont_loaded   = false;
+    ksr->wall_clock_last_ns    = 0;
 
     default_compressor_settings(ksr);
 
@@ -346,6 +347,8 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
     
     if(preload_instruments)
         preload_soundfont_instruments(ksr);
+
+    ksr->is_soundfont_loaded = true;
     
     return 1;
 }

@@ -204,6 +204,7 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
 {
     if(e)
     {
+        //log_debug("play_midi: type=%d chan=%d key=%d vel=%d time=%ld", e->type, e->channel, e->key, e->vel, e->time);
         if(ISQUIETCHANNEL(ksr, e->channel))
             return;
 

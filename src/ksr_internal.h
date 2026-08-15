@@ -179,6 +179,7 @@ enum {
 #define ME_TONE_BANK          15
 #define ME_POLY               16
 #define ME_TEMPO              17
+#define ME_COARSE_TUNING      18
 #define ME_EOT                99
 
 // Data format encoding bits
@@ -643,6 +644,7 @@ struct Kasaria
     bool           is_midi_ended;
     bool           is_midi_player_paused;
     bool           is_midi_player_active;
+    bool           is_soundfont_loaded; // Works for at least one soundfont
     int            free_voice_stack[MAX_VOICES];
     int            free_voice_count;
     int            total_midi_tracks;
