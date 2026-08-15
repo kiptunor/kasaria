@@ -82,7 +82,7 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
     // Paused / ended: never advance the sequencer or position, just output silence.
     if(!async_midi_player ||
            !async_midi_player->is_midi_loaded ||
-           !async_midi_player->stream ||
+           (!async_midi_player->stream && !async_midi_player->current_event) ||
            async_midi_player->is_midi_ended ||
            async_midi_player->is_midi_player_paused)
     {
@@ -778,8 +778,10 @@ void ksr_unmap_file(FileMap *m)
     
     if(m->data && m->data != MAP_FAILED)
         munmap(m->data, m->len);
+    
     if(m->fd >= 0)
         close(m->fd);
+    
     m->data = NULL;
     m->fd   = -1;
 }
@@ -812,14 +814,19 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
         if(me == 0xF0 || me == 0xF7)              /* SysEx: skip */
         {
             *p += read_vlq(p);
-            if(*p > end) *p = end;
+            
+            if(*p > end)
+                *p = end;
             continue;
         }
         if(me == 0xFF)                            /* meta */
         {
             u_char type = *(*p)++;
             u32 len = read_vlq(p);
-            if(type == 0x2F) return 0;            /* EndOfTrack */
+            
+            if(type == 0x2F)
+                return 0;            /* EndOfTrack */
+            
             if(type == 0x51 && len == 3)          /* tempo */
             {
                 u_char a = *(*p)++, b = *(*p)++, c = *(*p)++;
@@ -837,11 +844,13 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
         }
 
         u_char a, b;
+        
         if(me & 0x80)                             /* new status byte */
         {
-            s->lastchan[t] = me & 0x0F;
+            s->lastchan[t]   = me & 0x0F;
             s->laststatus[t] = (me >> 4) & 0x07;
-            if(*p >= end) return 0;
+            if(*p >= end)
+                return 0;
             a = *(*p)++ & 0x7F;
         }
         else                                      /* running status */
@@ -853,7 +862,10 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
         switch(s->laststatus[t])
         {
         case 0: case 1: case 2: case 6:           /* 2 data bytes */
-            if(*p >= end) return 0;
+        
+            if(*p >= end)
+                return 0;
+            
             b = *(*p)++ & 0x7F;
             ev->time = at;
             ev->channel = s->lastchan[t];
@@ -884,31 +896,67 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
             int control = 255, chan = s->lastchan[t];
             switch(a)
             {
-            case 7:   control = ME_MAINVOLUME; break;
-            case 10:  control = ME_PAN; break;
-            case 11:  control = ME_EXPRESSION; break;
-            case 64:  control = ME_SUSTAIN; b = (b >= 64); break;
-            case 120: control = ME_ALL_SOUNDS_OFF; break;
-            case 121: control = ME_RESET_CONTROLLERS; break;
-            case 123: control = ME_ALL_NOTES_OFF; break;
-            case 126: control = ME_MONO; break;
-            case 127: control = ME_POLY; break;
-            case 0:   control = ME_TONE_BANK; break;
+            case 7:
+                control = ME_MAINVOLUME;
+            break;
+            case 10:
+                control = ME_PAN;
+            break;
+            case 11:
+                control = ME_EXPRESSION;
+            break;
+            case 64:
+                control = ME_SUSTAIN; b = (b >= 64);
+            break;
+            case 120:
+                control = ME_ALL_SOUNDS_OFF;
+            break;
+            case 121:
+                control = ME_RESET_CONTROLLERS;
+            break;
+            case 123:
+                control = ME_ALL_NOTES_OFF;
+            break;
+            case 126:
+                control = ME_MONO;
+            break;
+            case 127:
+                control = ME_POLY;
+            break;
+            case 0:
+                control = ME_TONE_BANK;
+            break;
             case 32:  break;
-            case 100: s->nrpn[t] = 0; s->rpn_msb[t][chan] = b; break;
-            case 101: s->nrpn[t] = 0; s->rpn_lsb[t][chan] = b; break;
-            case 99:  s->nrpn[t] = 1; s->rpn_msb[t][chan] = b; break;
-            case 98:  s->nrpn[t] = 1; s->rpn_lsb[t][chan] = b; break;
+            case 100:
+                s->nrpn[t] = 0;
+                s->rpn_msb[t][chan] = b;
+            break;
+            case 101:
+                s->nrpn[t] = 0;
+                s->rpn_lsb[t][chan] = b;
+            break;
+            case 99:
+                s->nrpn[t] = 1;
+                s->rpn_msb[t][chan] = b;
+            break;
+            case 98:
+                s->nrpn[t] = 1;
+                s->rpn_lsb[t][chan] = b;
+                break;
             case 6:
-                if(s->nrpn[t]) break;
+                if(s->nrpn[t])
+                    break;
+                
                 switch((s->rpn_msb[t][chan] << 8) | s->rpn_lsb[t][chan])
                 {
-                case 0x0000: control = ME_PITCH_SENS; break;
+                case 0x0000:
+                    control = ME_PITCH_SENS;
+                    break;
                 case 0x7F7F:
-                    ev->time = at;
+                    ev->time    = at;
                     ev->channel = chan;
-                    ev->type = ME_PITCH_SENS;
-                    ev->key = 2; ev->vel = 0;
+                    ev->type    = ME_PITCH_SENS;
+                    ev->key     = 2; ev->vel = 0;
                     s->abs_tick[t] = at;
                     return 1;
                 default: break;
@@ -956,8 +1004,7 @@ static int stream_groom(Kasaria *ksr, MidiEvent *raw)
         else
         {
             long new_value = raw->key;
-            if(s->current_program[raw->channel] != SPECIAL_PROGRAM &&
-               s->current_program[raw->channel] != new_value)
+            if(s->current_program[raw->channel] != SPECIAL_PROGRAM && s->current_program[raw->channel] != new_value)
                 s->current_program[raw->channel] = new_value;
             else
                 skip_this_event = 1;
@@ -965,7 +1012,9 @@ static int stream_groom(Kasaria *ksr, MidiEvent *raw)
         break;
 
     case ME_NOTEON:
-        if(s->counting_time) s->counting_time = 1;
+        if(s->counting_time)
+            s->counting_time = 1;
+        
         if(ISDRUMCHANNEL(ksr, raw->channel) && ksr->drumset[s->current_set[raw->channel]])
         {
             if(!(ksr->drumset[s->current_set[raw->channel]]->tone[raw->key].instrument))
@@ -1026,31 +1075,93 @@ static u32 be32(const u_char *p)
     return ((u32)p[0] << 24) | ((u32)p[1] << 16) | ((u32)p[2] << 8) | p[3];
 }
 
+static void heap_sift_down(MidiStream *s, unsigned pos)
+{
+    unsigned n = s->heap_size;
+    for(;;)
+    {
+        unsigned l = 2 * pos + 1, r = l + 1, m = pos;
+        if(l < n && s->pending[s->heap[l]].time < s->pending[s->heap[m]].time)
+            m = l;
+        
+        if(r < n && s->pending[s->heap[r]].time < s->pending[s->heap[m]].time)
+            m = r;
+        
+        if(m == pos)
+            break;
+        
+        unsigned tmp = s->heap[pos]; s->heap[pos] = s->heap[m]; s->heap[m] = tmp;
+        pos = m;
+    }
+}
+
+static void heap_sift_up(MidiStream *s, unsigned pos)
+{
+    while(pos > 0)
+    {
+        unsigned par = (pos - 1) / 2;
+        
+        if(s->pending[s->heap[par]].time <= s->pending[s->heap[pos]].time)
+            break;
+        
+        unsigned tmp = s->heap[par]; s->heap[par] = s->heap[pos]; s->heap[pos] = tmp;
+        pos = par;
+    }
+}
+
 static void stream_rewind(Kasaria *ksr)
 {
     MidiStream *s = ksr->stream;
     const u_char *p = s->track_start;
+    s->heap_size = 0;
+    
     for(unsigned t = 0; t < s->ntrks; t++)
     {
-        while(p + 8 <= s->data + s->len && memcmp(p, "MTrk", 4)) p++;
-        if(p + 8 > s->data + s->len) { s->alive[t] = 0; continue; }
+        while(p + 8 <= s->data + s->len && memcmp(p, "MTrk", 4))
+            p++;
+        
+        if(p + 8 > s->data + s->len)
+        {
+            s->alive[t] = 0;
+            continue;
+        }
+        
         s->cur[t] = p + 8;
-        u32 tlen = be32(p + 4);
+        u32 tlen  = be32(p + 4);
         s->end[t] = p + 8 + tlen;
-        if(s->end[t] > s->data + s->len) s->end[t] = s->data + s->len;
+        
+        if(s->end[t] > s->data + s->len)
+            s->end[t] = s->data + s->len;
+        
         s->laststatus[t] = s->lastchan[t] = s->nrpn[t] = 0;
         s->abs_tick[t] = 0;
+        
         memset(s->rpn_msb[t], 0, 16);
         memset(s->rpn_lsb[t], 0, 16);
+        
         s->pending_valid[t] = 0;
-        s->alive[t] = 1;
+        s->alive[t]         = 1;
+
+        /* prime this track's first event into the heap */
+        if(stream_track_event(s, t, &s->pending[t]))
+        {
+            s->pending_valid[t] = 1;
+            unsigned pos = s->heap_size++;
+            s->heap[pos] = t;
+            heap_sift_up(s, pos);
+        }
+        else
+            s->alive[t] = 0;
+
         p = s->end[t];
     }
-    s->prev_tick = 0;
-    s->st = 0;
-    s->sample_cum = 0;
-    s->counting_time = ksr->skip_initial_midi_silence ? 2 : 0;
+    
+    s->prev_tick       = 0;
+    s->st              = 0;
+    s->sample_cum      = 0;
+    s->counting_time   = ksr->skip_initial_midi_silence ? 2 : 0;
     s->have = s->ended = 0;
+    
     for(int i = 0; i < 16; i++)
     {
         s->current_program[i] = ksr->default_program;
@@ -1065,27 +1176,36 @@ static int stream_next(Kasaria *ksr)
     MidiStream *s = ksr->stream;
     for(;;)
     {
-        int best = -1;
-        u32 best_tick = 0;
-        for(unsigned t = 0; t < s->ntrks; t++)
+        if(s->heap_size == 0)
+            return 0;
+
+        unsigned best = s->heap[0];
+        
+        if(!s->alive[best] || !s->pending_valid[best])
         {
-            if(!s->alive[t]) continue;
-            if(!s->pending_valid[t])
-            {
-                if(stream_track_event(s, t, &s->pending[t]))
-                    s->pending_valid[t] = 1;
-                else { s->alive[t] = 0; continue; }
-            }
-            if(best < 0 || s->pending[t].time < best_tick)
-            {
-                best = t;
-                best_tick = s->pending[t].time;
-            }
+            s->heap[0] = s->heap[--s->heap_size];
+            heap_sift_down(s, 0);
+            continue;
         }
-        if(best < 0) return 0;
+
         MidiEvent raw = s->pending[best];
         s->pending_valid[best] = 0;
-        if(stream_groom(ksr, &raw)) return 1;
+
+        /* refill the same track and re-heapify in place */
+        if(stream_track_event(s, best, &s->pending[best]))
+        {
+            s->pending_valid[best] = 1;
+            heap_sift_down(s, 0);
+        }
+        else
+        {
+            s->alive[best] = 0;
+            s->heap[0] = s->heap[--s->heap_size];
+            heap_sift_down(s, 0);
+        }
+
+        if(stream_groom(ksr, &raw))
+            return 1;
     }
 }
 
@@ -1116,11 +1236,24 @@ static void stream_advance(Kasaria *ksr)
 static void stream_free(Kasaria *ksr)
 {
     MidiStream *s = ksr->stream;
-    if(!s) return;
-    free(s->cur); free(s->end); free(s->laststatus); free(s->lastchan);
-    free(s->abs_tick); free(s->nrpn); free(s->rpn_msb); free(s->rpn_lsb);
-    free(s->pending); free(s->pending_valid); free(s->alive);
+    
+    if(!s)
+        return;
+    
+    free(s->cur);
+    free(s->end);
+    free(s->laststatus);
+    free(s->lastchan);
+    free(s->abs_tick);
+    free(s->nrpn);
+    free(s->rpn_msb);
+    free(s->rpn_lsb);
+    free(s->pending);
+    free(s->pending_valid);
+    free(s->alive);
+    free(s->heap);
     free(s);
+    
     ksr->stream = NULL;
 }
 
@@ -1128,38 +1261,56 @@ static int stream_init(Kasaria *ksr, const u_char *data, size_t len)
 {
     MidiStream *s;
     if(len < 14 || memcmp(data, "MThd", 4)) return 0;
+    
     long chunk = be32(data + 4);
-    if(chunk < 6) return 0;
+    
+    if(chunk < 6)
+        return 0;
+    
     u_char h[6];
     memcpy(h, data + 8, 6);
+    
     short format = (short)((h[0] << 8) | h[1]);
     short tracks = (short)((h[2] << 8) | h[3]);
     short div    = (short)((h[4] << 8) | h[5]);
-    if(format < 0 || format > 2 || tracks < 1 || tracks > 1024) return 0;
+    
+    if(format < 0 || format > 2 || tracks < 1 || tracks > 1024)
+        return 0;
 
     s = ksr->stream = calloc(1, sizeof *s);
-    if(!s) return 0;
-    s->data = data;
-    s->len = len;
-    s->format = format;
-    s->ntrks = tracks;
-    s->division = div < 0 ? (long)(-(div / 256)) * (long)(div & 0xFF) : (long)div;
+    
+    if(!s)
+        return 0;
+    
+    s->data        = data;
+    s->len         = len;
+    s->format      = format;
+    s->ntrks       = tracks;
+    s->division    = div < 0 ? (long)(-(div / 256)) * (long)(div & 0xFF) : (long)div;
     s->track_start = data + 8 + chunk;
-    if(s->track_start > data + len) { free(s); ksr->stream = NULL; return 0; }
+    
+    if(s->track_start > data + len)
+    {
+        free(s);
+        ksr->stream = NULL;
+        return 0;
+    }
 
-    s->cur         = calloc(tracks, sizeof *s->cur);
-    s->end         = calloc(tracks, sizeof *s->end);
-    s->laststatus  = calloc(tracks, 1);
-    s->lastchan    = calloc(tracks, 1);
-    s->abs_tick    = calloc(tracks, sizeof *s->abs_tick);
-    s->nrpn        = calloc(tracks, 1);
-    s->rpn_msb     = calloc(tracks, 16);
-    s->rpn_lsb     = calloc(tracks, 16);
-    s->pending     = calloc(tracks, sizeof *s->pending);
+    s->cur           = calloc(tracks, sizeof *s->cur);
+    s->end           = calloc(tracks, sizeof *s->end);
+    s->laststatus    = calloc(tracks, 1);
+    s->lastchan      = calloc(tracks, 1);
+    s->abs_tick      = calloc(tracks, sizeof *s->abs_tick);
+    s->nrpn          = calloc(tracks, 1);
+    s->rpn_msb       = calloc(tracks, 16);
+    s->rpn_lsb       = calloc(tracks, 16);
+    s->pending       = calloc(tracks, sizeof *s->pending);
     s->pending_valid = calloc(tracks, 1);
-    s->alive       = calloc(tracks, 1);
+    s->alive         = calloc(tracks, 1);
+    s->heap          = calloc(tracks, sizeof *s->heap);
+    
     if(!s->cur || !s->end || !s->laststatus || !s->lastchan || !s->abs_tick ||
-       !s->nrpn || !s->rpn_msb || !s->rpn_lsb || !s->pending || !s->pending_valid || !s->alive)
+       !s->nrpn || !s->rpn_msb || !s->rpn_lsb || !s->pending || !s->pending_valid || !s->alive || !s->heap)
     {
         stream_free(ksr);
         return 0;
@@ -1171,15 +1322,24 @@ static void stream_seek(Kasaria *ksr, long until_time)
 {
     if(ksr->current_sample > until_time)
         ksr->current_sample = 0;
+    
     reset_voices(ksr);
     reset_midi(ksr);
     stream_rewind(ksr);
-    if(!until_time) { ksr->current_sample = 0; return; }
+    
+    if(!until_time)
+    {
+        ksr->current_sample = 0;
+        return;
+    }
 
     for(;;)
     {
         MidiEvent *e = stream_peek(ksr);
-        if(e->type == ME_EOT || e->time >= until_time) break;
+        
+        if(e->type == ME_EOT || e->time >= until_time)
+            break;
+        
         switch(e->type)
         {
         case ME_PITCH_SENS: case ME_PITCHWHEEL: case ME_MAINVOLUME:
@@ -1230,6 +1390,7 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
 
     if(loading_mode == MIDI_MAPPING)
     {
+        log_debug("Opening file: %s", filename);
         struct stat st;
         ksr->f_mmap->data = NULL;
         ksr->f_mmap->len  = 0;
@@ -1246,39 +1407,43 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
             ksr->f_mmap->data = NULL;
             return 0;
         }
-    
+
+        log_debug("Creating file map...");
         ksr->f_mmap->len = (size_t)st.st_size;
         ksr->f_mmap->data = mmap(NULL, ksr->f_mmap->len, PROT_READ, MAP_PRIVATE, ksr->f_mmap->fd, 0);
 
         //mlock(ksr->f_mmap->data, ksr->f_mmap->len);
 
-        madvise(ksr->f_mmap->data, ksr->f_mmap->len, MADV_WILLNEED);
-        
         if(ksr->f_mmap->data == MAP_FAILED)
         {
             log_error("Failed to create file map.");
             close(ksr->f_mmap->fd);
             return 0;
         }
+
+        madvise(ksr->f_mmap->data, ksr->f_mmap->len, MADV_WILLNEED);
         
         if(!stream_init(ksr, ksr->f_mmap->data, ksr->f_mmap->len))
-           {
-               log_error("Invalid or unsupported MIDI stream.");
-               ksr_unmap_file(ksr->f_mmap);
-               return 0;
-           }
+        {
+            log_error("Invalid or unsupported MIDI stream.");
+            ksr_unmap_file(ksr->f_mmap);
+            return 0;
+        }
+        log_debug("MIDI Stream init");
        
-           /* one quick pass: mark instruments for loading + compute duration */
-           stream_rewind(ksr);
-           while(stream_next(ksr)) { }
-           ksr->sample_count = ksr->stream->st;
-           ksr->events_midi  = 0;
-       
-           stream_seek(ksr, 0);                /* reset to start, current_sample = 0 */
-           strncpy(ksr->last_smf, filename, 1023);
-           ksr->last_smf[1023] = '\0';
-           ksr->is_midi_loaded = true;
-           log_info("Loaded MIDI (mapped stream): %s", ksr->last_smf);
+        /* one quick pass: mark instruments for loading + compute duration */
+        stream_rewind(ksr);
+        
+        while(stream_next(ksr)){ }
+        
+        ksr->sample_count = ksr->stream->st;
+        ksr->events_midi  = 0;
+    
+        stream_seek(ksr, 0);                /* reset to start, current_sample = 0 */
+        strncpy(ksr->last_smf, filename, 1023);
+        ksr->last_smf[1023] = '\0';
+        ksr->is_midi_loaded = true;
+        log_info("Loaded MIDI (mapped stream): %s", ksr->last_smf);
         return 1;
     }
     
@@ -1409,40 +1574,54 @@ bool ksr_pause_midi(Kasaria *ksr)
 int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
 {
     int convert;
-    //if(!ksr || !buffer || !ksr->current_event || !ksr->is_midi_loaded || (type > AUDIO_ULAW || type < AUDIO_CHAR))
-    //    return 0;
-
-    if(!ksr || !buffer || !ksr->stream || !ksr->is_midi_loaded ||
-           (type > AUDIO_ULAW || type < AUDIO_CHAR))
-            return 0;
-
-    // I suppose I should call it here
+   
+    if(!ksr || !buffer || (!ksr->stream && !ksr->current_event) || !ksr->is_midi_loaded || (type > AUDIO_ULAW || type < AUDIO_CHAR))
+        return 0;
 
     ksr->is_midi_player_active = true;
 
     while(count > 0)
     {
-        MidiEvent *e;
-        // Handle all events that should happen at this time
-        //while(ksr->current_event->time <= ksr->current_sample)
-        while((e = stream_peek(ksr))->time <= ksr->current_sample)
+        convert = count;
+        if(ksr->midi_loading_mode == MIDI_MAPPING)
         {
-            //if(ksr->current_event->type == ME_EOT)
-            if(e->type == ME_EOT)
+            MidiEvent *e;
+
+            while((e = stream_peek(ksr))->time <= ksr->current_sample)
             {
-                ksr->is_midi_ended = true;
-                ksr->is_midi_player_active = false;
-                break;
+                if(e->type == ME_EOT)
+                {
+                    ksr->is_midi_ended = true;
+                    ksr->is_midi_player_active = false;
+                    break;
+                }
+    
+                play_midi(ksr, e);
+                stream_advance(ksr);
             }
 
-            play_midi(ksr, e);
-            stream_advance(ksr);
-            //ksr->current_event++;
+            e = stream_peek(ksr);
+            convert = e->time - ksr->current_sample;
         }
+        
+        if(ksr->midi_loading_mode == MIDI_MEMORY)
+        {
+            while(ksr->current_event->time <= ksr->current_sample)
+            {
+                if(ksr->current_event->type == ME_EOT)
+                {
+                    ksr->is_midi_ended = true;
+                    ksr->is_midi_player_active = false;
+                    break;
+                }
+                
+                play_midi(ksr, ksr->current_event);
+                ksr->current_event++;
+            }
 
-        e = stream_peek(ksr);
-        //convert = ksr->current_event->time - ksr->current_sample;
-        convert = e->time - ksr->current_sample;
+            convert = ksr->current_event->time - ksr->current_sample;
+        }
+        
         
         if(convert > count || convert <= 0) // I could prob count the number of events here ??
             convert = count;
@@ -1589,39 +1768,29 @@ bool ksr_is_midi_ended(Kasaria *ksr)
 
 int ksr_seek_midi(Kasaria *ksr, long time)
 {
-    /*
     int total_time;
-    if(!ksr || !ksr->current_event)
+    if(!ksr || (!ksr->stream && !ksr->current_event))
         return 0;
 
     total_time = ksr_get_duration(ksr);
+    
     if(time > total_time)
         time = total_time;
     else if(time < 0)
         time = 0;
 
-    skip_to(ksr, 0);
-    skip_to(ksr, ksr_millis2samples(ksr, time));
+    if(ksr->midi_loading_mode == MIDI_MEMORY)
+    {
+        skip_to(ksr, 0);
+        skip_to(ksr, ksr_millis2samples(ksr, time));
+    }
+
+    if(ksr->midi_loading_mode == MIDI_MAPPING)
+        stream_seek(ksr, ksr_millis2samples(ksr, time));
 
     ksr->phase_valid = 0;
     
     return ksr_get_current_time(ksr);
-    */
-
-    int total_time;
-        if(!ksr || !ksr->stream)
-            return 0;
-    
-        total_time = ksr_get_duration(ksr);
-        if(time > total_time)
-            time = total_time;
-        else if(time < 0)
-            time = 0;
-    
-        stream_seek(ksr, ksr_millis2samples(ksr, time));
-        ksr->phase_valid = 0;
-    
-        return ksr_get_current_time(ksr);
 }
 
 int ksr_fast_forward_midi(Kasaria *ksr, long time)

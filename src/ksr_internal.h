@@ -542,48 +542,52 @@ typedef struct
 
 typedef struct
 {
-    u_char  *data;      /* pointer to file bytes (page cache) */
+    u_char  *data;      // pointer to file bytes (page cache)
     size_t   len;
     int      fd;
 }FileMap;
 
 typedef struct
 {
-    const u_char *data;          /* mapped bytes */
+    const u_char *data;          // mapped bytes
     size_t        len;
-    const u_char *track_start;   /* first MTrk chunk */
+    const u_char *track_start;   // first MTrk chunk
 
     unsigned format;
     unsigned ntrks;
-    long     division;           /* ticks per quarter note */
+    long     division;           // ticks per quarter note
 
-    /* per-track cursors (allocated for ntrks) */
-    const u_char **cur;          /* next byte to read in each track */
-    const u_char **end;          /* end of each MTrk */
-    u_char *laststatus;          /* running status per track */
+    // per-track cursors (allocated for ntrks)
+    const u_char **cur;          // next byte to read in each track
+    const u_char **end;          // end of each MTrk
+    u_char *laststatus;          // running status per track
     u_char *lastchan;
-    u32    *abs_tick;            /* cumulative ticks per track */
-    u_char *nrpn;                /* RPN/NRPN state per track */
+    u32    *abs_tick;            // cumulative ticks per track
+    u_char *nrpn;                // RPN/NRPN state per track
     u_char (*rpn_msb)[16];
     u_char (*rpn_lsb)[16];
-    MidiEvent *pending;          /* next raw event per track (k-way merge) */
+    MidiEvent *pending;          // next raw event per track (k-way merge)
     u_char *pending_valid;
     u_char *alive;
 
-    /* grooming state (what groom_list tracked globally) */
+    // grooming state (what groom_list tracked globally)
     long prev_tick;
-    long st;                     /* current sample position */
+    unsigned last_track;
+    long st;                     // current sample position
     long sample_cum;
     int  counting_time;
     long current_program[16];
     long current_bank[16];
     long current_set[16];
 
-    /* current decoded event */
+    unsigned *heap;
+    unsigned heap_size;
+
+    // current decoded event
     MidiEvent ev;
     u_char have;
     u_char ended;
-} MidiStream;
+}MidiStream;
 
 struct Kasaria
 {
