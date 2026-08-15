@@ -99,7 +99,6 @@ int alloc_tone_bank_element(ToneBankElement *tone)
 	
 	if(tone == NULL)
 	{
-		// ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "alloc_tone_bank_element: ToneBankElement malloc error.");
 		log_error("alloc_tone_bank_element: ToneBankElement malloc error.");
 		return 1; // error
 	}
@@ -121,7 +120,6 @@ void alloc_instrument_bank(int dr, int bk)
 		    
 		    if(drumset[bk] == NULL)
 		    {
-		        //ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "alloc_instrument_bank: ToneBank malloc error. drumset");
 		        log_error("alloc_instrument_bank: ToneBank malloc error. drumset");
 		        return;
 		    }
@@ -130,7 +128,6 @@ void alloc_instrument_bank(int dr, int bk)
 			
 		    if(alloc_tone_bank_element(&b->tone[0]))
 		    {
-		        //ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "alloc_instrument_bank: ToneBankElement malloc error. drumset");
 		        log_error("alloc_instrument_bank: ToneBankElement malloc error. drumset");
 		        return;
 		    }
@@ -144,7 +141,6 @@ void alloc_instrument_bank(int dr, int bk)
 		    
 		    if(tonebank[bk] == NULL)
 		    {
-		        // ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "alloc_instrument_bank: ToneBank malloc error. tonebank");
 		        log_error("alloc_instrument_bank: ToneBank malloc error. tonebank");
 		        return;
 		    }
@@ -153,7 +149,6 @@ void alloc_instrument_bank(int dr, int bk)
 			
 		    if(alloc_tone_bank_element(&b->tone[0]))
 		    {
-		        // ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "alloc_instrument_bank: ToneBankElement malloc error. tonebank");
 		        log_error("alloc_instrument_bank: ToneBankElement malloc error. tonebank");
 		        return;
 		    }
@@ -191,12 +186,14 @@ static int fill_bank(Kasaria *ksr, int dr, int b)
     {
         if(bank->tone[i].instrument == MAGIC_LOAD_INSTRUMENT)
         {
+            /*
             if(ksr->sf_loaded)
             {
                 //bank->tone[i].instrument = load_soundfont_instrument(ksr, &ksr->sf_info, ksr->sf_filename, b, i);
                 //if(bank->tone[i].instrument)
                 //    continue;
             }
+            */
 
             bank->tone[i].instrument = 0;
             errors++;

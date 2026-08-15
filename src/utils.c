@@ -223,8 +223,6 @@ void *safe_large_malloc(size_t count)
     if ((p = (void*) malloc(count)) != NULL)
       return p;
     errflag = 1;
-    //ctl->cmsg(CMSG_FATAL, VERB_NORMAL,
-    //      "Sorry. Couldn't malloc Lm %lu bytes.", (unsigned long)count);
 
 #ifdef ABORT_AT_FATAL
     abort();

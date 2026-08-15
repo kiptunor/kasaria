@@ -89,7 +89,6 @@ static inline long rs_block8(long ofs, long incr, const sample_t *__restrict src
     __m256i d = _mm256_mullo_epi32(_mm256_sub_epi32(v2, v1), frac);
     d = _mm256_add_epi32(_mm256_srai_epi32(d, FRACTION_BITS), v1);
 
-    //_mm_storeu_si128((__m128i *)dest, _mm256_castsi256_si128(_mm256_packs_epi32(d, d)));
     _mm_storeu_si128((__m128i *)dest,
                      _mm_packs_epi32(_mm256_castsi256_si128(d),
                                      _mm256_extracti128_si256(d, 1)));

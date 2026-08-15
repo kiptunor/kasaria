@@ -245,17 +245,6 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     int         j;
     if(ISDRUMCHANNEL(ksr, e->channel))
     {
-        /*
-        if(!ksr->drumset[ksr->channel[e->channel].bank] && !ksr->drumset[0])
-            return;
-        
-        if(!(ip = ksr->drumset[ksr->channel[e->channel].bank]->tone[e->key].instrument))
-        {
-            if(!(ip = ksr->drumset[0]->tone[e->key].instrument))
-                return;
-        }
-        */
-
         ToneBank *db = ksr->drumset[ksr->channel[e->channel].bank];
         if(!db)
             db = ksr->drumset[0];
@@ -627,15 +616,6 @@ void adjust_pitchbend(Kasaria *ksr, int c)
 
 void adjust_volume(Kasaria *ksr, int c)
 {
-    /*
-    int i = ksr->voices;
-    while(i--)
-        if(ksr->voice[i].channel == c && (ksr->voice[i].status == VOICE_ON || ksr->voice[i].status == VOICE_SUSTAINED))
-        {
-            recompute_amp(ksr, i);
-            apply_envelope_to_amp(ksr, i);
-        }
-    */
     int n = ksr->channel_voice_count[c];
     for(int i = 0; i < n; i++)
     {
@@ -692,28 +672,12 @@ void do_compute_data(Kasaria *ksr, long count)
     for(i = 0; i < samples; i++)
         ksr->buffer_pointer[i] = 0;
 
-    //int active = 0;
     for(i = 0; i < ksr->voices; i++)
     {
-        /*
-        ulog_debug(
-               "VOICE CHECK: i=%d status=%d sample=%p data=%p count=%ld",
-               i,
-               ksr->voice[i].status,
-               (void *)ksr->voice[i].sample,
-               ksr->voice[i].sample
-                   ? (void *)ksr->voice[i].sample->data
-                   : NULL,
-               count
-           );
-           */
         if(ksr->voice[i].status != VOICE_FREE)
-        {
             mix_voice(ksr, ksr->buffer_pointer, i, count);
-            //active++;
-        }
+        
     }
-    //ulog_debug("mix: active=%d", active);  // ← moved OUTSIDE the loop
 
     audio_compressor(&ksr->compressor_settings, (f32 *)ksr->buffer_pointer, samples * sizeof(f32));
 }
