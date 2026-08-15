@@ -38,7 +38,7 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
-
+#define IS_VALID_INSTRUMENT(ip) ((ip) != NULL && (ip) != (Instrument *)-1)
 
 
 void reset_voices(Kasaria *ksr)
@@ -245,6 +245,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     int         j;
     if(ISDRUMCHANNEL(ksr, e->channel))
     {
+        /*
         if(!ksr->drumset[ksr->channel[e->channel].bank] && !ksr->drumset[0])
             return;
         
@@ -252,7 +253,24 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         {
             if(!(ip = ksr->drumset[0]->tone[e->key].instrument))
                 return;
+        }
+        */
+
+        ToneBank *db = ksr->drumset[ksr->channel[e->channel].bank];
+        if(!db)
+            db = ksr->drumset[0];
+        
+        if(!db)
+            return;
+        
+        if(!IS_VALID_INSTRUMENT(ip = db->tone[e->key].instrument))
+        {
+            db = ksr->drumset[0];
+            if(!db)
+                return;
             
+            if(!IS_VALID_INSTRUMENT(ip = db->tone[e->key].instrument))
+                return;
         }
     
         /* For drums, select sample by matching MIDI key to note_to_use/root_key
