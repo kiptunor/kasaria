@@ -145,6 +145,7 @@ Kasaria *ksr_init(bool disable_logs)
     ksr->is_midi_player_active = false;
     ksr->is_soundfont_loaded   = false;
     ksr->wall_clock_last_ns    = 0;
+    ksr->is_audio_init         = false;
 
     default_compressor_settings(ksr);
 

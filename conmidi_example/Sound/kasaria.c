@@ -73,7 +73,7 @@ void KSR_Init()
     ksr_set_note_velocity_skipping(ksr_inst, 0, 32, true);
     ksr_print_config(ksr_inst);
     ksr_load_soundfont_file(ksr_inst, "Full Grand Piano V2.sf2", true);
-    ksr_load_soundfont_file(ksr_inst, "SgtPepperArc360.sf2", true);
+    ksr_load_soundfont_file(ksr_inst, "Arachno SoundFont Version 1.0.sf2", true);
 
     ksr_init_audio(ksr_inst, RAW_MIDI_EVENTS);
     ksr_start_audio(ksr_inst);
