@@ -188,20 +188,17 @@ void recompute_amp(Kasaria *ksr, int v)
     long tempamp;
 
     // TODO: use fscale
-
+    
     long vol = ksr->channel[ksr->voice[v].channel].volume;
     long vol_scaled = vol ? (long)(vol_table[vol] * 127.0) : 0;
     
     long expr = ksr->channel[ksr->voice[v].channel].expression;
     long expr_scaled = expr ? (long)(vol_table[expr] * 127.0) : 0;
 
-    //tempamp = (ksr->voice[v].velocity * ksr->channel[ksr->voice[v].channel].volume * ksr->channel[ksr->voice[v].channel].expression); /* 21 bits */
-    // Good but channel volume being 0 still makes sound
-    //tempamp = ksr->voice[v].velocity
-    //        * (long)(vol_table[ksr->channel[ksr->voice[v].channel].volume] * 127.0)
-    //        * ksr->channel[ksr->voice[v].channel].expression;
+    long vel = ksr->voice[v].velocity;
+    long vel_scaled = vel ? (long)(vol_table[vel] * 127.0) : 0;
 
-    tempamp = ksr->voice[v].velocity * vol_scaled * expr_scaled;
+    tempamp = vel_scaled * vol_scaled * expr_scaled;
 
     if(!(ksr->play_mode.encoding & PE_MONO))
     {
