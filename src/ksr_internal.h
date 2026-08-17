@@ -684,12 +684,16 @@ struct Kasaria
     int                channel_voice_count[16];
     int                channel_voice_list[16][MAX_VOICES * 2];
 
+    int  steal_scan;         // rotating round-robin pointer
+
     unsigned char skip_note_vel[16][128];    // velocity of a skipped note
     unsigned char skip_note_active[16][128];
 
     ma_device_config   dev_config;
     ma_device          audio_device;
     int                audio_init_scope;
+
+    bool   profiling_enabled;
 };
 
 
@@ -807,4 +811,6 @@ extern char *strdup_mblock(MBlockList *mblock, const char *str);
 extern int free_global_mblock(void);
 int fp_equals(float a, float b, float tolerance);
 void *safe_large_malloc(size_t count);
+
+void ksr_profile_voice(Kasaria *ksr);
 #endif

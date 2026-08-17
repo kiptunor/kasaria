@@ -3079,11 +3079,11 @@ static void convert_volume_envelope(Kasaria *ksr, SampleList *vp, LayerTable *tb
     vp->hold             = to_rate(ksr, 1, tbl->set[SF_holdEnv2] ? tbl->val[SF_holdEnv2] : -12000);
     vp->sustain          = calc_volenv_sustain(tbl->set[SF_sustainEnv2] ? tbl->val[SF_sustainEnv2] : 0);
     vp->decay            = to_rate(ksr, 65534 - vp->sustain, tbl->set[SF_decayEnv2] ? tbl->val[SF_decayEnv2] : -12000);
-    //vp->release          = get_sf_release(ksr, tbl->set[SF_releaseEnv2] ? tbl->val[SF_releaseEnv2] : -12000); // This fucks up the performance
+    vp->release          = get_sf_release(ksr, tbl->set[SF_releaseEnv2] ? tbl->val[SF_releaseEnv2] : -12000); // This fucks up the performance
     vp->v.envelope_delay = (ksr->play_mode.rate * to_msec((f64)(tbl->set[SF_delayEnv2] ? tbl->val[SF_delayEnv2] : -12000)) * 0.001);
 
 
-    vp->release = to_rate(ksr, 65535, -12000); // Temporarily because I'm too stupid to figure everything out
+    //vp->release = to_rate(ksr, 65535, -12000); // Temporarily because I'm too stupid to figure everything out
 	// convert modulation envelope
 	tmp = to_msec(tbl->set[SF_attackEnv1] ? tbl->val[SF_attackEnv1] : -12000);
 	

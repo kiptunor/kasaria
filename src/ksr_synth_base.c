@@ -44,6 +44,8 @@ playmidi.c -- random stuff in need of rearrangement
 void reset_voices(Kasaria *ksr)
 {
     log_debug("Reset voices");
+
+    ksr->steal_scan = 0;
    
     for(int i = 0; i < MAX_VOICES; i++)    // ← MAX_VOICES, not ksr->voices
         ksr->voice[i].status = VOICE_FREE;
@@ -468,27 +470,31 @@ void note_on(Kasaria *ksr, MidiEvent *e)
     }
     
     // Pop from free stack
+    //u64 n0 = monotonic_ns();
     if(ksr->free_voice_count > 0)
     {
         start_note(ksr, e, ksr->free_voice_stack[--ksr->free_voice_count]);
         return;
     }
 
-    // Steal quietest decaying voice
-    int  i = ksr->voices, lowest = -1;
-    long lv = 0x7FFFFFFF, v;
-    
-    while(i--)
+    // Steal a releasing voice. free_voice_count==0 means almost every slot is
+        // live, so a rotating round-robin find is ~O(1) instead of the old O(voices)
+        // quietest scan that ran on every note-on.
+
+    int i      = ksr->steal_scan;
+    int n      = ksr->voices;
+    int lowest = -1;
+    while(n--)
     {
-        if(ksr->voice[i].status != VOICE_ON && ksr->voice[i].status != VOICE_DIE)
+        int st = ksr->voice[i].status;
+        if(st != VOICE_ON && st != VOICE_DIE)
         {
-            v = ksr->voice[i].left_mix;
-            if(ksr->voice[i].panned == PANNED_MYSTERY && ksr->voice[i].right_mix > v)
-                v = ksr->voice[i].right_mix;
-            if(v < lv) { lv = v; lowest = i; }
+            lowest = i;
+            break;
         }
+        i = (i + 1) % ksr->voices;
     }
-    
+    ksr->steal_scan = lowest >= 0 ? (lowest + 1) % ksr->voices : 0;
     if(lowest != -1)
     {
         ksr->cut_notes++;
@@ -497,6 +503,9 @@ void note_on(Kasaria *ksr, MidiEvent *e)
     }
     else
         ksr->lost_notes++;
+
+        //ksr->prof_noteon_ns += monotonic_ns() - n0;
+        //ksr->prof_noteon_calls++;
 }
 
 void finish_note(Kasaria *ksr, int i)
@@ -663,11 +672,14 @@ void reset_midi(Kasaria *ksr)
 
 void do_compute_data(Kasaria *ksr, long count)
 {
-
     int i;
     int samples;
 
     samples = (ksr->play_mode.encoding & PE_MONO) ? count : (count * 2);
+
+    u64 t0 = 0;
+    if(ksr->profiling_enabled)
+        t0 = monotonic_ns();
 
     for(i = 0; i < samples; i++)
         ksr->buffer_pointer[i] = 0;
@@ -676,7 +688,6 @@ void do_compute_data(Kasaria *ksr, long count)
     {
         if(ksr->voice[i].status != VOICE_FREE)
             mix_voice(ksr, ksr->buffer_pointer, i, count);
-        
     }
 
     audio_compressor(&ksr->compressor_settings, (f32 *)ksr->buffer_pointer, samples * sizeof(f32));

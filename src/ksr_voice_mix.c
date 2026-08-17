@@ -28,6 +28,9 @@ mix.c */
 
 
 
+#define KSR_RELEASE_FAST_FREE  1500   /* free voices below this → fast release */
+#define KSR_RELEASE_FAST_MULT  3      /* release-rate multiplier under pressure */
+
 
 
 
@@ -135,6 +138,9 @@ int recompute_envelope(Kasaria *ksr, int v)
     ksr->voice[v].envelope_increment = ksr->voice[v].sample->envelope_rate[stage];
     if(ksr->voice[v].envelope_target < ksr->voice[v].envelope_volume)
         ksr->voice[v].envelope_increment = -ksr->voice[v].envelope_increment;
+
+    if(stage >= 3 && ksr->free_voice_count < KSR_RELEASE_FAST_FREE)
+        ksr->voice[v].envelope_increment *= KSR_RELEASE_FAST_MULT;
 
     return 0;
 }
@@ -677,10 +683,8 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
 
 void mix_voice(Kasaria *ksr, f32 *buf, int v, long c)
 {
-    // Prob this is where I have to handle SF2 effects
     Voice    *vp = ksr->voice + v;
     sample_t *sp;
-
     
     if(vp->status == VOICE_DIE)
     {
@@ -700,7 +704,6 @@ void mix_voice(Kasaria *ksr, f32 *buf, int v, long c)
 
         if(ksr->play_mode.encoding & PE_MONO)
         {
-            /* Mono output. */
             if(vp->envelope_increment || vp->tremolo_phase_increment)
                 mix_mono_signal(ksr, sp, buf, v, c);
             else
@@ -724,8 +727,6 @@ void mix_voice(Kasaria *ksr, f32 *buf, int v, long c)
             }
             else
             {
-                /* It's either full left or full right. In either case,
-                every other sample is 0. Just get the offset right: */
                 if(vp->panned == PANNED_RIGHT)
                     buf++;
 

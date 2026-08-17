@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
     ksr_set_fast_decay(synth, true);
     ksr_set_antialiasing(synth, true);
     ksr_set_sample_rate(synth, 48000); // Optional
+    ksr_set_pre_resample(synth, true);
     
     // Skip notes with velocities in between the low and high specified threasholds
     // And also enable the filter
