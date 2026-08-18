@@ -14,7 +14,7 @@ A powerful and high efficiency midi synthesizer based on Timidity 0.2i
 - [ ] Custom API for loading audio samples
 - [ ] SF2 Effects
 - [ ] SFZ Support
-- [ ] Audio Capture 
+- [x] Audio Capture 
 - [X] Builtin Audio Limiter
 
 ## Big thanks to
