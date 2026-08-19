@@ -32,17 +32,39 @@ int main(int argc, char *argv[])
     // Initialize and open an audio device
     ksr_init_audio(synth, INTERNAL_MIDI_PLAYER); // Needed for the async midi playback
 
+    KsrSoundfontOpts s1;
+    KsrSoundfontOpts s2;
+
+    s1 = (KsrSoundfontOpts){
+        .active_presets = 10,
+        .bank = 0,
+        .preset = 0,
+        .preload_instruments = true,
+        .load_percussion_bank = true,
+    };
+
+    s2 = (KsrSoundfontOpts){
+        .active_presets = 10,
+        .bank = 0,
+        .preset = 0,
+        .preload_instruments = true,
+        .load_percussion_bank = true,
+    };
+
     // Load 2 soundfonts
 
     // The first preset of this soundfont overrides the first preset of the second loaded soundfont
-    ksr_load_soundfont_file(synth, "Full Grand Piano V2.sf2", true);
+    //ksr_load_soundfont_file(synth, "Full Grand Piano V2.sf2", true);
+
+    ksr_load_soundfont_file_new(synth, "Full Grand Piano V2.sf2", s1);
 
     /*
         But the second soundfont may have more presets than the first loaded soundfont
         which means that if the midi uses multiple banks the second soundfont can provide them if the first soundfont
         doesn't have a preset for the required MIDI bank
     */
-    ksr_load_soundfont_file(synth, "Arachno SoundFont Version 1.0.sf2", true); 
+    //ksr_load_soundfont_file(synth, "Arachno SoundFont Version 1.0.sf2", true);
+    //ksr_load_soundfont_file_new(synth, "Arachno SoundFont Version 1.0.sf2", s2);
 
 
     if(!ksr_load_midi_file(synth, MIDI_MEMORY, argv[1])) // Try to load a midi file

@@ -265,7 +265,7 @@ int preload_soundfont_instruments(Kasaria *ksr)
         bank    = ksr->sf_info->preset[i].bank;
         program = ksr->sf_info->preset[i].preset;
 
-        if(program < 0 || program > 127)
+        if(program < 0 || program > 127) // Is this required only for the percusion bank ?
             continue;
 
         if(bank == 128)   // SF2 percussion bank
@@ -314,5 +314,90 @@ int preload_soundfont_instruments(Kasaria *ksr)
             log_error("SF2: failed to load instrument bank=%d program=%d", bank, program);
     }
     
+    return 1;
+}
+
+int preload_soundfont_presets(Kasaria *ksr, int active_presets, bool perc_bank)
+{
+    Instrument *instr;
+    int bank;
+    int program;
+
+    if(!ksr || !ksr->sf_loaded || !ksr->sf_info)
+        return 0;
+
+    int limit = active_presets;
+    // Very important !!! Limit the number of requested presets if the soundfont has less than that
+    if(limit > ksr->sf_info->npresets)
+        limit = ksr->sf_info->npresets;
+
+    for(int i = 0; i < limit; i++)
+    {
+        bank    = ksr->sf_info->preset[i].bank;
+        program = ksr->sf_info->preset[i].preset;
+
+        log_trace("BANK IDX: %d", bank);
+
+        if(bank < 0 || bank > 127)
+            continue;
+
+        if(program < 0 || program > 127)
+            continue;
+
+
+        if(!ksr->tonebank[bank])
+        {
+            ksr->tonebank[bank] = (ToneBank *)safe_malloc(sizeof(ToneBank));
+            memset(ksr->tonebank[bank], 0, sizeof(ToneBank));
+        }
+        
+        if(ksr->tonebank[bank]->tone[program].instrument)
+            continue;
+
+        if(bank == 128)
+            continue;
+        
+        instr = sndfont_load_instrument(ksr, bank, program);
+        
+        if(instr)
+            ksr->tonebank[bank]->tone[program].instrument = instr;
+        else
+            log_error("SF2: failed to load instrument bank=%d program=%d", bank, program);
+    }
+
+    if(perc_bank)
+    {
+        for(int i = 0; i < ksr->sf_info->npresets; i++)
+        {
+            bank    = ksr->sf_info->preset[i].bank;
+            program = ksr->sf_info->preset[i].preset;
+
+            if(bank == 128)
+            {
+                instr = sndfont_load_instrument(ksr, bank, program);
+            
+                if(!instr)
+                {
+                    log_error("SF2: drum load failed bank=%d program=%d", bank, program);
+                    continue;
+                }
+                
+                if(!ksr->drumset[0])
+                {
+                    ksr->drumset[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
+                    memset(ksr->drumset[0], 0, sizeof(ToneBank));
+                }
+                
+                for(int k = 0; k < instr->samples; k++)
+                {
+                    Sample *sp = &instr->sample[k];
+                    for(int key = sp->low_key; key <= sp->high_key && key < 128; key++)
+                        if(key >= 0)
+                            ksr->drumset[0]->tone[key].instrument = instr;
+                }
+                continue;
+            }
+        }
+    }
     return 1;
 }

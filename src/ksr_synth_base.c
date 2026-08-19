@@ -248,7 +248,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         if(!db)
             db = ksr->drumset[0];
         
-        if(!db)
+        if(!db) // Todo: Handle drum bank loading on midi player demand
             return;
         
         if(!IS_VALID_INSTRUMENT(ip = db->tone[e->key].instrument))
@@ -286,6 +286,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     }
     else
     {
+        // Todo: Handle regular MIDI bank loading on midi player demand
         if(!ksr->tonebank[ksr->channel[e->channel].bank] && !ksr->tonebank[0] && ksr->channel[e->channel].program != SPECIAL_PROGRAM)
             return; // No tonebank? Then we can't play.
 

@@ -742,6 +742,7 @@ void        free_instruments(Kasaria *tm);
 void        free_default_instrument(Kasaria *tm);
 //Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filename, int bank, int program);
 int         preload_soundfont_instruments(Kasaria *ksr);
+int         preload_soundfont_presets(Kasaria *ksr, int active_presets, bool perc_bank);
 void alloc_instrument_bank(int dr, int bk);
 
 

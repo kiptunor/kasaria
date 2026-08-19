@@ -354,6 +354,76 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
     return 1;
 }
 
+int ksr_load_soundfont_file_new(Kasaria *ksr, const char *filename, KsrSoundfontOpts soundfont_opts)
+{
+    if(!ksr || !filename)
+        return 1;
+
+    FILE *fp;
+    const char *ext;
+    
+    log_debug("Loading soundfont file: %s", filename);
+    
+    ext = strrchr(filename, '.');
+    
+    if(ext)
+        ext++;
+    
+    if(!ext || strcasecmp(ext, "sf2") != 0)
+    {
+        log_error("Unsupported soundfont format!");
+        return 0;
+    }
+
+    fp = fopen(filename, "rb");
+    
+    if(!fp)
+    {
+        log_error("Can't open soundfont file: %s", filename);
+        return 0;
+    }
+    
+    if(ksr->sf_loaded)
+    {
+        free_soundfont(ksr->sf_info);
+        ksr->sf_loaded = 0;
+    }
+    
+    if(!ksr->sf_info)
+    {
+        ksr->sf_info = safe_malloc(sizeof(SFInfo));
+    
+        if(!ksr->sf_info)
+        {
+            log_error("Failed to allocate SFInfo");
+            fclose(fp);
+            return 0;
+        }
+    
+        memset(ksr->sf_info, 0, sizeof(SFInfo));
+    }
+    if(load_soundfont(ksr->sf_info, fp) != 0)
+    {
+        fclose(fp);
+        return 0;
+    }
+    
+    fclose(fp);
+
+    strncpy(ksr->sf_filename, filename, sizeof(ksr->sf_filename) - 1);
+    
+    ksr->sf_filename[sizeof(ksr->sf_filename) - 1] = '\0';
+    
+    ksr->sf_loaded = 1;
+    
+    if(soundfont_opts.preload_instruments)
+        //preload_soundfont_instruments(ksr);
+        preload_soundfont_presets(ksr, soundfont_opts.active_presets, soundfont_opts.load_percussion_bank);
+
+    ksr->is_soundfont_loaded = true;
+    return 0;
+}
+
 void ksr_set_audio_frame_size(Kasaria *ksr, int size)
 {
     if(!ksr)

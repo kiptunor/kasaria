@@ -83,6 +83,15 @@ typedef struct
     bool audio_compressor;
 }KasariaConfig;
 
+typedef struct
+{
+    int active_presets;          // Set how many presets to store
+    int bank;                    // Set the current MIDI bank (Currently unused)
+    int preset;                  // Set the current preset
+    bool preload_instruments;    // Preload instruments into tone banks (Required for synthesis)
+    bool load_percussion_bank; // When enabled the soundfont loader also loads the percusion bank used in MIDI Channel 10
+}KsrSoundfontOpts;
+
 /*
     General API notes: Unless otherwise indicated, functions that return a value will return non-0 on success,
     and 0 on failure. Time and duration is represented in milliseconds. API functions for getting strings return
@@ -265,6 +274,9 @@ KSR_API int ksr_get_song_copyright(Kasaria *ksr, char *buffer, long count);
                            so the synth can actually produce sound
 */
 KSR_API int  ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_instruments);
+
+// Partially implelented !!!
+KSR_API int  ksr_load_soundfont_file_new(Kasaria *ksr, const char *filename, KsrSoundfontOpts soundfont_opts);
 
 // Not yet implemented
 KSR_API void ksr_load_soundfont_from_mem(Kasaria *ksr, void *mem, long size, bool preload_instruments);

@@ -51,7 +51,7 @@ resample.c
 
 
 
-#define KSR_USE_RESAMPLE_SIMD 1 // Makes efficiency worse for some reason idk
+#define KSR_USE_RESAMPLE_SIMD 0 // Makes efficiency worse for some reason idk
 
 
 
