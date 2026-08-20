@@ -2986,11 +2986,7 @@ static void set_rootfreq(SampleList *vp)
 	vp->v.scale_freq = vp->root;
 	vp->v.root_key = vp->root;
 	vp->v.tune = pow(2.0, (f64)vp->tune * DIV_1200);
-#if 1 // use tune
-	vp->v.root_freq = freq_table[vp->root];
-#else // not use tune , include root_freq
 	vp->v.root_freq = (f64)freq_table[vp->root] / vp->v.tune + 0.5;
-#endif
 
 #if 0
 	int root = vp->root;
