@@ -1458,6 +1458,10 @@ void ksr_unload_midi(Kasaria *ksr)
 
     log_debug("Unload MIDI");
 
+    // Maybe this can prevent crashes in read_vlq ?
+    if(!ksr->is_midi_player_paused)
+        ksr_pause_midi(ksr);
+
     if(ksr->midi_loading_mode == MIDI_MAP)
         ksr_unmap_file(ksr->f_mmap);
 
