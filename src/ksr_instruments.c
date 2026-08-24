@@ -216,7 +216,7 @@ int load_missing_instruments(Kasaria *ksr)
     return errors;
 }
 
-static void free_instrument(Instrument *ip)
+void free_instruments(Instrument *ip)
 {
     Sample *sp;
     int     i;
@@ -226,7 +226,8 @@ static void free_instrument(Instrument *ip)
     for(i = 0; i < ip->samples; i++)
     {
         sp = &(ip->sample[i]);
-        free(sp->data);
+        if(sp->data && sp->data_alloced)
+            free(sp->data);
     }
 
     free(ip->sample);
@@ -238,7 +239,7 @@ void free_default_instrument(Kasaria *ksr)
     log_debug("Clear default instrument");
     if(ksr->default_instrument)
     {
-        free_instrument(ksr->default_instrument);
+        free_instruments(ksr->default_instrument);
         ksr->default_instrument = 0;
         ksr->default_program    = DEFAULT_PROGRAM;
     }

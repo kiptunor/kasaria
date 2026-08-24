@@ -38,7 +38,7 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
-#define IS_VALID_INSTRUMENT(ip) ((ip) != NULL && (ip) != (Instrument *)-1)
+
 
 
 void reset_voices(Kasaria *ksr)
@@ -291,11 +291,29 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             return; // No tonebank? Then we can't play.
 
         if(ksr->channel[e->channel].program == SPECIAL_PROGRAM)
-            ip = ksr->default_instrument;
-        else if(!(ip = ksr->tonebank[ksr->channel[e->channel].bank]->tone[ksr->channel[e->channel].program].instrument))
         {
-            if(!(ip = ksr->tonebank[0]->tone[ksr->channel[e->channel].program].instrument))
-                return; // No instruments available ? Too bad. Handle them yourself!
+            ip = ksr->default_instrument;
+            if(!ip)
+                return;
+        }
+        else
+        {
+            ToneBank *tb = ksr->tonebank[ksr->channel[e->channel].bank];
+
+            ip = NULL;
+            if(tb)
+                ip = tb->tone[ksr->channel[e->channel].program].instrument;
+
+            if(!IS_VALID_INSTRUMENT(ip))
+            {
+                tb = ksr->tonebank[0];
+                if(!tb)
+                    return;
+
+                ip = tb->tone[ksr->channel[e->channel].program].instrument;
+                if(!IS_VALID_INSTRUMENT(ip))
+                    return; // no instrument installed anywhere: stay silent
+            }
         }
 
         if(!ip)

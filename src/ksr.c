@@ -281,19 +281,220 @@ void ksr_set_config(Kasaria *ksr, KasariaConfig config)
     ksr->skip_initial_midi_silence  = config.skip_initial_silence;
 }
 
+static void hard_kill_voice(Kasaria *ksr, int v)
+{
+    Voice *vp = &ksr->voice[v];
+    int c, k, t;
+
+    vp->status = VOICE_FREE;
+    channel_voice_remove(ksr, vp->channel, v);
+
+    for(c = 0; c < 16; c++)
+        for(k = 0; k < 128; k++)
+            for(t = 0; t < 2; t++)
+                if(ksr->voice_by_channel_note[c][k][t] == vp)
+                    ksr->voice_by_channel_note[c][k][t] = NULL;
+
+    free_voice_push(ksr, v);
+}
+
+static bool remap_voice(Kasaria *ksr, int v)
+{
+    Voice *vp = &ksr->voice[v];
+    int ch = vp->channel;
+
+    if(ksr->voice_by_channel_note[ch][vp->note][1] == vp)
+        return false; // stereo partner voice: let the primary drive it
+
+    if(ISDRUMCHANNEL(ksr, ch))
+    {
+        ToneBank *db = ksr->drumset[ksr->channel[ch].bank];
+        Instrument *ip;
+        int j;
+
+        if(!db || !IS_VALID_INSTRUMENT(db->tone[vp->note].instrument))
+        {
+            db = ksr->drumset[0];
+            if(!db || !IS_VALID_INSTRUMENT(db->tone[vp->note].instrument))
+                return false;
+        }
+
+        ip = db->tone[vp->note].instrument;
+        for(j = 0; j < ip->samples; j++)
+            if(vp->note >= ip->sample[j].low_key && vp->note <= ip->sample[j].high_key)
+            {
+                vp->sample = &ip->sample[j];
+                recompute_freq(ksr, v);
+                recompute_amp(ksr, v);
+                return true;
+            }
+        return false;
+    }
+
+    int pg = ksr->channel[ch].program;
+    int bk = ksr->channel[ch].bank;
+    ToneBank *tb = (bk >= 0 && bk < 128) ? ksr->tonebank[bk] : NULL;
+    Instrument *ip = NULL;
+    
+    if(tb && IS_VALID_INSTRUMENT(tb->tone[pg].instrument))
+        ip = tb->tone[pg].instrument;
+    else if(ksr->tonebank[0] && IS_VALID_INSTRUMENT(ksr->tonebank[0]->tone[pg].instrument))
+        ip = ksr->tonebank[0]->tone[pg].instrument;
+    
+    if(!ip)
+        return false;
+
+    select_sample(ksr, v, ip);
+    recompute_freq(ksr, v);
+    recompute_amp(ksr, v);
+    return true;
+}
+
+static void unload_instruments(Kasaria *ksr)
+{
+    int          i, j, k, n, v;
+    int          count = 0;
+    Instrument **freed;
+    
+    if(!ksr)
+        return;
+
+    if(ksr->is_midi_player_active)
+        ksr_pause_midi(ksr);
+
+    freed = (Instrument **)safe_malloc(sizeof(Instrument *) * (128 * 2 * 128));
+    
+    for(i = 0; i < 128; i++)
+    {
+        ToneBank *banks[2];
+        banks[0] = ksr->tonebank[i];
+        banks[1] = ksr->drumset[i];
+
+        for(j = 0; j < 2; j++)
+        {
+            ToneBank *b = banks[j];
+            if(!b)
+                continue;
+
+            for(k = 0; k < 128; k++)
+            {
+                Instrument *ip = b->tone[k].instrument;
+
+                if(!ip || ip == MAGIC_LOAD_INSTRUMENT)
+                    continue;
+
+                b->tone[k].instrument = NULL;
+
+                for(n = 0; n < count; n++)
+                    if(freed[n] == ip)
+                        break;
+
+                if(n == count)
+                    freed[count++] = ip;
+            }
+        }
+    }
+    
+    for(v = 0; v < ksr->voices; v++)
+    {
+        Voice *vp = &ksr->voice[v];
+        bool doomed = false;
+
+        if(vp->status == VOICE_FREE || !vp->sample)
+            continue;
+
+        for(n = 0; n < count && !doomed; n++)
+            if(vp->sample >= freed[n]->sample && vp->sample < freed[n]->sample + freed[n]->samples)
+                doomed = true;
+
+        if(!doomed)
+            continue;
+
+        if(!remap_voice(ksr, v))
+            hard_kill_voice(ksr, v);
+    }
+
+    for(n = 0; n < count; n++)
+        free_instruments(freed[n]);
+
+    safe_free(freed);
+
+    if(ksr->is_midi_player_active)
+        ksr_pause_midi(ksr);
+}
+
+static void release_freed(Kasaria *ksr, Instrument **freed, int count)
+{
+    int v, n;
+
+    for(v = 0; v < ksr->voices; v++)
+    {
+        Voice *vp = &ksr->voice[v];
+        bool doomed = false;
+
+        if(vp->status == VOICE_FREE || !vp->sample)
+            continue;
+
+        for(n = 0; n < count && !doomed; n++)
+            if(vp->sample >= freed[n]->sample && vp->sample < freed[n]->sample + freed[n]->samples)
+                doomed = true;
+
+        if(!doomed)
+            continue;
+
+        if(!remap_voice(ksr, v))
+            hard_kill_voice(ksr, v);
+    }
+
+    for(n = 0; n < count; n++)
+        free_instruments(freed[n]);
+}
+
+static void preserve_instrument(Instrument *ip)
+{
+    int s;
+
+    for(s = 0; s < ip->samples; s++)
+    {
+        Sample *sp = &ip->sample[s];
+        long   frames;
+        size_t bytes, elem;
+        void  *copy;
+
+        if(!sp->data || sp->data_alloced)
+            continue;
+
+        frames = sp->data_length >> FRACTION_BITS;
+        if(frames < 1)
+            frames = 1;
+
+        switch(sp->data_type)
+        {
+            case SAMPLE_TYPE_FLOAT:  elem = sizeof(f32); break;
+            case SAMPLE_TYPE_DOUBLE: elem = sizeof(f64); break;
+            case SAMPLE_TYPE_INT32:  elem = sizeof(i32); break;
+            default:                 elem = sizeof(sample_t); break;
+        }
+
+        bytes = (size_t)frames * elem + 128 * elem;
+        copy  = safe_large_malloc(bytes);
+        memcpy(copy, sp->data, bytes);
+
+        sp->data         = copy;
+        sp->data_alloced = 1;
+    }
+}
+
 int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_instruments)
 {
-    if(!ksr || !filename)
-        return 0;
-
     FILE *fp;
     const char *ext;
-
+    
     if(!ksr || !filename)
         return 0;
 
     log_debug("Loading soundfont file: %s", filename);
-
+    
     ext = strrchr(filename, '.');
 
     if(ext)
@@ -304,7 +505,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
         log_error("Unsupported soundfont format!");
         return 0;
     }
-
+    
     fp = fopen(filename, "rb");
 
     if(!fp)
@@ -312,39 +513,121 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
         log_error("Can't open soundfont file: %s", filename);
         return 0;
     }
+    
+    // ---- BEGIN: parse into temp first, so we know the new font's coverage ----
+    
+    SFInfo *tmp = (SFInfo *)safe_malloc(sizeof(SFInfo));
+    memset(tmp, 0, sizeof(SFInfo));
 
-    if(ksr->sf_loaded)
-    {
-        free_soundfont(ksr->sf_info);
-        ksr->sf_loaded = 0;
-    }
-
-    if(!ksr->sf_info)
-    {
-        ksr->sf_info = safe_malloc(sizeof(SFInfo));
-
-        if(!ksr->sf_info)
-        {
-            log_error("Failed to allocate SFInfo");
-            fclose(fp);
-            return 0;
-        }
-
-        memset(ksr->sf_info, 0, sizeof(SFInfo));
-    }
-    if(load_soundfont(ksr->sf_info, fp) != 0)
+    if(load_soundfont(tmp, fp) != 0)
     {
         fclose(fp);
+        safe_free(tmp);
         return 0;
     }
-
+    
     fclose(fp);
+    
+    // ---- selective replace: free only what the new font will provide ----
+
+    if(ksr->sf_loaded && ksr->sf_info)
+    {
+        Instrument **freed = (Instrument **)safe_malloc(sizeof(Instrument *) * (128 * 2 * 128));
+        int count = 0, i, n, k;
+        bool new_has_drums = false;
+
+        for(i = 0; i < tmp->npresets; i++)
+            if(tmp->preset[i].bank == 128)
+                new_has_drums = true;
+
+        for(i = 0; i < tmp->npresets; i++)
+        {
+            int b = tmp->preset[i].bank, p = tmp->preset[i].preset;
+            Instrument *ip;
+
+            if(b < 0 || b > 127 || b == 128 || p < 0 || p > 127)
+                continue;
+            if(!ksr->tonebank[b])
+                continue;
+
+            ip = ksr->tonebank[b]->tone[p].instrument;
+            if(!ip || ip == MAGIC_LOAD_INSTRUMENT)
+                continue;
+
+            ksr->tonebank[b]->tone[p].instrument = NULL;
+
+            for(n = 0; n < count; n++)
+                if(freed[n] == ip)
+                    break;
+            if(n == count)
+                freed[count++] = ip;
+        }
+
+        if(new_has_drums)
+        {
+            for(i = 0; i < 128; i++)
+            {
+                ToneBank *db = ksr->drumset[i];
+                if(!db)
+                    continue;
+                for(k = 0; k < 128; k++)
+                {
+                    Instrument *ip = db->tone[k].instrument;
+                    if(!ip || ip == MAGIC_LOAD_INSTRUMENT)
+                        continue;
+                    db->tone[k].instrument = NULL;
+                    for(n = 0; n < count; n++)
+                        if(freed[n] == ip)
+                            break;
+                    if(n == count)
+                        freed[count++] = ip;
+                }
+            }
+        }
+
+        release_freed(ksr, freed, count);
+
+        for(i = 0; i < 128; i++)
+        {
+            ToneBank *banks[2];
+            int j;
+            banks[0] = ksr->tonebank[i];
+            banks[1] = ksr->drumset[i];
+            for(j = 0; j < 2; j++)
+            {
+                ToneBank *b2 = banks[j];
+                int s2;
+                if(!b2)
+                    continue;
+                for(s2 = 0; s2 < 128; s2++)
+                {
+                    Instrument *ip = b2->tone[s2].instrument;
+                    int n2;
+                    if(!ip || ip == MAGIC_LOAD_INSTRUMENT)
+                        continue;
+                    for(n2 = 0; n2 < count; n2++)
+                        if(freed[n2] == ip)
+                            break;
+                    if(n2 == count)
+                        preserve_instrument(ip);
+                }
+            }
+        }
+
+        safe_free(freed);
+        free_sf2_sample_cache();
+        free_soundfont(ksr->sf_info);
+    }
+
+    safe_free(ksr->sf_info);
+    ksr->sf_info = tmp;
 
     strncpy(ksr->sf_filename, filename, sizeof(ksr->sf_filename) - 1);
-
     ksr->sf_filename[sizeof(ksr->sf_filename) - 1] = '\0';
 
     ksr->sf_loaded = 1;
+
+    // ---- END ----
 
     if(preload_instruments)
         preload_soundfont_instruments(ksr);
@@ -385,6 +668,8 @@ int ksr_load_soundfont_file_new(Kasaria *ksr, const char *filename, KsrSoundfont
 
     if(ksr->sf_loaded)
     {
+        unload_instruments(ksr);
+        free_sf2_sample_cache();
         free_soundfont(ksr->sf_info);
         ksr->sf_loaded = 0;
     }

@@ -54,16 +54,19 @@ int main(int argc, char *argv[])
     // Load 2 soundfonts
 
     // The first preset of this soundfont overrides the first preset of the second loaded soundfont
-    //ksr_load_soundfont_file(synth, "Full Grand Piano V2.sf2", true);
 
-    ksr_load_soundfont_file_new(synth, "Full Grand Piano V2.sf2", s1);
+    ksr_load_soundfont_file(synth, "Arachno SoundFont Version 1.0.sf2", true);
+    
+    ksr_load_soundfont_file(synth, "Full Grand Piano V2.sf2", true);
+
+    //ksr_load_soundfont_file_new(synth, "Full Grand Piano V2.sf2", s1);
 
     /*
         But the second soundfont may have more presets than the first loaded soundfont
         which means that if the midi uses multiple banks the second soundfont can provide them if the first soundfont
         doesn't have a preset for the required MIDI bank
     */
-    //ksr_load_soundfont_file(synth, "Arachno SoundFont Version 1.0.sf2", true);
+    
     //ksr_load_soundfont_file_new(synth, "Arachno SoundFont Version 1.0.sf2", s2);
 
 

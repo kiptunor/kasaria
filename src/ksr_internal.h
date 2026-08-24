@@ -123,6 +123,8 @@
 #define divi_2048(i) ((i) / 2048)
 #define divi_4096(i) ((i) / 4096)
 
+#define IS_VALID_INSTRUMENT(ip) ((ip) != NULL && (ip) != (Instrument *)-1)
+
 enum {
 	SAMPLE_TYPE_INT16 = 0, // def sample_t int16 int8
 //	SAMPLE_TYPE_INT8,
@@ -737,7 +739,7 @@ void        audio_compressor(CompressorSettings *compr_settings, void *buffer, u
 
 // ------------- SoundFont Instrument functions (ksr_instruments.c) -------------
 int         load_missing_instruments(Kasaria *tm);
-void        free_instruments(Kasaria *tm);
+void        free_instruments(Instrument *ip);
 // int set_default_instrument(Kasaria *tm, char *name);
 void        free_default_instrument(Kasaria *tm);
 //Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filename, int bank, int program);
