@@ -28,8 +28,8 @@ mix.c */
 
 
 
-#define KSR_RELEASE_FAST_FREE  1500   /* free voices below this → fast release */
-#define KSR_RELEASE_FAST_MULT  3      /* release-rate multiplier under pressure */
+#define KSR_RELEASE_FAST_FREE  1500   // free voices below this → fast release
+#define KSR_RELEASE_FAST_MULT  3      // release-rate multiplier under pressure
 
 
 
@@ -72,7 +72,7 @@ static inline void mix_stereo_block(f32 *__restrict lp, const sample_t *__restri
     _mm256_storeu_ps(lp + 8, _mm256_add_ps(_mm256_loadu_ps(lp + 8), o1));
 }
 
-/* 8 input samples -> add left*s_k to lp[2k] only (one channel of stereo). */
+// 8 input samples -> add left*s_k to lp[2k] only (one channel of stereo).
 static inline void mix_single_block(f32 *__restrict lp, const sample_t *__restrict sp, long left)
 {
     __m256i s = _mm256_cvtepi16_epi32(_mm_loadu_si128((const __m128i *)sp));
@@ -89,7 +89,7 @@ static inline void mix_single_block(f32 *__restrict lp, const sample_t *__restri
     _mm256_storeu_ps(lp + 8, _mm256_add_ps(_mm256_loadu_ps(lp + 8), o1));
 }
 
-/* 8 input samples -> add left*s_k to lp[k] (mono). */
+// 8 input samples -> add left*s_k to lp[k] (mono).
 static inline void mix_mono_block(f32 *__restrict lp, const sample_t *__restrict sp, long left)
 {
     __m256i s = _mm256_cvtepi16_epi32(_mm_loadu_si128((const __m128i *)sp));
@@ -111,7 +111,7 @@ int recompute_envelope(Kasaria *ksr, int v)
     if(stage > 5)
     {
         // Envelope ran out.
-        int tmp              = (ksr->voice[v].status == VOICE_DIE); /* Already displayed as dead */
+        int tmp              = (ksr->voice[v].status == VOICE_DIE); // Already displayed as dead
         ksr->voice[v].status = VOICE_FREE;
         free_voice_push(ksr, v);
         if(!tmp)
@@ -215,7 +215,7 @@ static void update_tremolo(Kasaria *ksr, int v)
 
         ksr->voice[v].tremolo_sweep_position += ksr->voice[v].tremolo_sweep;
         if(ksr->voice[v].tremolo_sweep_position >= (1 << SWEEP_SHIFT))
-            ksr->voice[v].tremolo_sweep = 0; /* Swept to max amplitude */
+            ksr->voice[v].tremolo_sweep = 0; // Swept to max amplitude
         else
         {
             // Need to adjust depth

@@ -199,8 +199,8 @@ enum {
 #define MODES_REVERSE         (1 << 4)
 #define MODES_SUSTAIN         (1 << 5)
 #define MODES_ENVELOPE        (1 << 6)
-#define MODES_CLAMPED	      (1<<7) /* ?? (for last envelope??) */
-/* Flags not defined by GUS */
+#define MODES_CLAMPED	      (1<<7) // ?? (for last envelope??)
+// Flags not defined by GUS
 #define MODES_RELEASE         (1<<8)
 #define MODES_TRIGGER_RANDOM      (1<<9)
 #define MODES_NO_NOTEOFF          (1<<10)
@@ -317,17 +317,17 @@ typedef struct
     i16 modenv_to_pitch, modenv_to_fc,
 	  envelope_keyf[6], envelope_velf[6], modenv_keyf[6], modenv_velf[6];
     i8 envelope_velf_bpo, modenv_velf_bpo, envelope_keyf_bpo, modenv_keyf_bpo,
-	  key_to_fc_bpo, vel_to_fc_threshold;	/* in notes */
+	  key_to_fc_bpo, vel_to_fc_threshold;	// in notes
     i32 pitch_envelope[9];
 
-    i32 envelope_delay, modenv_delay;	/* in samples */
+    i32 envelope_delay, modenv_delay;	// in samples
 
     i32 modenv_rate[6], modenv_offset[6];
 
-    i16 vel_to_fc, key_to_fc; /* in cents, [-12000, 12000] */
+    i16 vel_to_fc, key_to_fc; // in cents, [-12000, 12000]
     i16 vel_to_resonance;
 
-    i32 cutoff_freq, cutoff_low_limit, cutoff_low_keyf;	/* in Hz, [1, 20000] */
+    i32 cutoff_freq, cutoff_low_limit, cutoff_low_keyf;	// in Hz, [1, 20000]
     i16 resonance;
     i64 offset;
 
@@ -339,15 +339,15 @@ typedef struct
     i8 def_pan;
     i8 low_key, high_key, root_key;
     int hpf[HPF_PARAM_NUM];
-    i32 sf_sample_index, sf_sample_link;	/* for stereo SoundFont */
+    i32 sf_sample_index, sf_sample_link;	// for stereo SoundFont
 
-    i32 seq_length;	/* length of the round robin, 0 == disabled */
-    i32 seq_position;	/* 1-based position within the round robin, 0 == disabled */
+    i32 seq_length;	// length of the round robin, 0 == disabled
+    i32 seq_position;	// 1-based position within the round robin, 0 == disabled
     f64 rt_decay;
     u8 low_vel, high_vel;
     f64 sample_pan;
-    i16 scale_freq;	/* in notes */
-    i16 scale_factor;	/* in 1024divs/key */
+    i16 scale_freq;	    // in notes
+    i16 scale_factor;	// in 1024divs/key
     f64 tune;
 } Sample;
 
@@ -706,7 +706,7 @@ typedef struct _MBlockNode
     struct _MBlockNode *next;
 #ifndef MBLOCK_NOPAD
     void *pad;
-#endif /* MBLOCK_NOPAD */
+#endif // MBLOCK_NOPAD
     char buffer[1];
 } MBlockNode;
 

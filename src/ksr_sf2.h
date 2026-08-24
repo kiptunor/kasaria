@@ -98,7 +98,7 @@ typedef struct _SFHeader
     SFGenLayer *layer;
 } SFHeader;
 
-/* preset header record */
+// preset header record
 typedef struct _SFPresetHdr
 {
     SFHeader hdr;

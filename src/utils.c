@@ -211,24 +211,26 @@ void *safe_large_malloc(size_t count)
     void *p;
     static int errflag = 0;
 
-    if (errflag)
-	exit(10);
+    if(errflag)
+	    exit(10);
 	
-    if (count == 0)
+    if(count == 0)
       /* Some malloc routine return NULL if count is zero, such as
        * malloc routine from libmalloc.a of Solaris.
        * But TiMidity doesn't want to return NULL even if count is zero.
        */
-      count = 1;
-    if ((p = (void*) malloc(count)) != NULL)
-      return p;
+        count = 1;
+    
+    if((p = (void*) malloc(count)) != NULL)
+        return p;
+    
     errflag = 1;
 
 #ifdef ABORT_AT_FATAL
     abort();
-#endif /* ABORT_AT_FATAL */
+#endif // ABORT_AT_FATAL
     exit(10);
-    /*NOTREACHED*/
+    // NOTREACHED
 	return 0;
 }
 
@@ -300,7 +302,7 @@ const char *url_unexpand_home_dir(const char *fname)
 
 static MBlockNode *free_mblock_list = NULL;
 #define ADDRALIGN 8
-/* #define DEBUG */
+// #define DEBUG
 
 void init_mblock(MBlockList *mblock)
 {
@@ -345,7 +347,7 @@ static int enough_block_memory(MBlockList *mblock, size_t n)
 
     newoffset = mblock->first->offset + n;
 
-    if(newoffset < mblock->first->offset) /* exceed representable in size_t */
+    if(newoffset < mblock->first->offset) // exceed representable in size_t
 	return 0;
 
     if(newoffset > mblock->first->block_size)
@@ -359,7 +361,7 @@ void *new_segment(MBlockList *mblock, size_t nbytes)
     MBlockNode *p;
     void *addr;
 
-    /* round up to ADDRALIGN */
+    // round up to ADDRALIGN
     nbytes = ((nbytes + ADDRALIGN - 1) & ~(ADDRALIGN - 1));
     if(!enough_block_memory(mblock, nbytes))
     {
@@ -380,7 +382,7 @@ void *new_segment(MBlockList *mblock, size_t nbytes)
 	fprintf(stderr, "Bad address: 0x%x\n", addr);
 	exit(1);
     }
-#endif /* DEBUG */
+#endif // DEBUG
 
     return addr;
 }
@@ -389,7 +391,7 @@ static void reuse_mblock1(MBlockNode *p)
 {
     if(p->block_size > MIN_MBLOCK_SIZE)
 	safe_free(p);
-    else /* p->block_size <= MIN_MBLOCK_SIZE */
+    else // p->block_size <= MIN_MBLOCK_SIZE
     {
 	p->next = free_mblock_list;
 	free_mblock_list = p;
@@ -401,7 +403,7 @@ void reuse_mblock(MBlockList *mblock)
     MBlockNode *p;
 
     if((p = mblock->first) == NULL)
-	return;			/* There is nothing to collect memory */
+	return;			// There is nothing to collect memory
 
     while(p)
     {
@@ -420,7 +422,7 @@ char *strdup_mblock(MBlockList *mblock, const char *str)
     char *p;
 
     len = strlen(str);
-    p = (char *)new_segment(mblock, len + 1); /* for '\0' */
+    p = (char *)new_segment(mblock, len + 1); // for '\0'
     memcpy(p, str, len + 1);
     return p;
 }

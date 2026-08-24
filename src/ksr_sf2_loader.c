@@ -77,66 +77,66 @@
 
 enum
 {
-	SF_startAddrs,		  /* 0  sample start address -4 (0to*0xffffff)  */
-	SF_endAddrs,		  /* 1                                          */
-	SF_startloopAddrs,	  /* 2  loop start address -4 (0 to * 0xffffff) */
-	SF_endloopAddrs,	  /* 3  loop end address -3 (0 to * 0xffffff)   */
-	SF_startAddrsHi,	  /* 4  high word of startAddrs                 */
-	SF_lfo1ToPitch,		  /* 5  main fm: lfo1-> pitch                   */
-	SF_lfo2ToPitch,		  /* 6  aux fm:  lfo2-> pitch                   */
-	SF_env1ToPitch,		  /* 7  pitch env: env1(aux)-> pitch            */
-	SF_initialFilterFc,	  /* 8  initial filter cutoff                    */
-	SF_initialFilterQ,	  /* 9  filter Q                                 */
-	SF_lfo1ToFilterFc,	  /* 10 filter modulation: lfo1->filter*cutoff    */
-	SF_env1ToFilterFc,	  /* 11 filter env: env1(aux)->filter * cutoff    */
-	SF_endAddrsHi,		  /* 12 high word of endAddrs                   */
-	SF_lfo1ToVolume,	  /* 13 tremolo: lfo1-> volume                  */
-	SF_env2ToVolume,	  /* 14 Env2Depth: env2-> volume                */
-    SF_chorusEffectsSend, /* 15 chorus                                  */
-    SF_reverbEffectsSend, /* 16 reverb                                  */
-    SF_panEffectsSend,	  /* 17 pan                                     */
-    SF_auxEffectsSend,	  /* 18 pan auxdata (internal)                  */
-    SF_sampleVolume,	  /* 19 used internally                         */
-    SF_unused3,		      /* 20                                         */
-    SF_delayLfo1,		  /* 21 delay 0x8000-n*(725us)                  */
-    SF_freqLfo1,		  /* 22 frequency                               */
-    SF_delayLfo2,		  /* 23 delay 0x8000-n*(725us)                  */
-    SF_freqLfo2,		  /* 24 frequency                               */
-    SF_delayEnv1,		  /* 25 delay 0x8000 - n(725us)                 */
-    SF_attackEnv1,		  /* 26 attack                                  */
-    SF_holdEnv1,		  /* 27 hold                                    */
-    SF_decayEnv1,		  /* 28 decay                                   */
-    SF_sustainEnv1,		  /* 29 sustain                                 */
-    SF_releaseEnv1,		  /* 30 release                                 */
-    SF_autoHoldEnv1,	  /* 31                                         */
-    SF_autoDecayEnv1,	  /* 32                                         */
-    SF_delayEnv2,		  /* 33 delay 0x8000 - n(725us)                 */
-    SF_attackEnv2,		  /* 34 attack                                  */
-    SF_holdEnv2,		  /* 35 hold                                    */
-    SF_decayEnv2,		  /* 36 decay                                   */
-    SF_sustainEnv2,		  /* 37 sustain                                 */
-    SF_releaseEnv2,		  /* 38 release                                 */
-    SF_autoHoldEnv2,	  /* 39                                         */
-    SF_autoDecayEnv2,	  /* 40                                         */
-    SF_instrument,		  /* 41                                         */
-    SF_nop,			      /* 42                                         */
-    SF_keyRange,		  /* 43                                         */
-    SF_velRange,		  /* 44                                         */
-    SF_startloopAddrsHi,  /* 45 high word of startloopAddrs             */
-    SF_keynum,		      /* 46                                         */
-    SF_velocity,		  /* 47                                         */
-    SF_initAtten,		  /* 48                                         */
-    SF_keyTuning,		  /* 49                                         */
-    SF_endloopAddrsHi,	  /* 50 high word of endloopAddrs               */
-    SF_coarseTune,		  /* 51                                         */
-    SF_fineTune,		  /* 52                                         */
-    SF_sampleId,		  /* 53                                         */
-    SF_sampleFlags,		  /* 54                                         */
-    SF_samplePitch,		  /* 55 SF1 only                                */
-    SF_scaleTuning,		  /* 56                                         */
-    SF_keyExclusiveClass, /* 57                                         */
-    SF_rootKey,		      /* 58                                         */
-    SF_EOF			      /* 59                                         */
+	SF_startAddrs,		  // 0  sample start address -4 (0to*0xffffff)
+	SF_endAddrs,		  // 1
+	SF_startloopAddrs,	  // 2  loop start address -4 (0 to * 0xffffff)
+	SF_endloopAddrs,	  // 3  loop end address -3 (0 to * 0xffffff)
+	SF_startAddrsHi,	  // 4  high word of startAddrs
+	SF_lfo1ToPitch,		  // 5  main fm: lfo1-> pitch
+	SF_lfo2ToPitch,		  // 6  aux fm:  lfo2-> pitch
+	SF_env1ToPitch,		  // 7  pitch env: env1(aux)-> pitch
+	SF_initialFilterFc,	  // 8  initial filter cutoff
+	SF_initialFilterQ,	  // 9  filter Q
+	SF_lfo1ToFilterFc,	  // 10 filter modulation: lfo1->filter*cutoff
+	SF_env1ToFilterFc,	  // 11 filter env: env1(aux)->filter * cutoff
+	SF_endAddrsHi,		  // 12 high word of endAddrs
+	SF_lfo1ToVolume,	  // 13 tremolo: lfo1-> volume
+	SF_env2ToVolume,	  // 14 Env2Depth: env2-> volume
+	SF_chorusEffectsSend, // 15 chorus
+	SF_reverbEffectsSend, // 16 reverb
+	SF_panEffectsSend,	  // 17 pan
+	SF_auxEffectsSend,	  // 18 pan auxdata (internal)
+	SF_sampleVolume,	  // 19 used internally
+	SF_unused3,		      // 20
+	SF_delayLfo1,		  // 21 delay 0x8000-n*(725us)
+	SF_freqLfo1,		  // 22 frequency
+	SF_delayLfo2,		  // 23 delay 0x8000-n*(725us)
+	SF_freqLfo2,		  // 24 frequency
+	SF_delayEnv1,		  // 25 delay 0x8000 - n(725us)
+	SF_attackEnv1,		  // 26 attack
+	SF_holdEnv1,		  // 27 hold
+	SF_decayEnv1,		  // 28 decay
+	SF_sustainEnv1,		  // 29 sustain
+	SF_releaseEnv1,		  // 30 release
+	SF_autoHoldEnv1,	  // 31
+	SF_autoDecayEnv1,	  // 32
+	SF_delayEnv2,		  // 33 delay 0x8000 - n(725us)
+	SF_attackEnv2,		  // 34 attack
+	SF_holdEnv2,		  // 35 hold
+	SF_decayEnv2,		  // 36 decay
+	SF_sustainEnv2,		  // 37 sustain
+	SF_releaseEnv2,		  // 38 release
+	SF_autoHoldEnv2,	  // 39
+	SF_autoDecayEnv2,	  // 40
+	SF_instrument,		  // 41
+	SF_nop,			      // 42
+	SF_keyRange,		  // 43
+	SF_velRange,		  // 44
+	SF_startloopAddrsHi,  // 45 high word of startloopAddrs
+	SF_keynum,		      // 46
+	SF_velocity,		  // 47
+	SF_initAtten,		  // 48
+	SF_keyTuning,		  // 49
+	SF_endloopAddrsHi,	  // 50 high word of endloopAddrs
+	SF_coarseTune,		  // 51
+	SF_fineTune,		  // 52
+	SF_sampleId,		  // 53
+	SF_sampleFlags,		  // 54
+	SF_samplePitch,		  // 55 SF1 only
+	SF_scaleTuning,		  // 56
+	SF_keyExclusiveClass, // 57
+	SF_rootKey,		      // 58
+	SF_EOF			      // 59
 };
 
 char *sf_gen_text[SF_EOF];
@@ -151,49 +151,49 @@ typedef struct _LayerTable
 
 typedef struct _LayerItem
 {
-	int copy;	/* copy policy */
-	int type;	/* conversion type */
-	int minv;	/* minimum value */
-	int maxv;	/* maximum value */
-	int defv;	/* default value */
+	int copy;	// copy policy
+	int type;	// conversion type
+	int minv;	// minimum value
+	int maxv;	// maximum value
+	int defv;	// default value
 }LayerItem;
 
-/* copy policy */
+// copy policy
 enum
 {
-	L_INHRT,	/* add to global */
-	L_OVWRT,	/* overwrite on global */
-	L_RANGE,	/* range */
-	L_PRSET,	/* preset only */
-	L_INSTR		/* instrument only */
+	L_INHRT,	// add to global
+	L_OVWRT,	// overwrite on global
+	L_RANGE,	// range
+	L_PRSET,	// preset only
+	L_INSTR		// instrument only
 };
 
-/* data type */
+// data type
 enum
 {
-	T_NOP,		/* nothing */
-	T_NOCONV,	/* no conversion */
-	T_OFFSET,	/* address offset */
-	T_HI_OFF,	/* address coarse offset (32k) */
-	T_RANGE,	/* range; composite values (0-127/0-127) */
+	T_NOP,		// nothing
+	T_NOCONV,	// no conversion
+	T_OFFSET,	// address offset
+	T_HI_OFF,	// address coarse offset (32k)
+	T_RANGE,	// range; composite values (0-127/0-127)
 
-	T_CUTOFF,	/* initial cutoff */
-	T_FILTERQ,	/* initial resonance */
-	T_TENPCT,	/* effects send */
-	T_PANPOS,	/* panning position */
-	T_ATTEN,	/* initial attenuation */
-	T_SCALE,	/* scale tuning */
+	T_CUTOFF,	// initial cutoff
+	T_FILTERQ,	// initial resonance
+	T_TENPCT,	// effects send
+	T_PANPOS,	// panning position
+	T_ATTEN,	// initial attenuation
+	T_SCALE,	// scale tuning
 
-	T_TIME,		/* envelope/LFO time */
-	T_TM_KEY,	/* time change per key */
-	T_FREQ,		/* LFO frequency */
-	T_PSHIFT,	/* env/LFO pitch shift */
-	T_CSHIFT,	/* env/LFO cutoff shift */
-	T_TREMOLO,	/* LFO tremolo shift */
-	T_MODSUST,	/* modulation env sustain level */
-	T_VOLSUST,	/* volume env sustain level */
+	T_TIME,		// envelope/LFO time
+	T_TM_KEY,	// time change per key
+	T_FREQ,		// LFO frequency
+	T_PSHIFT,	// env/LFO pitch shift
+	T_CSHIFT,	// env/LFO cutoff shift
+	T_TREMOLO,	// LFO tremolo shift
+	T_MODSUST,	// modulation env sustain level
+	T_VOLSUST,	// volume env sustain level
 
-	T_EOT		/* end of type */
+	T_EOT		// end of type
 };
 
 enum EnumOverWriteMode
@@ -208,7 +208,7 @@ enum EnumOverWriteMode
 
 LayerItem layer_items[SF_EOF];
 
-///r
+
 i8 sf_attenuation_neg  = 0;
 f64 sf_attenuation_pow = 10.0; // sb xfi
 f64 sf_attenuation_mul = 0.005; // sb xfi
@@ -243,12 +243,12 @@ i8 sf_config_addrs_offset = 0; // 1:on
 
 #define SF_CLOSE_EACH_FILE 1
 
-/* return value */
-#define AWE_RET_OK		    0	/* successfully loaded */
-#define AWE_RET_ERR		    1	/* some fatal error occurs */
-#define AWE_RET_SKIP		2	/* some fonts are skipped */
-#define AWE_RET_NOMEM		3	/* out or memory; not all fonts loaded */
-#define AWE_RET_NOT_FOUND	4	/* the file is not found */
+// return value
+#define AWE_RET_OK		    0	// successfully loaded
+#define AWE_RET_ERR		    1	// some fatal error occurs
+#define AWE_RET_SKIP		2	// some fonts are skipped
+#define AWE_RET_NOMEM		3	// out or memory; not all fonts loaded
+#define AWE_RET_NOT_FOUND	4	// the file is not found
 
 
 
@@ -260,7 +260,7 @@ typedef int (*SBKConv)(int gen, int amount);
 
 typedef struct _SFPatchRec
 {
-	int preset, bank, keynote; /* -1 = matches all */
+	int preset, bank, keynote; // -1 = matches all
 }SFPatchRec;
 
 typedef struct _SampleList
@@ -273,10 +273,10 @@ typedef struct _SampleList
 	i32 cutoff_freq;
 	i16 resonance;
 	i16 root, tune;
-	char low, high;		/* key note range */
+	char low, high;		// key note range
 	i8 reverb_send, chorus_send;
 
-	/* Depend on play_mode->rate */
+	// Depend on play_mode->rate
 	i32 vibrato_freq;
 	i32 attack;
 	i32 hold;
@@ -290,7 +290,7 @@ typedef struct _SampleList
 	i32 moddecay;
 	i32 modrelease;
 
-	int bank, keynote;	/* for drum instruments */
+	int bank, keynote;	// for drum instruments
 }SampleList;
 
 typedef struct _InstList
@@ -340,15 +340,15 @@ typedef struct _SFInsts
 typedef struct SF2SampleCacheEntry
 {
 	struct SF2SampleCacheEntry *next;
-	FILE *tf;        // which file the data was read from
-	i64   start;     // file offset of the sample data
-	i64   lowbit;    // file offset of the low 8 bits (24-bit)
-	Sample sample;   // cached buffer + its properties
-	i32   src_rate;  /* source sample rate, before any resampling          */
-	i64   src_len;   /* source data length, before any resampling          */
+	FILE *tf;          // which file the data was read from
+	i64   start;       // file offset of the sample data
+	i64   lowbit;      // file offset of the low 8 bits (24-bit)
+	Sample sample;     // cached buffer + its properties
+	i32   src_rate;    // source sample rate, before any resampling
+	i64   src_len;     // source data length, before any resampling
 	i32   note_to_use;
 	i32   root_key;
-	i32   play_rate; /* output rate at load time                           */
+	i32   play_rate;   // output rate at load time
 }SF2SampleCacheEntry;
 
 
@@ -356,13 +356,13 @@ typedef struct OverrideTiMidityData
 {
 	short overwriteMode;
 	short timRunMode;
-	/* nrpn */
+	// nrpn
 	f64 vibrato_rate;
 	f64 vibrato_cent;
 	f64 vibrato_delay;
 	f64 filter_freq;
 	f64 filter_reso;
-	/* effect */
+	// effect
 	char chorus_send, reverb_send;
 	f64 gsefx_CustomODLv;
 	f64 gsefx_CustomODDrive;
@@ -427,16 +427,16 @@ static SF2SampleCacheEntry *sf2_sample_cache = NULL;
 
 /*----------------------------------------------------------------*/
 
-/* prototypes */
+// prototypes
 
 #define P_GLOBAL	1
 #define P_LAYER		2
 #ifndef FALSE
 #define FALSE       0
-#endif /* FALSE */
+#endif // FALSE
 #ifndef TRUE
 #define TRUE 1
-#endif /* TRUE */
+#endif // TRUE
 
 
 static SFInsts *find_soundfont(const char *sf_file);
@@ -516,7 +516,6 @@ static void load_sfrom(Kasaria *ksr)
 	
 	if((tf = open_file(ksr, sf_file, 1, OF_VERBOSE)) == NULL)
 	{
-		//ctl->cmsg(CMSG_WARNING, VERB_NOISY, "Can't open SFROM.SF2");
 		log_warn("Can't open SFROM.SF2");
 		sfrom_load = -1;
 		return;
@@ -527,7 +526,6 @@ static void load_sfrom(Kasaria *ksr)
 	{
 		close_file(tf);
 		tf = NULL;
-		// ctl->cmsg(CMSG_WARNING, VERB_NOISY, "SFROM : load_soundfont() error");
 		log_warn("SFROM : load_soundfont() error");
 		sfrom_load = -1;
 	    return;
@@ -541,7 +539,6 @@ static void load_sfrom(Kasaria *ksr)
 	{
 		close_file(tf);
 		tf = NULL;
-		// ctl->cmsg(CMSG_WARNING, VERB_NOISY, "SFROM : malloc error");
 		log_warn("SFROM : malloc error");
 		sfrom_load = -1;
 		return;
@@ -604,35 +601,35 @@ static void free_sfrom(void)
  * conversion rules for each type
  *----------------------------------------------------------------*/
 
-/* initial cutoff */
+// initial cutoff
 static int sbk_cutoff(int gen, int val)
 {
 	if(val == 127)
 		return 14400;
 	else
 		return 59 * val + 4366;
-	/*return 50 * val + 4721;*/
+	// return 50 * val + 4721;
 }
 
-/* initial resonance */
+// initial resonance
 static int sbk_filterQ(int gen, int val)
 {
 	return val * 3 / 2;
 }
 
-/* chorus/reverb */
+// chorus/reverb
 static int sbk_tenpct(int gen, int val)
 {
 	return val * 1000 / 256;
 }
 
-/* pan position */
+// pan position
 static int sbk_panpos(int gen, int val)
 {
 	return val * 1000 / 127 - 500;
 }
 
-/* initial attenuation */
+// initial attenuation
 static int sbk_atten(int gen, int val)
 {
 	if(val == 0)
@@ -641,13 +638,13 @@ static int sbk_atten(int gen, int val)
 	return (int)(-200.0 * log10((f64)val * DIV_127) * 10);
 }
 
-/* scale tuning */
+// scale tuning
 static int sbk_scale(int gen, int val)
 {
 	return (val ? 50 : 100);
 }
 
-/* env/lfo time parameter */
+// env/lfo time parameter
 static int sbk_time(int gen, int val)
 {
 	if(val <= 0)
@@ -656,34 +653,34 @@ static int sbk_time(int gen, int val)
 	return (int)(log((f64)val * DIV_1000) / log(2.0) * 1200.0);
 }
 
-/* time change per key */
+// time change per key
 static int sbk_tm_key(int gen, int val)
 {
 	return (int)(val * 5.55);
 }
 
-/* lfo frequency */
+// lfo frequency
 static int sbk_freq(int gen, int val)
 {
 	if(val == 0)
 	{
 		if(gen == SF_freqLfo1)
 			return -725;
-		else /* SF_freqLfo2*/
+		else // SF_freqLfo2
 			return -15600;
 	}
-	/*return (int)(3986.0 * log10((double)val) - 7925.0);*/
+	// return (int)(3986.0 * log10((double)val) - 7925.0);
 	return (int)(1200 * log10((f64)val) / log10(2.0) - 7925.0);
 
 }
 
-/* lfo/env pitch shift */
+// lfo/env pitch shift
 static int sbk_pshift(int gen, int val)
 {
 	return (1200 * val / 64 + 1) / 2;
 }
 
-/* lfo/env cutoff freq shift */
+// lfo/env cutoff freq shift
 static int sbk_cshift(int gen, int val)
 {
 	if(gen == SF_lfo1ToFilterFc)
@@ -692,13 +689,13 @@ static int sbk_cshift(int gen, int val)
 		return (1200 * 6 * val) / 64;
 }
 
-/* lfo volume shift */
+// lfo volume shift
 static int sbk_tremolo(int gen, int val)
 {
 	return (120 * val) / 64;
 }
 
-/* mod env sustain */
+// mod env sustain
 static int sbk_modsust(int gen, int val)
 {
 	if(val < 96)
@@ -707,7 +704,7 @@ static int sbk_modsust(int gen, int val)
 		return 0;
 }
 
-/* vol env sustain */
+// vol env sustain
 static int sbk_volsust(int gen, int val)
 {
 	if(val < 96)
@@ -764,7 +761,7 @@ static SFInsts *new_soundfont(const char *sf_file)
 	{
 		if(!sf->fname)
 		{
-			/* remove the record from the chain to reuse */
+			// remove the record from the chain to reuse
 			if(prev)
 				prev->next = sf->next;
 			else if(sfrecs == sf)
@@ -837,7 +834,7 @@ void free_soundfonts()
 		next = sf->next;
 		safe_free(sf);
 	}
-    sfrecs = NULL;//added by Kobarin
+    sfrecs = NULL; //added by Kobarin
 	free_sfrom();
 }
 
@@ -998,13 +995,11 @@ static void init_sf(Kasaria *ksr, SFInsts *rec)
 	SFInfo sfinfo = {0};
 	int i;
 
-	// ctl->cmsg(CMSG_INFO, VERB_NOISY, "Init soundfonts `%s'", FILENAME_REDUCED(rec->fname));
 	log_info("Init soundfonts `%s'", FILENAME_REDUCED(rec->fname));
 	
 
 	if((rec->tf = open_file(ksr, rec->fname, 1, OF_VERBOSE)) == NULL)
 	{
-		// ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "Can't open soundfont file %s", FILENAME_REDUCED(rec->fname));
 		log_error("Can't open soundfont file %s", FILENAME_REDUCED(rec->fname));
 		end_soundfont(rec);
 		return;
@@ -1028,7 +1023,7 @@ static void init_sf(Kasaria *ksr, SFInsts *rec)
 		int preset = sfinfo.preset[i].preset;
 
 		if(bank == 128 && 0 <= preset && preset < 128 + MAP_BANK_COUNT)
-		    /* FIXME: why not allow exclusion of drumsets? */
+		    // FIXME: why not allow exclusion of drumsets?
 		    alloc_instrument_bank(1, preset);
 		else if(0 <= bank && bank < 128 + MAP_BANK_COUNT)
 		{
@@ -1039,14 +1034,13 @@ static void init_sf(Kasaria *ksr, SFInsts *rec)
 		}
 		else
 		{
-			//ctl->cmsg(CMSG_ERROR, VERB_VERBOSE, "%s: bank/preset is out of range [bank = %d, preset = %d]", FILENAME_REDUCED(rec->fname), bank, preset);
 			log_error("%s: bank/preset is out of range [bank = %d, preset = %d]", FILENAME_REDUCED(rec->fname), bank, preset);
 			continue;
 		}
 		load_font(ksr, &sfinfo, i);
 	}
 
-	/* copy header info */
+	// copy header info
 	rec->version      = sfinfo.version;
 	rec->minorversion = sfinfo.minorversion;
 	rec->samplepos    = sfinfo.samplepos;
@@ -1134,7 +1128,6 @@ Instrument *try_load_soundfont(Kasaria *ksr, SFInsts *rec, int order, int bank, 
 		
 		if((rec->tf = open_file(ksr, rec->fname, 1, OF_VERBOSE)) == NULL)
 		{
-			// ctl->cmsg(CMSG_ERROR, VERB_NORMAL, "Can't open soundfont file %s", FILENAME_REDUCED(rec->fname));
 			log_error("Can't open soundfont file %s", FILENAME_REDUCED(rec->fname));
 			end_soundfont(rec);
 			return NULL;
@@ -1178,9 +1171,9 @@ Instrument *load_soundfont_inst(Kasaria *ksr, int order, int bank, int preset, i
 {
     SFInsts *rec;
     Instrument *ip;
-    /*
-     * Search through all ordered soundfonts
-     */
+    
+    // Search through all ordered soundfonts
+     
     int o = order;
 
     for(rec = sfrecs; rec; rec = rec->next)
@@ -1268,7 +1261,7 @@ static f64 calc_volume(LayerTable *tbl)
 #endif
 }
 
-/* convert from 16bit value to fractional offset (15.15) */
+// convert from 16bit value to fractional offset (15.15)
 static i32 to_offset(i32 offset)
 {
 	return offset << 14;
@@ -1312,7 +1305,7 @@ static i32 to_rate(Kasaria *ksr, i32 diff, int timecent)
 {
     f64 rate;
 
-    if(timecent == -12000)	/* instantaneous attack */
+    if(timecent == -12000)	// instantaneous attack
 	    return (i32)SF_ENVRATE_MAX + 1;
     
     if(diff <= 0)
@@ -1406,12 +1399,12 @@ static void dump_sample_wav(Sample *sample)
     fwrite("WAVE", 1, 4, w);
     fwrite("fmt ", 1, 4, w);
     { u32 c = 16;         fwrite(&c, 4, 1, w); }
-    { u16 c = 1;          fwrite(&c, 2, 1, w); }   /* PCM */
-    { u16 c = 1;          fwrite(&c, 2, 1, w); }   /* mono */
+    { u16 c = 1;          fwrite(&c, 2, 1, w); }   // PCM
+    { u16 c = 1;          fwrite(&c, 2, 1, w); }   // mono
     fwrite(&rate, 4, 1, w);
-    { u32 c = rate * 2;   fwrite(&c, 4, 1, w); }   /* byte rate */
-    { u16 c = 2;          fwrite(&c, 2, 1, w); }   /* block align */
-    { u16 c = 16;         fwrite(&c, 2, 1, w); }   /* bits */
+    { u32 c = rate * 2;   fwrite(&c, 4, 1, w); }   // byte rate
+    { u16 c = 2;          fwrite(&c, 2, 1, w); }   // block align
+    { u16 c = 16;         fwrite(&c, 2, 1, w); }   // bits
     fwrite("data", 1, 4, w);
     fwrite(&data_len, 4, 1, w);
 
@@ -1444,7 +1437,7 @@ static void sf2_sample_cache_add(FILE *tf, i64 start, i64 lowbit, i32 src_rate, 
 	SF2SampleCacheEntry *e;
 
 	if(!sample->data)
-		return;                      /* failed load: don't cache garbage */
+		return;                      // failed load: don't cache garbage
 
 	e = (SF2SampleCacheEntry *)safe_malloc(sizeof(*e));
 	e->next        = sf2_sample_cache;
@@ -1468,7 +1461,7 @@ static void sf2_sample_cache_add(FILE *tf, i64 start, i64 lowbit, i32 src_rate, 
 	e->sample.note_to_use  = sample->note_to_use;
 	sf2_sample_cache = e;
 
-	sample->data_alloced = 0;      /* the instrument only borrows it now */
+	sample->data_alloced = 0;      // the instrument only borrows it now
 }
 
 void free_sf2_sample_cache(void)
@@ -1518,7 +1511,6 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 		i32 src_rate, note_to_use, root_key, play_rate;
 		i64 src_len;
 
-		//ctl->cmsg(CMSG_INFO, VERB_DEBUG, "Rate=%d LV=%d HV=%d LK=%d HK=%d RK=%d Tune=%f Pan=%f [%d]", sp->v.sample_rate, sp->v.low_vel, sp->v.high_vel, sp->v.low_key, sp->v.high_key,  sp->v.root_key, sp->v.tune, sp->v.sample_pan, sp->start);
 		//log_debug("Rate=%d LV=%d HV=%d LK=%d HK=%d RK=%d Tune=%f Pan=%f [%d]", sp->v.sample_rate, sp->v.low_vel, sp->v.high_vel, sp->v.low_key, sp->v.high_key,  sp->v.root_key, sp->v.tune, sp->v.sample_pan, sp->start);
 		
 		memcpy(sample, &sp->v, sizeof(Sample));
@@ -1531,7 +1523,7 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 		root_key    = sample->root_key;
 		play_rate   = ksr->play_mode.rate;
 
-		tf = sp->sfrom ? sfrom_sfrec->tf : rec->tf; ///r
+		tf = sp->sfrom ? sfrom_sfrec->tf : rec->tf;
 
 		if(!ksr->pre_resampling_allowed || !sample->note_to_use || (sample->modes & MODES_LOOPING))
 		{
@@ -1585,7 +1577,6 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 				sample->data         = found->data;
 				sample->data_alloced = 0;
 				
-				// ctl->cmsg(CMSG_INFO, VERB_DEBUG, " * Cached");
 				log_debug(" * Cached");
 				continue;
 			}
@@ -1660,10 +1651,10 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 		*/
 
 #if defined(SF2_24BIT) && (defined(DATA_T_DOUBLE) || defined(DATA_T_FLOAT))
-#if 1 /* SF2_24BIT_SAMPLE_TYPE_FLOAT */
+#if 1 // SF2_24BIT_SAMPLE_TYPE_FLOAT
 		if(sp->lowbit > 0 )
 		{
-		    /* 24 bit */
+		    // 24 bit
 		    i64 cnt;
 		    u8 *lowbit;
 			u16 *highbit;
@@ -1696,17 +1687,17 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 		    }
 		    safe_free(highbit);
 		    safe_free(lowbit);
-			/* set a small blank loop at the tail for avoiding abnormal loop. */	
+			// set a small blank loop at the tail for avoiding abnormal loop.	
 			memset(&tmp_data[frames], 0, sizeof(f32) * 128);
 			
 			if(antialiasing_allowed)
 			    antialiasing_float((f32 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, play_mode->rate);
 		}
 		else
-#else /* SF2_24BIT_SAMPLE_TYPE_INT32 */
+#else // SF2_24BIT_SAMPLE_TYPE_INT32
 		if(sp->lowbit > 0 )
 		{
-		    /* 24 bit */
+		    // 24 bit
 		    i64 cnt;
 		    u8 *lowbit;
 			u16 *highbit;
@@ -1720,87 +1711,88 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 			highbit = (u16 *)safe_large_malloc(sizeof(int16) * frames); // 16bit
 			lowbit = (u8 *)safe_large_malloc(sizeof(int8) * frames); // 8bit
 
-				fseek(tf, sp->start, SEEK_SET);
-				fread(highbit, sp->len, 1, tf);
-				fseek(tf, sp->lowbit, SEEK_SET);
-				fread(lowbit, frames, 1, tf);
+			fseek(tf, sp->start, SEEK_SET);
+			fread(highbit, sp->len, 1, tf);
+			fseek(tf, sp->lowbit, SEEK_SET);
+			fread(lowbit, frames, 1, tf);
 
-				tmp_data = (u32 *)sample->data;
-				for (j = 0; j < frames; j++) {
-					// 24bit to int32full
-					u32 tmp_i = 0; // 1byte 00でいいらしい？
-					tmp_i |= (u32)lowbit[j] << 8; // 2byte
-					tmp_i |= (u32)highbit[j] << 16; // 3-4byte
-#ifndef LITTLE_ENDIAN
-					XCHG_LONG(tmp_i)
-#endif
-						tmp_data[j] = tmp_i;
-				}
-				safe_free(highbit);
-				safe_free(lowbit);
-
-				/* set a small blank loop at the tail for avoiding abnormal loop. */
-			//	tmp_data[frames] = tmp_data[frames + 1] = tmp_data[frames + 2] = 0;			
-				memset(&tmp_data[frames], 0, sizeof(int32) * 128);
-
-				if(antialiasing_allowed)
-					antialiasing_int32((i32 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, play_mode->rate);
-
-			}
-			else
-#endif
-#endif
+			tmp_data = (u32 *)sample->data;
+			for(j = 0; j < frames; j++)
 			{
-				/* 16 bit */
-				frames               = divi_2(sp->len);
-				sample->data_length  = frames << FRACTION_BITS;
-				sample->data         = (sample_t *)safe_large_malloc(sizeof(sample_t) * (frames + 128));
-				
-				memset(sample->data, 0, sizeof(sample_t) * (frames + 128));
-				
-				sample->data_alloced = 1;
-				sample->data_type    = SAMPLE_TYPE_INT16;
+				// 24bit to int32full
+				u32 tmp_i = 0; // 1byte 00でいいらしい？
+				tmp_i |= (u32)lowbit[j] << 8; // 2byte
+				tmp_i |= (u32)highbit[j] << 16; // 3-4byte
+#ifndef LITTLE_ENDIAN
+				XCHG_LONG(tmp_i)
+#endif
+				tmp_data[j] = tmp_i;
+			}
+			safe_free(highbit);
+			safe_free(lowbit);
+
+			// set a small blank loop at the tail for avoiding abnormal loop. */
+			//	tmp_data[frames] = tmp_data[frames + 1] = tmp_data[frames + 2] = 0;			
+			memset(&tmp_data[frames], 0, sizeof(int32) * 128);
+
+			if(antialiasing_allowed)
+				antialiasing_int32((i32 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, play_mode->rate);
+
+		}
+		else
+#endif
+#endif
+		{
+			// 16 bit
+			frames               = divi_2(sp->len);
+			sample->data_length  = frames << FRACTION_BITS;
+			sample->data         = (sample_t *)safe_large_malloc(sizeof(sample_t) * (frames + 128));
+			
+			memset(sample->data, 0, sizeof(sample_t) * (frames + 128));
+			
+			sample->data_alloced = 1;
+			sample->data_type    = SAMPLE_TYPE_INT16;
 
 							
 
-				//fseek(tf, sp->start, SEEK_SET);
-				fseek(tf, (long)sp->start, SEEK_SET);
+			//fseek(tf, sp->start, SEEK_SET);
+			fseek(tf, (long)sp->start, SEEK_SET);
   
-				//fread(sample->data, sp->len, 1, tf);
-				size_t got = fread(sample->data, 1, sp->len, tf);
+			//fread(sample->data, sp->len, 1, tf);
+			size_t got = fread(sample->data, 1, sp->len, tf);
 
-				long   n;
-                short  maxamp = 1, a;
-                short *p      = (short *)sample->data;
-                for(n = 0; n < frames; n++)
-                {
-                    a = *p++;
-                    if(a < 0) a = -a;
-                    if(a > maxamp) maxamp = a;
-                }
-                sample->volume = 32768.0 / (f64)maxamp * sample->volume;
+			long   n;
+            short  maxamp = 1, a;
+            short *p      = (short *)sample->data;
+            for(n = 0; n < frames; n++)
+            {
+                a = *p++;
+                if(a < 0) a = -a;
+                if(a > maxamp) maxamp = a;
+            }
+            sample->volume = 32768.0 / (f64)maxamp * sample->volume;
 
-				//if(dump_wav_counter < 40)   // Could be an useful feature to add in the API
-                //    dump_sample_wav(sample);
+			//if(dump_wav_counter < 40)   // Could be an useful feature to add in the API
+            //    dump_sample_wav(sample);
 				
 
 #ifndef LITTLE_ENDIAN
-				for(j = 0; j < frames; j++)
-					sample->data[j] = (i16)(LE_SHORT(tmp_data[j]));
+			for(j = 0; j < frames; j++)
+				sample->data[j] = (i16)(LE_SHORT(tmp_data[j]));
 #endif
-				/* set a small blank loop at the tail for avoiding abnormal loop. */
-			    //sample->data[frames] = sample->data[frames + 1] = sample->data[frames + 2] = 0;
-				//memset(&sample->data[frames], 0, sizeof(sample_t) * 128);
+			// set a small blank loop at the tail for avoiding abnormal loop.
+			// sample->data[frames] = sample->data[frames + 1] = sample->data[frames + 2] = 0;
+			// memset(&sample->data[frames], 0, sizeof(sample_t) * 128);
 
-				if(ksr->antialiasing_allowed)
-					//antialiasing((i16 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, ksr->play_mode.rate);
-					antialiasing(sample, ksr->play_mode.rate);
-			}
-		//}
+			if(ksr->antialiasing_allowed)
+				//antialiasing((i16 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, ksr->play_mode.rate);
+				antialiasing(sample, ksr->play_mode.rate);
+		}
+	//}
 
-		/* resample it if possible */
-		if(ksr->opt_pre_resamplation && sample->note_to_use && !(sample->modes & MODES_LOOPING))
-			pre_resample(ksr, sample);
+	// resample it if possible
+	if(ksr->opt_pre_resamplation && sample->note_to_use && !(sample->modes & MODES_LOOPING))
+		pre_resample(ksr, sample);
 		
 #ifdef LOOKUP_HACK
 		squash_sample_16to8(sample);
@@ -1833,7 +1825,7 @@ int exclude_soundfont(int bank, int preset, int keynote)
 	return 0;
 }
 
-/* check the instrument is specified to be excluded */
+// check the instrument is specified to be excluded
 static int is_excluded(SFInsts *rec, int bank, int preset, int keynote)
 {
 	SFExclude *p;
@@ -1869,7 +1861,7 @@ int order_soundfont(int bank, int preset, int keynote, int order)
 	return 0;
 }
 
-/* check the instrument is specified to be ordered */
+// check the instrument is specified to be ordered
 static int is_ordered(SFInsts *rec, int bank, int preset, int keynote)
 {
 	SFOrder *p;
@@ -1892,11 +1884,11 @@ int load_font(Kasaria *ksr, SFInfo *sf, int pridx)
 	int rc, j, nlayers;
 	SFGenLayer *layp, *globalp;
 
-	/* if layer is empty, skip it */
+	// if layer is empty, skip it
 	if((nlayers = preset->hdr.nlayers) <= 0 || (layp = preset->hdr.layer) == NULL)
 		return AWE_RET_SKIP;
 	
-	/* check global layer */
+	// check global layer
 	globalp = NULL;
 	if(is_global(layp))
 	{
@@ -1905,12 +1897,12 @@ int load_font(Kasaria *ksr, SFInfo *sf, int pridx)
 		nlayers--;
 	}
 	
-	/* parse for each preset layer */
+	// parse for each preset layer
 	for(j = 0; j < nlayers; j++, layp++)
 	{
 		LayerTable tbl;
 
-		/* set up table */
+		// set up table
 		clear_table(&tbl);
 		
 		if(globalp)
@@ -1918,7 +1910,7 @@ int load_font(Kasaria *ksr, SFInfo *sf, int pridx)
 		
 		set_to_table(sf, &tbl, layp, P_LAYER);
 
-		/* parse the instrument */
+		// parse the instrument
 		rc = parse_layer(ksr, sf, pridx, &tbl, 0);
 		if(rc == AWE_RET_ERR || rc == AWE_RET_NOMEM)
 			return rc;
@@ -1930,7 +1922,7 @@ int load_font(Kasaria *ksr, SFInfo *sf, int pridx)
 
 /*----------------------------------------------------------------*/
 
-/* parse a preset layer and convert it to the patch structure */
+// parse a preset layer and convert it to the patch structure
 static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int level)
 {
 	SFInstHdr *inst;
@@ -1942,13 +1934,11 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 
 	if(level >= 2)
 	{
-	//	fprintf(stderr, "parse_layer: too deep instrument level\n");
-		//ctl->cmsg(CMSG_INFO, VERB_DEBUG, "parse_layer: too deep instrument level :%d", pridx);///r c214
 		log_debug("parse_layer: too deep instrument level :%d", pridx);
 		return AWE_RET_ERR;
 	}
 
-	/* instrument must be defined */
+	// instrument must be defined
 	if(!tbl->set[SF_instrument])
 	{
 	    log_trace("parse_layer pridx=%d lvl=%d: SKIP no instrument gen", pridx, level);
@@ -1967,7 +1957,7 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 			return AWE_RET_SKIP;
 #endif
 
-	/* if layer is empty, skip it */
+	// if layer is empty, skip it
 	if((nlayers = inst->hdr.nlayers) <= 0 || (lay = inst->hdr.layer) == NULL)
     {
         log_debug("parse_layer pridx=%d lvl=%d: SKIP inst=%d nlayers=%d", pridx, level, tbl->val[SF_instrument], nlayers);
@@ -1976,7 +1966,7 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 
 	reset_last_sample_info();
 
-	/* check global layer */
+	// check global layer
 	globalp = NULL;
 	if(is_global(lay))
 	{
@@ -1985,7 +1975,7 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 		nlayers--;
 	}
 
-	/* parse for each layer */
+	// parse for each layer
 	for(i = 0; i < nlayers; i++, lay++)
 	{
 		LayerTable ctbl;
@@ -1998,7 +1988,7 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 
 		if(!ctbl.set[SF_sampleId])
 		{
-			/* recursive loading */
+			// recursive loading
 			merge_table(sf, &ctbl, tbl);
 
 			if(!sanity_range(&ctbl))
@@ -2041,7 +2031,7 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 			if(!sanity_range(&ctbl))
 				continue;
 
-			/* load the info data */
+			// load the info data
 			if((rc = make_patch(ksr, sf, pridx, &ctbl)) == AWE_RET_ERR)
 				return rc;
 		}
@@ -2068,14 +2058,14 @@ static int is_global(SFGenLayer *layer)
  * layer table handlers
  *----------------------------------------------------------------*/
 
-/* initialize layer table */
+// initialize layer table
 static void clear_table(LayerTable *tbl)
 {
 	memset(tbl->val, 0, sizeof(tbl->val));
 	memset(tbl->set, 0, sizeof(tbl->set));
 }
 
-/* set items in a layer to the table */
+// set items in a layer to the table
 static void set_to_table(SFInfo *sf, LayerTable *tbl, SFGenLayer *lay, int level)
 {
 	int i;
@@ -2083,13 +2073,13 @@ static void set_to_table(SFInfo *sf, LayerTable *tbl, SFGenLayer *lay, int level
 	{
 		SFGenRec *gen       = &lay->list[i];
 		
-		/* copy the value regardless of its copy policy */
+		// copy the value regardless of its copy policy
 		tbl->val[gen->oper] = gen->amount;
 		tbl->set[gen->oper] = level;
 	}
 }
 
-/* add an item to the table */
+// add an item to the table
 static void add_item_to_table(LayerTable *tbl, int oper, int amount, int level)
 {
 	LayerItem *item = &layer_items[oper];
@@ -2098,7 +2088,7 @@ static void add_item_to_table(LayerTable *tbl, int oper, int amount, int level)
 	switch(item->copy)
 	{
 	case L_INHRT:
-		{ ///r
+		{
 			i32 tmp = tbl->val[oper];
 			tmp += amount;
 			if(tmp > INT16_MAX)
@@ -2113,7 +2103,7 @@ static void add_item_to_table(LayerTable *tbl, int oper, int amount, int level)
 	break;
 	case L_PRSET:
 	case L_INSTR:
-		/* do not overwrite */
+		// do not overwrite
 		if(!tbl->set[oper])
 			tbl->val[oper] = amount;
 	break;
@@ -2141,7 +2131,7 @@ static void add_item_to_table(LayerTable *tbl, int oper, int amount, int level)
 	}
 }
 
-/* merge two tables */
+// merge two tables
 static void merge_table(SFInfo *sf, LayerTable *dst, LayerTable *src)
 {
 	int i;
@@ -2152,7 +2142,7 @@ static void merge_table(SFInfo *sf, LayerTable *dst, LayerTable *src)
 			if(sf->version == 1)
 			{
 				if(!dst->set[i] || i == SF_keyRange || i == SF_velRange)
-					/* just copy it */
+					// just copy it
 					dst->val[i] = src->val[i];
 			}
 			else
@@ -2163,12 +2153,12 @@ static void merge_table(SFInfo *sf, LayerTable *dst, LayerTable *src)
 	}
 }
 
-/* merge and set default values */
+// merge and set default values
 static void init_and_merge_table(SFInfo *sf, LayerTable *dst, LayerTable *src)
 {
 	int i;
 
-	/* default value is not zero */
+	// default value is not zero
 	if (sf->version == 1)
 	{
 		layer_items[SF_sustainEnv1].defv = 1000;
@@ -2184,7 +2174,7 @@ static void init_and_merge_table(SFInfo *sf, LayerTable *dst, LayerTable *src)
 		layer_items[SF_freqLfo2].defv    = 0;
 	}
 
-	/* set default */
+	// set default
 	for(i = 0; i < SF_EOF; i++)
 	{
 		if(!dst->set[i])
@@ -2192,7 +2182,7 @@ static void init_and_merge_table(SFInfo *sf, LayerTable *dst, LayerTable *src)
 	}
 	
 	merge_table(sf, dst, src);
-	/* convert from SBK to SF2 */
+	// convert from SBK to SF2
 	if(sf->version == 1)
 	{
 		for(i = 0; i < SF_EOF; i++)
@@ -2273,7 +2263,6 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
 
     if(sample->sampletype & SF_SAMPLETYPE_ROM && sfrom_load < 1) /* is ROM sample? */
     {
-	    // ctl->cmsg(CMSG_INFO, VERB_DEBUG, "preset %d is ROM sample: 0x%x", pridx, sample->sampletype);
 		log_debug("preset %d is ROM sample: 0x%x", pridx, sample->sampletype);
 	    return AWE_RET_SKIP;
     }
@@ -2294,11 +2283,9 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
 	{
 	    int pat_keynote = (bank == 128) ? -1 : keynote;
 
-        // ctl->cmsg(CMSG_INFO, VERB_DEBUG_SILLY, "SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
         //log_debug("SF make inst pridx=%d bank=%d preset=%d keynote=%d", pridx, bank, preset, keynote);
         if(is_excluded(current_sfrec, bank, preset, keynote))
         {
-            // ctl->cmsg(CMSG_INFO, VERB_DEBUG_SILLY, " * Excluded");
             log_debug(" * Excluded");
             continue;
         }
@@ -2331,7 +2318,7 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
             current_sfrec->instlist[addr] = ip;
         }
 
-        /* new sample */
+        // new sample
         sp = (SampleList*)SFMalloc(current_sfrec, sizeof(SampleList));
         memset(sp, 0, sizeof(SampleList));
 	
@@ -2348,7 +2335,7 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
 		
         make_info(ksr, sf, sp, tbl);
 
-        /* add a sample */
+        // add a sample
         if(!ip->slist)
             ip->slist = sp;
         else
@@ -2356,7 +2343,7 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
             SampleList *cur, *prev;
             i32 start;
             
-            /* Insert sample */
+            // Insert sample
             start = sp->start;
             cur = ip->slist;
             prev = NULL;
@@ -2378,7 +2365,7 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
         }
     
         ip->samples++;
-	} /* for (;;) */
+	} // for (;;)
 
 
 	if(done == 0)
@@ -2400,14 +2387,14 @@ static void make_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *tbl)
 	set_rootkey(sf, vp, tbl);
 	set_rootfreq(vp);
 
-	/* tremolo & vibrato */
+	// tremolo & vibrato
 #ifndef SF_SUPPRESS_TREMOLO
 	convert_tremolo(vp, tbl);
-#endif /* SF_SUPPRESS_TREMOLO */
+#endif // SF_SUPPRESS_TREMOLO
 
 #ifndef SF_SUPPRESS_VIBRATO
 	convert_vibrato(vp, tbl);
-#endif /* SF_SUPPRESS_VIBRATO */
+#endif // SF_SUPPRESS_VIBRATO
 
 
 #ifndef CFG_FOR_SF //elion chg
@@ -2457,7 +2444,7 @@ static void make_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *tbl)
 
 static void set_envelope_parameters(SampleList *vp)
 {
-	/* convert envelope parameters */
+	// convert envelope parameters
 	vp->v.envelope_offset[0] = to_offset(65535);
 	vp->v.envelope_rate[0]   = vp->attack;
 
@@ -2479,7 +2466,7 @@ static void set_envelope_parameters(SampleList *vp)
 	vp->v.envelope_offset[5] = 0;
 	vp->v.envelope_rate[5]   = vp->release;
 
-	/* convert modulation envelope parameters */
+	// convert modulation envelope parameters
 	vp->v.modenv_offset[0] = to_offset(65535);
 	vp->v.modenv_rate[0]   = vp->modattack;
 
@@ -2505,7 +2492,7 @@ static void set_envelope_parameters(SampleList *vp)
 	vp->v.modenv_rate[5]   = vp->modrelease;
 }
 
-/* set sample address */
+// set sample address
 
 static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *tbl)
 {
@@ -2518,7 +2505,7 @@ static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable
 		is_rom = 1;
 	}
 	
-    /* set sample position */
+    // set sample position
     vp->start = sp->startsample;
 	if(sf_config_addrs_offset)
 		vp->start += (tbl->val[SF_startAddrsHi] << 15) + tbl->val[SF_startAddrs];
@@ -2533,7 +2520,7 @@ static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable
 
 	vp->v.offset = 0;
 
-    /* set loop position */
+    // set loop position
 	vp->v.loop_start = sp->startloop;
 	vp->v.loop_end   = sp->endloop;
 
@@ -2546,12 +2533,12 @@ static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable
 	vp->v.loop_start += (tbl->val[SF_startloopAddrsHi] << 15) + tbl->val[SF_startloopAddrs];
 	vp->v.loop_end   += (tbl->val[SF_endloopAddrsHi] << 15)   + tbl->val[SF_endloopAddrs];
 
-    /* set data length */
+    // set data length
     vp->v.data_length = vp->len + 1;
 
 	if(!(sp->sampletype & SF_SAMPLETYPE_COMPRESSED))
 	{
-		/* fix loop position */
+		// fix loop position
 		if(vp->v.loop_end > vp->len + 1)
 			vp->v.loop_end = vp->len + 1;
 		
@@ -2568,7 +2555,7 @@ static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable
 		}
 	}
 
-    /* Sample rate */
+    // Sample rate
 	if(sp->samplerate > SF_SAMPLERATE_MAX)
 	    sp->samplerate = SF_SAMPLERATE_MAX;
 	else if(sp->samplerate < SF_SAMPLERATE_MIN)
@@ -2577,58 +2564,58 @@ static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable
 	
     vp->v.sample_rate = sp->samplerate;
 
-    /* sample mode */
-//    vp->v.modes = vp->lowbit > 0 ? MODES_24BIT : MODES_16BIT;
+    // sample mode
+    //    vp->v.modes = vp->lowbit > 0 ? MODES_24BIT : MODES_16BIT;
     vp->v.modes = MODES_16BIT;
 
-    /* volume envelope & total volume */
+    // volume envelope & total volume
     vp->v.volume  = calc_volume(tbl) * current_sfrec->amptune;
 	vp->v.cfg_amp = 1.0;
 
 #ifndef SF_SUPPRESS_ENVELOPE
 	convert_volume_envelope(ksr, vp, tbl);
-#endif /* SF_SUPPRESS_ENVELOPE */
+#endif // SF_SUPPRESS_ENVELOPE
 	set_envelope_parameters(vp);
 
 	switch(tbl->val[SF_sampleFlags])
 	{
 	default:
-	case 0: /* no looping */
-	case 2: /* unused , no looping */
-		/* set a small blank loop at the tail for avoiding abnormal loop. */
+	case 0: // no looping
+	case 2: // unused , no looping
+		// set a small blank loop at the tail for avoiding abnormal loop.
 		vp->v.loop_start = vp->len;
 		vp->v.loop_end = vp->len + 1;
 		break;
-	case 1: /* looping */
+	case 1: // looping
 		vp->v.modes |= MODES_LOOPING | MODES_SUSTAIN;
-		vp->v.data_length = vp->v.loop_end; /* strip the tail */
+		vp->v.data_length = vp->v.loop_end; // strip the tail
 		break;
-	case 3: /* looping , release sample */
+	case 3: // looping , release sample
 		vp->v.modes |= MODES_LOOPING | MODES_SUSTAIN | MODES_RELEASE;
 		break;	
 	}
 
-    /* convert to fractional samples */
+    // convert to fractional samples
     vp->v.offset      <<= FRACTION_BITS;
     vp->v.data_length <<= FRACTION_BITS;
     vp->v.loop_start  <<= FRACTION_BITS;
     vp->v.loop_end    <<= FRACTION_BITS;
 
-    /* point to the file position */
+    // point to the file position
 	if(sp->sampletype & SF_SAMPLETYPE_COMPRESSED)
 	{
-		vp->start += (is_rom ? sfrom_sfinfo.samplepos : sf->samplepos); ///r
-		vp->lowbit = is_rom ? sfrom_sfinfo.lowbitpos  : sf->lowbitpos; ///r
+		vp->start += (is_rom ? sfrom_sfinfo.samplepos : sf->samplepos);
+		vp->lowbit = is_rom ? sfrom_sfinfo.lowbitpos  : sf->lowbitpos;
 	}
 	else
 	{
-		vp->start  = vp->start * 2 + (is_rom ? sfrom_sfinfo.samplepos : sf->samplepos); ///r
-		vp->lowbit = is_rom ? sfrom_sfinfo.lowbitpos : sf->lowbitpos; ///r
+		vp->start  = vp->start * 2 + (is_rom ? sfrom_sfinfo.samplepos : sf->samplepos);
+		vp->lowbit = is_rom ? sfrom_sfinfo.lowbitpos : sf->lowbitpos;
 		vp->len   *= 2;
 	}
 
-	vp->v.vel_to_fc           = -2400; /* SF2 default value */
-	vp->v.vel_to_fc_threshold = 0; ///r c214  def64
+	vp->v.vel_to_fc           = -2400; // SF2 default value
+	vp->v.vel_to_fc_threshold = 0;     // c214  def64
 	vp->v.key_to_fc           = vp->v.vel_to_resonance = 0;
 	vp->v.envelope_velf_bpo   = vp->v.modenv_velf_bpo = 64;	
 	vp->v.envelope_keyf_bpo   = vp->v.modenv_keyf_bpo = 60;
@@ -2650,7 +2637,7 @@ static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable
 		vp->v.modenv_to_fc = sf_limit_modenv_fc;
 	else if(vp->v.modenv_to_fc < -sf_limit_modenv_fc)
 		vp->v.modenv_to_fc = -sf_limit_modenv_fc;
-///r	
+	
 	vp->v.cutoff_low_limit  = -1; 
 	vp->v.cutoff_low_keyf   = 0; // cent
 	vp->v.inst_type         = INST_SF2;
@@ -2686,13 +2673,13 @@ static int last_sample_instrument;
 static int last_sample_keyrange;
 static SampleList *last_sample_list;
 
-///r
+
 static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *tbl)
 {
     int val;
     SFSampleInfo *sample = &sf->sample[tbl->val[SF_sampleId]];
 
-    /* key range */
+    // key range
     if(tbl->set[SF_keyRange])
     {
 	    vp->low = LOWNUM(tbl->val[SF_keyRange]);
@@ -2707,7 +2694,7 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
     vp->v.low_key = vp->low;
     vp->v.high_key = vp->high;
     
-    /* velocity range */
+    // velocity range
     if(tbl->set[SF_velRange])
     {
 		vp->v.low_vel = LOWNUM(tbl->val[SF_velRange]);
@@ -2719,15 +2706,13 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
 		vp->v.high_vel = 127;
 	}
 
-    /* fixed key & velocity */
+    // fixed key & velocity
     if(tbl->set[SF_keynum])
 		vp->v.note_to_use = (int)tbl->val[SF_keynum];
     
 	if(tbl->set[SF_velocity] && (int)tbl->val[SF_velocity] != 0)
-	{
-		//ctl->cmsg(CMSG_INFO, VERB_DEBUG, "error: fixed-velocity is not supported.");
 		log_debug("error: fixed-velocity is not supported.");
-	}
+	
 	
 	vp->v.sample_type     = sample->sampletype;
 	vp->v.sf_sample_index = tbl->val[SF_sampleId];
@@ -2794,18 +2779,18 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
 		}
 	}
 
-	/* Remember this sample in case the next one is a match */
+	// Remember this sample in case the next one is a match
 	last_sample_type       = sample->sampletype;
 	last_sample_instrument = tbl->val[SF_instrument];
 	last_sample_keyrange   = tbl->val[SF_keyRange];
 	last_sample_list       = vp;
 	
-	/* panning position: -0.5 to 0.5 */
+	// panning position: -0.5 to 0.5
 	vp->v.sample_pan = 0.0;
 	val = 0;	
 	if(tbl->set[SF_panEffectsSend])
 	{
-		val = (int)tbl->val[SF_panEffectsSend];// elion add
+		val = (int)tbl->val[SF_panEffectsSend]; // elion add
 		if(val < -500)
 			val = -500;
 		else if(val > 500)
@@ -2814,13 +2799,13 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
 	
     if(sample->sampletype & SF_SAMPLETYPE_MONO)
     {
-        /* monoSample = 1 */
+        // monoSample = 1
 		if(val != 0)
 			vp->v.sample_pan = (f64)val * DIV_1000;
 	}
 	else if(sample->sampletype & SF_SAMPLETYPE_RIGHT)
 	{
-	    /* rightSample = 2 */
+	    // rightSample = 2
 		val += 500;
 		if(val > 500)
 			val = 500;
@@ -2828,7 +2813,7 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
 	}
 	else if(sample->sampletype & SF_SAMPLETYPE_LEFT)
 	{
-	    /* leftSample = 4 */
+	    // leftSample = 4
 		val -= 500;
 		if(val < -500)
 			val = -500;
@@ -2836,11 +2821,10 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
 	}
 	else if(sample->sampletype & SF_SAMPLETYPE_LINKED)
 	{	
-	    /* linkedSample = 8 */
+	    // linkedSample = 8
 		if(val != 0)
 			vp->v.sample_pan = (f64)val * DIV_1000;
 		
-		// ctl->cmsg(CMSG_ERROR, VERB_NOISY, "error: linkedSample is not supported.");
 		log_debug("error: linkedSample is not supported.");
 	}
 
@@ -2864,7 +2848,7 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
 	current_sfrec->def_resonance_allowed = 1;
 #endif
 
-    /* initial cutoff & resonance */
+    // initial cutoff & resonance
     vp->cutoff_freq = 20005;
 
     if((int)tbl->val[SF_initialFilterFc] < 0)tbl->set[SF_initialFilterFc] = tbl->val[SF_initialFilterFc] = 0;
@@ -2912,8 +2896,8 @@ static void set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *
     
 	vp->v.resonance = vp->resonance;
 
-#if 0 /* Not supported */
-    /* exclusive class key */
+#if 0 // Not supported
+    // exclusive class key
     vp->exclusiveClass = tbl->val[SF_keyExclusiveClass];
 #endif
 }
@@ -2935,21 +2919,21 @@ static int abscent_to_Hz(int abscents)
 
 /*----------------------------------------------------------------*/
 
-#define SF_MODENV_CENT_MAX 1200	/* Live! allows only +-1200cents. */
+#define SF_MODENV_CENT_MAX 1200	// Live! allows only +-1200cents.
 
-/* calculate root key & fine tune */
+// calculate root key & fine tune
 static void set_rootkey(SFInfo *sf, SampleList *vp, LayerTable *tbl)
 {
 	SFSampleInfo *sp = &sf->sample[tbl->val[SF_sampleId]];
 	int temp;
 	int is_rom = 0;
 	
-	/* scale factor */
+	// scale factor
 	vp->v.scale_factor = 1024 * (f64) tbl->val[SF_scaleTuning] / 100 + 0.5;
-	/* set initial root key & fine tune */
+	// set initial root key & fine tune
 	if(sf->version == 1 && tbl->set[SF_samplePitch])
 	{
-		/* set from sample pitch */
+		// set from sample pitch
 		vp->root = tbl->val[SF_samplePitch] / 100;
 		vp->tune = -tbl->val[SF_samplePitch] % 100;
 		if(vp->tune <= -50)
@@ -2957,11 +2941,11 @@ static void set_rootkey(SFInfo *sf, SampleList *vp, LayerTable *tbl)
 	}
 	else
 	{
-		/* from sample info */
+		// from sample info
 		vp->root = sp->originalPitch;
 		vp->tune = (i8) sp->pitchCorrection;
 	}
-	/* orverride root key */
+	// orverride root key
 	if(tbl->set[SF_rootKey])
 		vp->root = tbl->val[SF_rootKey];
 	else if(vp->bank == 128 && vp->v.scale_factor != 0)
@@ -2975,7 +2959,7 @@ static void set_rootkey(SFInfo *sf, SampleList *vp, LayerTable *tbl)
 	if(tbl->set[SF_fineTune])
 		vp->tune += (i32)tbl->val[SF_fineTune];
 
-	/* correct too high pitch */
+	// correct too high pitch
 	if(vp->root >= (i32)(vp->high) + 60)
 		vp->root -= 60;
 	
@@ -2992,7 +2976,7 @@ static void set_rootfreq(SampleList *vp)
 	int root = vp->root;
 	int tune = 0.5 - 256.0 * (f64)vp->tune * DIV_100;
 
-	/* 0 <= tune < 255 */
+	// 0 <= tune < 255
 	while(tune < 0)
 		root--, tune += 256;
 	
@@ -3002,17 +2986,17 @@ static void set_rootfreq(SampleList *vp)
 	if(root < 0)
 	{
 		vp->v.root_freq = (f64)freq_table[0] * (f64) bend_fine[tune] / bend_coarse[-root] + 0.5;
-		vp->v.scale_freq = 0;		/* scale freq */
+		vp->v.scale_freq = 0;		// scale freq
 	}
 	else if(root > 127)
 	{
 		vp->v.root_freq = (f64)freq_table[127] * (f64) bend_fine[tune] * bend_coarse[root - 127] + 0.5;
-		vp->v.scale_freq = 127;		/* scale freq */
+		vp->v.scale_freq = 127;		// scale freq
 	}
 	else
 	{
 		vp->v.root_freq = (f64)freq_table[root] * (f64) bend_fine[tune] + 0.5;
-		vp->v.scale_freq = root;	/* scale freq */
+		vp->v.scale_freq = root;	// scale freq
 	}
 /*
 	if (root || root < 0 || root > 127) {
@@ -3036,7 +3020,7 @@ static void set_rootfreq(SampleList *vp)
 /*----------------------------------------------------------------*/
 
 
-/*Pseudo Reverb*/
+// Pseudo Reverb
 i32 modify_release;
 
 i32 get_sf_release(Kasaria *ksr, i32 v)
@@ -3060,7 +3044,7 @@ static i32 abscent_to_mHz(int abscents)
 	return ((f64)8176 * pow(2.0, (f64)abscents * DIV_1200) + 0.5);
 }
 
-/* volume envelope parameters */
+// volume envelope parameters
 static void convert_volume_envelope(Kasaria *ksr, SampleList *vp, LayerTable *tbl)
 {
 	f64 tmp;
@@ -3079,7 +3063,7 @@ static void convert_volume_envelope(Kasaria *ksr, SampleList *vp, LayerTable *tb
     vp->v.envelope_delay = (ksr->play_mode.rate * to_msec((f64)(tbl->set[SF_delayEnv2] ? tbl->val[SF_delayEnv2] : -12000)) * 0.001);
 
 
-    //vp->release = to_rate(ksr, 65535, -12000); // Temporarily because I'm too stupid to figure everything out
+    // vp->release = to_rate(ksr, 65535, -12000); // Temporarily because I'm too stupid to figure everything out
 	// convert modulation envelope
 	tmp = to_msec(tbl->set[SF_attackEnv1] ? tbl->val[SF_attackEnv1] : -12000);
 	
@@ -3101,7 +3085,7 @@ static void convert_volume_envelope(Kasaria *ksr, SampleList *vp, LayerTable *tb
 /*----------------------------------------------------------------
  * ModLFO (LFO1) conversion
  *----------------------------------------------------------------*/
-///r
+
 static void convert_tremolo(SampleList *vp, LayerTable *tbl)
 {
     i32 freq;
@@ -3181,7 +3165,7 @@ static void convert_tremolo(SampleList *vp, LayerTable *tbl)
 /*----------------------------------------------------------------
  * VibLFO (LFO2) conversion
  *----------------------------------------------------------------*/
-///r
+
 static void convert_vibrato(SampleList *vp, LayerTable *tbl)
 {
     i32 freq;

@@ -61,11 +61,11 @@ resample.c
 #include <immintrin.h>
 #define RESAMPLE_BLOCK 8
 
-/* True if the next 8-sample block stays fully below lim (fixed-point). */
+// True if the next 8-sample block stays fully below lim (fixed-point).
 #define KSR_RS_BLOCK_FITS_UP(ofs, incr, lim) \
     (((((ofs) + (RESAMPLE_BLOCK - 1) * (incr)) >> FRACTION_BITS) + 1) < ((lim) >> FRACTION_BITS))
 
-/* True if the next 8-sample block (incr < 0) stays inside [ls, le). */
+// True if the next 8-sample block (incr < 0) stays inside [ls, le).
 #define KSR_RS_BLOCK_FITS_DOWN(ofs, incr, ls, le) \
     (((((ofs) + (RESAMPLE_BLOCK - 1) * (incr)) >> FRACTION_BITS) >= ((ls) >> FRACTION_BITS)) && \
      ((((ofs) >> FRACTION_BITS) + 1) < ((le) >> FRACTION_BITS)))
@@ -81,10 +81,10 @@ static inline long rs_block8(long ofs, long incr, const sample_t *__restrict src
     __m256i idx  = _mm256_srli_epi32(o, FRACTION_BITS);
     __m256i frac = _mm256_and_si256(o, _mm256_set1_epi32((int)FRACTION_MASK));
 
-    /* 4-byte gather at src + idx*2 reads shorts [idx] and [idx+1] */
+    // 4-byte gather at src + idx*2 reads shorts [idx] and [idx+1]
     __m256i g  = _mm256_i32gather_epi32((const int *)src, idx, 2);
-    __m256i v1 = _mm256_srai_epi32(_mm256_slli_epi32(g, 16), 16); /* low short, sign-extended */
-    __m256i v2 = _mm256_srai_epi32(g, 16);                        /* high short, sign-extended */
+    __m256i v1 = _mm256_srai_epi32(_mm256_slli_epi32(g, 16), 16); // low short, sign-extended
+    __m256i v2 = _mm256_srai_epi32(g, 16);                        // high short, sign-extended
 
     __m256i d = _mm256_mullo_epi32(_mm256_sub_epi32(v2, v1), frac);
     d = _mm256_add_epi32(_mm256_srai_epi32(d, FRACTION_BITS), v1);
@@ -213,7 +213,7 @@ static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
 static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
 {
 
-    /* Play sample until end-of-loop, skip back and continue. */
+    // Play sample until end-of-loop, skip back and continue.
 
     INTERPVARS;
     long      ofs  = vp->sample_offset;

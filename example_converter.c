@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     ksr_set_fast_decay(converter, true);
     ksr_set_antialiasing(converter, true);
     ksr_set_sample_rate(converter, 48000); // Optional
-    ksr_set_max_voices(converter, 5000);
+    ksr_set_max_voices(converter, 2026);
     
     // Skip notes with velocities in between the low and high specified threasholds
     // And also enable the filter

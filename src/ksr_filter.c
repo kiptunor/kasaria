@@ -102,7 +102,7 @@ static void designfir(f64 *g, f64 fc)
         g[i]  = sin((f64)omega * fc) / omega;
     }
 
-    att  = 40.; /* attenuation  in  db */
+    att  = 40.; // attenuation  in  db
     beta = (f64)exp(log((f64)0.58417 * (att - 20.96)) * 0.4) + 0.07886 * (att - 20.96);
     kaiser(w, ORDER2, beta);
 

@@ -138,7 +138,7 @@ void select_sample(Kasaria *ksr, int v, Instrument *ip)
 
 void recompute_freq(Kasaria *ksr, int v)
 {
-    int sign = (ksr->voice[v].sample_increment < 0), /* for bidirectional loops */
+    int sign = (ksr->voice[v].sample_increment < 0), // for bidirectional loops
         pb   = ksr->channel[ksr->voice[v].channel].pitchbend;
     f64 a;
 
@@ -275,7 +275,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             }
         }
         if(!best)
-            return;  /* No drum sample for this key */
+            return;  // No drum sample for this key
         ksr->voice[i].sample = best;
             
         

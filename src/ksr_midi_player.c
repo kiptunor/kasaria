@@ -812,7 +812,7 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
         at += read_vlq(p);
         u_char me = *(*p)++;
 
-        if(me == 0xF0 || me == 0xF7)              /* SysEx: skip */
+        if(me == 0xF0 || me == 0xF7)              // SysEx: skip
         {
             *p += read_vlq(p);
             
@@ -820,22 +820,22 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
                 *p = end;
             continue;
         }
-        if(me == 0xFF)                            /* meta */
+        if(me == 0xFF)                            // meta
         {
             u_char type = *(*p)++;
             u32 len = read_vlq(p);
             
             if(type == 0x2F)
-                return 0;            /* EndOfTrack */
+                return 0;            // EndOfTrack
             
-            if(type == 0x51 && len == 3)          /* tempo */
+            if(type == 0x51 && len == 3)          // tempo
             {
                 u_char a = *(*p)++, b = *(*p)++, c = *(*p)++;
                 ev->time = at;
                 ev->type = ME_TEMPO;
-                ev->channel = c;                  /* low byte */
-                ev->key     = a;                  /* high byte */
-                ev->vel     = b;                  /* mid byte */
+                ev->channel = c;                  // low byte
+                ev->key     = a;                  // high byte
+                ev->vel     = b;                  // mid byte
                 s->abs_tick[t] = at;
                 return 1;
             }
@@ -846,7 +846,7 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
 
         u_char a, b;
         
-        if(me & 0x80)                             /* new status byte */
+        if(me & 0x80)                             // new status byte
         {
             s->lastchan[t]   = me & 0x0F;
             s->laststatus[t] = (me >> 4) & 0x07;
@@ -854,7 +854,7 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
                 return 0;
             a = *(*p)++ & 0x7F;
         }
-        else                                      /* running status */
+        else                                      // running status
         {
             if(*p >= end) return 0;
             a = me & 0x7F;
@@ -862,7 +862,7 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
 
         switch(s->laststatus[t])
         {
-        case 0: case 1: case 2: case 6:           /* 2 data bytes */
+        case 0: case 1: case 2: case 6:           // 2 data bytes
         
             if(*p >= end)
                 return 0;
@@ -878,7 +878,7 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
             s->abs_tick[t] = at;
             return 1;
 
-        case 4:                                   /* program change: 1 byte */
+        case 4:                                   // program change: 1 byte
             ev->time = at;
             ev->channel = s->lastchan[t];
             ev->type = ME_PROGRAM;
@@ -887,10 +887,10 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
             s->abs_tick[t] = at;
             return 1;
 
-        case 5:                                   /* channel pressure: dropped */
+        case 5:                                   // channel pressure: dropped
             continue;
 
-        case 3:                                   /* control change remap */
+        case 3:                                   // control change remap
         {
             if(*p >= end) return 0;
             b = *(*p)++ & 0x7F;
@@ -1143,7 +1143,7 @@ static void stream_rewind(Kasaria *ksr)
         s->pending_valid[t] = 0;
         s->alive[t]         = 1;
 
-        /* prime this track's first event into the heap */
+        // prime this track's first event into the heap
         if(stream_track_event(s, t, &s->pending[t]))
         {
             s->pending_valid[t] = 1;
@@ -1192,7 +1192,7 @@ static int stream_next(Kasaria *ksr)
         MidiEvent raw = s->pending[best];
         s->pending_valid[best] = 0;
 
-        /* refill the same track and re-heapify in place */
+        // refill the same track and re-heapify in place
         if(stream_track_event(s, best, &s->pending[best]))
         {
             s->pending_valid[best] = 1;
@@ -1432,7 +1432,7 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
         }
         log_debug("MIDI Stream init");
        
-        /* one quick pass: mark instruments for loading + compute duration */
+        // one quick pass: mark instruments for loading + compute duration
         stream_rewind(ksr);
         
         while(stream_next(ksr)){ }
@@ -1440,7 +1440,7 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
         ksr->sample_count = ksr->stream->st;
         ksr->events_midi  = 0;
     
-        stream_seek(ksr, 0);                /* reset to start, current_sample = 0 */
+        stream_seek(ksr, 0);                // reset to start, current_sample = 0
         strncpy(ksr->last_smf, filename, 1023);
         ksr->last_smf[1023] = '\0';
         ksr->is_midi_loaded = true;
