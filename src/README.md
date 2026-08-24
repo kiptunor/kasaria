@@ -3,10 +3,10 @@
 Most important
 - [x] Fix all SF2 loader bugs and design flaws (Maybe I did fixed them all idk)
 - [ ] Implement SF2 effects (Failed)
+- [ ] Complete the functionality of the lazy SF2 loader (Neded to be done in the midi player)
 - [ ] Add more SoundFont Loading settings (Preset, MIDI Bank, XG Bank)
 - [x] Implement file mapping midi player
-- [ ] Fix audio glithces when using the raw midi event sender functions (Difficult to figure it out)
-- [x] Replace the logging library with a different one (Maybe)
+- [x] Replace the logging library with a different one
 - [ ] Cleanup in the Kasaria struct members
 - [ ] Add navigation comments in the entire codebase based on the context
 - [ ] Add API functions to read NPS, Polyphony, Tempo Changes
@@ -19,6 +19,11 @@ Most important
 - [ ] Organize the code examples
 - [ ] Add documentation on all API functions in kasaria.h
 - [ ] Add function API to get the version of kasaria
-- [ ] Impelent SFZ support
 
 Less important
+
+
+
+### Future Plans
+- [ ] Add support for SFZ and DLS soundfonts
+- [ ] Implement the [SFE or SF4](https://github.com/SFe-Team-was-taken/SFE) specs
