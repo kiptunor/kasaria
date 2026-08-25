@@ -35,6 +35,7 @@ resample.c
 
 
 #include <malloc.h>
+#include <string.h>
 
 #include "ksr_internal.h"
 #include "ext_deps/log_c/log.h"
@@ -51,7 +52,7 @@ resample.c
 
 
 
-#define KSR_USE_RESAMPLE_SIMD 0 // Makes efficiency worse for some reason idk
+#define KSR_USE_RESAMPLE_SIMD 1 // Makes efficiency worse for some reason idk
 
 
 
@@ -142,6 +143,13 @@ static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
     long      le    = vp->sample->data_length;
     long      count = *countptr;
 
+    if(ofs < 0 || ofs >= le)
+    {
+        vp->status = VOICE_FREE;
+        *countptr = 0;
+        return dest;
+    }
+
 #ifdef PRECALC_LOOPS
     long i;
 
@@ -222,6 +230,12 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
     long      ll   = le - vp->sample->loop_start;
     sample_t *dest = ksr->resample_buffer;
     sample_t *src  = vp->sample->data;
+
+    if(incr == 0)
+    {
+        memset(dest, 0, count * sizeof(sample_t));
+        return dest;
+    }
 
 #ifdef PRECALC_LOOPS
     long i;
