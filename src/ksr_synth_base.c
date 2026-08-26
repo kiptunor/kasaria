@@ -185,58 +185,38 @@ void recompute_freq(Kasaria *ksr, int v)
 
 void recompute_amp(Kasaria *ksr, int v)
 {
-    //long tempamp;
-
-    // TODO: use fscale
-    
     long vol = ksr->channel[ksr->voice[v].channel].volume;
-    //long vol_scaled = vol ? (long)(vol_table[vol] * 127.0) : 0;
-    
     long expr = ksr->channel[ksr->voice[v].channel].expression;
-    //long expr_scaled = expr ? (long)(vol_table[expr] * 127.0) : 0;
-
     long vel = ksr->voice[v].velocity;
-    //long vel_scaled = vel ? (long)(vol_table[vel] * 127.0) : 0;
-    //long vel_scaled = vel; // Direct velocity value
-    //long vel_scaled = vel * vel * 127 / (127 * 127); // Maybe less aggressive volume ?
 
-    // So far every little attempt sucks
-    //f64 vel_scaled = vel ? vol_table[vel] * 127.0 : 0.0;
-    //f64 vel_scaled = vel ? pow((f64)vel / 127.0, 1.5) * 127.0 : 0.0;
-    //f64 vel_scaled = vel ? sqrt((f64)vel / 127.0) * 127.0 : 0.0;
-    f64 vel_scaled = (f64)vel;
+    f64 vel_scaled = vel ? vol_table[vel] * 127.0 : 0.0;
     f64 vol_scaled = vol ? vol_table[vol] * 127.0 : 0.0;
     f64 expr_scaled = expr ? vol_table[expr] * 127.0 : 0.0;
     f64 tempamp = vel_scaled * vol_scaled * expr_scaled;
 
-    tempamp = vel_scaled * vol_scaled * expr_scaled;
+    f64 base = (f64)(tempamp) * ksr->voice[v].sample->volume * ksr->master_volume;
 
     if(!(ksr->play_mode.encoding & PE_MONO))
     {
         if(ksr->voice[v].panning > 60 && ksr->voice[v].panning < 68)
         {
             ksr->voice[v].panned   = PANNED_CENTER;
-
-            ksr->voice[v].left_amp = FSCALENEG((f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 21);
+            ksr->voice[v].left_amp = base / (f64)(1 << 19);
         }
         else if(ksr->voice[v].panning < 5)
         {
             ksr->voice[v].panned   = PANNED_LEFT;
-
-            ksr->voice[v].left_amp = FSCALENEG((f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 20);
+            ksr->voice[v].left_amp = base / (f64)(1 << 18);
         }
         else if(ksr->voice[v].panning > 123)
         {
             ksr->voice[v].panned   = PANNED_RIGHT;
-
-            // left_amp will be used
-            ksr->voice[v].left_amp = FSCALENEG((f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 20);
+            ksr->voice[v].left_amp = base / (f64)(1 << 18);
         }
         else
         {
             ksr->voice[v].panned     = PANNED_MYSTERY;
-
-            ksr->voice[v].left_amp   = FSCALENEG((f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 27);
+            ksr->voice[v].left_amp   = base / (f64)(1 << 25);
             ksr->voice[v].right_amp  = ksr->voice[v].left_amp * (ksr->voice[v].panning);
             ksr->voice[v].left_amp  *= (f64)(127 - ksr->voice[v].panning);
         }
@@ -244,8 +224,7 @@ void recompute_amp(Kasaria *ksr, int v)
     else
     {
         ksr->voice[v].panned   = PANNED_CENTER;
-
-        ksr->voice[v].left_amp = FSCALENEG((f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume, 21);
+        ksr->voice[v].left_amp = base / (f64)(1 << 19);
     }
 }
 

@@ -149,6 +149,7 @@ void apply_envelope_to_amp(Kasaria *ksr, int v)
 {
     f64  lamp = ksr->voice[v].left_amp, ramp;
     long la, ra;
+    
     if(ksr->voice[v].panned == PANNED_MYSTERY)
     {
         ramp = ksr->voice[v].right_amp;
@@ -159,7 +160,8 @@ void apply_envelope_to_amp(Kasaria *ksr, int v)
         }
         if(ksr->voice[v].sample->modes & MODES_ENVELOPE)
         {
-            lamp *= vol_table[ksr->voice[v].envelope_volume >> 23];
+            //lamp *= vol_table[ksr->voice[v].envelope_volume >> 23];
+            lamp *= (f64)(ksr->voice[v].envelope_volume >> 23) / 127.0;
             ramp *= vol_table[ksr->voice[v].envelope_volume >> 23];
         }
 
@@ -181,7 +183,8 @@ void apply_envelope_to_amp(Kasaria *ksr, int v)
         if(ksr->voice[v].tremolo_phase_increment)
             lamp *= ksr->voice[v].tremolo_volume;
         if(ksr->voice[v].sample->modes & MODES_ENVELOPE)
-            lamp *= vol_table[ksr->voice[v].envelope_volume >> 23];
+            //lamp *= vol_table[ksr->voice[v].envelope_volume >> 23];
+            lamp *= (f64)(ksr->voice[v].envelope_volume >> 23) / 127.0;
 
         la = FSCALE(lamp, AMP_BITS);
 
