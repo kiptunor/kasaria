@@ -452,6 +452,7 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 static int is_global(SFGenLayer *layer);
 static void clear_table(LayerTable *tbl);
 static void set_to_table(SFInfo *sf, LayerTable *tbl, SFGenLayer *lay, int level);
+static void set_envelope_parameters(SampleList *vp);
 static void add_item_to_table(LayerTable *tbl, int oper, int amount, int level);
 static void merge_table(SFInfo *sf, LayerTable *dst, LayerTable *src);
 static void init_and_merge_table(SFInfo *sf, LayerTable *dst, LayerTable *src);
@@ -633,7 +634,7 @@ static int sbk_panpos(int gen, int val)
 static int sbk_atten(int gen, int val)
 {
 	if(val == 0)
-		return 1000;
+		return 0;
 	
 	return (int)(-200.0 * log10((f64)val * DIV_127) * 10);
 }
@@ -1343,7 +1344,7 @@ static i32 calc_volenv_sustain(int sust_cB)
 #if 1
 	if(sust_cB <= 0)
 	    return 65533;
-	else if(sust_cB >= 1440)
+	else if(sust_cB >= 1000)
 	    return 0;			
 	else
 	    return (1440 - sust_cB) * 65533 / 1440;
@@ -1770,7 +1771,9 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
                 if(a < 0) a = -a;
                 if(a > maxamp) maxamp = a;
             }
-            sample->volume = 32768.0 / (f64)maxamp * sample->volume;
+
+            if(maxamp > 0)
+                sample->volume = 32768.0 / (f64)maxamp * sample->volume;
 
 			//if(dump_wav_counter < 40)   // Could be an useful feature to add in the API
             //    dump_sample_wav(sample);
@@ -2379,11 +2382,12 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
  * Modified for TiMidity
  */
 
-/* conver to Sample parameter */
+// conver to Sample parameter
 static void make_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *tbl)
 {
 	set_sample_info(ksr, sf, vp, tbl);
 	set_init_info(ksr, sf, vp, tbl);
+	set_envelope_parameters(vp);
 	set_rootkey(sf, vp, tbl);
 	set_rootfreq(vp);
 

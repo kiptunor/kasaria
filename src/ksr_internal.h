@@ -615,7 +615,7 @@ struct Kasaria
     volatile f32   current_midi_player_position;
     Channel        channel[16];
     Voice          voice[MAX_VOICES];
-    Voice         *voice_by_channel_note[16][128][2];
+    Voice         *voice_by_channel_note[16][128][8];
     long           control_rate;
     long           control_ratio;
     f64            master_volume;
