@@ -201,17 +201,20 @@ void recompute_amp(Kasaria *ksr, int v)
         if(ksr->voice[v].panning > 60 && ksr->voice[v].panning < 68)
         {
             ksr->voice[v].panned   = PANNED_CENTER;
-            ksr->voice[v].left_amp = base / (f64)(1 << 19);
+            //ksr->voice[v].left_amp = base / (f64)(1 << 19);
+            ksr->voice[v].left_amp = base / (f64)(1 << 20);
         }
         else if(ksr->voice[v].panning < 5)
         {
             ksr->voice[v].panned   = PANNED_LEFT;
-            ksr->voice[v].left_amp = base / (f64)(1 << 18);
+            //ksr->voice[v].left_amp = base / (f64)(1 << 18);
+            ksr->voice[v].left_amp = base / (f64)(1 << 19);
         }
         else if(ksr->voice[v].panning > 123)
         {
             ksr->voice[v].panned   = PANNED_RIGHT;
-            ksr->voice[v].left_amp = base / (f64)(1 << 18);
+            //ksr->voice[v].left_amp = base / (f64)(1 << 18);
+            ksr->voice[v].left_amp = base / (f64)(1 << 19);
         }
         else
         {
