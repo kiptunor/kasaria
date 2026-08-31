@@ -434,7 +434,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             }
         }
 
-        // FIX 4: Instrument layering — don't skip RIGHT/LEFT, only skip primary + stereo partner
+        // Super broken when using Project CF-162.sf2
         for(int li = 0; li < ip->samples; li++)
         {
             Sample *layer = &ip->sample[li];
