@@ -97,7 +97,7 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
     while(remaining > 0)
     {
         int chunk    = remaining > async_midi_player->buffer_period_size ? async_midi_player->buffer_period_size : remaining;
-        int rendered = ksr_get_player_stream(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk);
+        int rendered = ksr_player_get_stream(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk);
 
         if(!rendered)
         {
@@ -1576,7 +1576,7 @@ bool ksr_player_pause(Kasaria *ksr)
     return pause_ret;
 }
 
-int ksr_get_player_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long count)
+int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long count)
 {
     int convert;
    

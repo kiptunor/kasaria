@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     while(total > 0)
     {
         long frames = total < chunk ? total : chunk;
-        if(!ksr_get_player_stream(converter, AUDIO_FLOAT, (unsigned char*)buf, frames))
+        if(!ksr_player_get_stream(converter, AUDIO_FLOAT, (unsigned char*)buf, frames))
             break;
     
         ma_encoder_write_pcm_frames(&encoder, buf, frames, NULL);

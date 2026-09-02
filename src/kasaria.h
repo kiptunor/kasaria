@@ -357,7 +357,7 @@ KSR_API int  ksr_reload_midi(Kasaria *ksr);
             which makes the synth really good for generating the real frequencies of chopped notes.
             An important capability that most blackers cant go without it
 */
-KSR_API int  ksr_get_player_stream(Kasaria *ksr, long audio_fmt, unsigned char *buffer, long count);
+KSR_API int  ksr_player_get_stream(Kasaria *ksr, long audio_fmt, unsigned char *buffer, long count);
 
 /*
 @brief                  Start the internal player handler
