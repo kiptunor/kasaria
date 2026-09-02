@@ -97,7 +97,7 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
     while(remaining > 0)
     {
         int chunk    = remaining > async_midi_player->buffer_period_size ? async_midi_player->buffer_period_size : remaining;
-        int rendered = ksr_play_midi_raw(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk);
+        int rendered = ksr_get_player_stream(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk);
 
         if(!rendered)
         {
@@ -1460,7 +1460,7 @@ void ksr_unload_midi(Kasaria *ksr)
 
     // Maybe this can prevent crashes in read_vlq ?
     if(!ksr->is_midi_player_paused)
-        ksr_pause_midi(ksr);
+        ksr_player_pause(ksr);
 
     if(ksr->midi_loading_mode == MIDI_MAP)
         ksr_unmap_file(ksr->f_mmap);
@@ -1559,7 +1559,7 @@ static void ksr_mark_pos_ns(Kasaria *ksr)
     ksr->wall_clock_last_ns = now;
 }
 
-bool ksr_pause_midi(Kasaria *ksr)
+bool ksr_player_pause(Kasaria *ksr)
 {
     if(!ksr)
         return 1;
@@ -1576,11 +1576,11 @@ bool ksr_pause_midi(Kasaria *ksr)
     return pause_ret;
 }
 
-int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
+int ksr_get_player_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long count)
 {
     int convert;
    
-    if(!ksr || !buffer || (!ksr->stream && !ksr->current_event) || !ksr->is_midi_loaded || (type > AUDIO_ULAW || type < AUDIO_CHAR))
+    if(!ksr || !buffer || (!ksr->stream && !ksr->current_event) || !ksr->is_midi_loaded || (audio_fmt > AUDIO_ULAW || audio_fmt < AUDIO_CHAR))
         return 0;
 
     ksr->is_midi_player_active = true;
@@ -1631,7 +1631,7 @@ int ksr_play_midi_raw(Kasaria *ksr, long type, u_char *buffer, long count)
         if(convert > count || convert <= 0) // I could prob count the number of events here ??
             convert = count;
 
-        switch(type)
+        switch(audio_fmt)
         {
         case AUDIO_CHAR:
             ksr_render_char(ksr, (u_char *)buffer, convert);
@@ -1707,7 +1707,7 @@ u64 monotonic_ns(void)
     return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
 }
 
-double ksr_get_midi_player_pos(Kasaria *ksr)
+double ksr_player_get_pos(Kasaria *ksr)
 {
     if(!ksr)
         return 0.0;
@@ -1720,7 +1720,7 @@ double ksr_get_midi_player_pos(Kasaria *ksr)
     return base; // paused / ended / inactive → exact, frozen
 }
 
-int ksr_play_midi(Kasaria *ksr, bool wait_midi_ending)
+int ksr_player_begin(Kasaria *ksr, bool wait_midi_ending)
 {
     if(!ksr)
         return 0;
@@ -1758,7 +1758,7 @@ int ksr_play_midi(Kasaria *ksr, bool wait_midi_ending)
     return 1;
 }
 
-bool ksr_is_midi_player_active(Kasaria *ksr)
+bool ksr_player_is_active(Kasaria *ksr)
 {
     if(!ksr)
         return 0;
@@ -1766,12 +1766,12 @@ bool ksr_is_midi_player_active(Kasaria *ksr)
     return ksr->is_midi_player_active;
 }
 
-bool ksr_is_midi_ended(Kasaria *ksr)
+bool ksr_player_is_ended(Kasaria *ksr)
 {
     return ksr->is_midi_ended;
 }
 
-int ksr_seek_midi(Kasaria *ksr, long time)
+int ksr_player_seek(Kasaria *ksr, long time)
 {
     int total_time;
     if(!ksr || (!ksr->stream && !ksr->current_event))
@@ -1798,24 +1798,24 @@ int ksr_seek_midi(Kasaria *ksr, long time)
     return ksr_get_current_time(ksr);
 }
 
-int ksr_fast_forward_midi(Kasaria *ksr, long time)
+int ksr_player_fast_forward(Kasaria *ksr, long time)
 {
     int new_time;
     if(!ksr)
         return 0;
 
     new_time = ksr_get_current_time(ksr) + time;
-    return ksr_seek_midi(ksr, new_time);
+    return ksr_player_seek(ksr, new_time);
 }
 
-int ksr_rewind_midi(Kasaria *ksr, long time)
+int ksr_player_rewind(Kasaria *ksr, long time)
 {
     int new_time;
     if(!ksr)
         return 0;
 
     new_time = ksr_get_current_time(ksr) - time;
-    return ksr_seek_midi(ksr, new_time);
+    return ksr_player_seek(ksr, new_time);
 }
 
 int ksr_restart_smf(Kasaria *ksr)
@@ -1823,7 +1823,7 @@ int ksr_restart_smf(Kasaria *ksr)
     if(!ksr)
         return 0;
 
-    return ksr_seek_midi(ksr, 0);
+    return ksr_player_seek(ksr, 0);
 }
 
 int ksr_stop_midi(Kasaria *ksr)
@@ -1831,5 +1831,5 @@ int ksr_stop_midi(Kasaria *ksr)
     if(!ksr)
         return 0;
 
-    return ksr_seek_midi(ksr, ksr_get_duration(ksr));
+    return ksr_player_seek(ksr, ksr_get_duration(ksr));
 }

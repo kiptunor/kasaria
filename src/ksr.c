@@ -360,7 +360,7 @@ static void unload_instruments(Kasaria *ksr)
         return;
 
     if(ksr->is_midi_player_active)
-        ksr_pause_midi(ksr);
+        ksr_player_pause(ksr);
 
     freed = (Instrument **)safe_malloc(sizeof(Instrument *) * (128 * 2 * 128));
     
@@ -420,7 +420,7 @@ static void unload_instruments(Kasaria *ksr)
     safe_free(freed);
 
     if(ksr->is_midi_player_active)
-        ksr_pause_midi(ksr);
+        ksr_player_pause(ksr);
 }
 
 static void release_freed(Kasaria *ksr, Instrument **freed, int count)
@@ -1442,7 +1442,7 @@ void ksr_shutdown(Kasaria *ksr)
 
     // Maybe the shutdown is forced
     if(!ksr->is_midi_player_paused)
-        ksr_pause_midi(ksr);
+        ksr_player_pause(ksr);
 
     free_sf2_sample_cache();
 

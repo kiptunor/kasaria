@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     }
 
     // Start the MIDI playback in the background (Audio thread is handled internally) and also wait for the etire midi player to finish
-    ksr_play_midi(synth, true);
+    ksr_player_begin(synth, true);
 
     ksr_shutdown(synth);
     return 0;
