@@ -2528,6 +2528,12 @@ static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable
 	vp->v.loop_start = sp->startloop;
 	vp->v.loop_end   = sp->endloop;
 
+	if(!(vp->v.modes & MODES_LOOPING))
+	{
+        vp->v.loop_start = vp->v.data_length;
+        vp->v.loop_end   = vp->v.data_length + (1 << FRACTION_BITS);
+	}
+
 	if(!(sp->sampletype & SF_SAMPLETYPE_COMPRESSED))
 	{
 		vp->v.loop_start -= vp->start;

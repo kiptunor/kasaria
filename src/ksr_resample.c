@@ -887,6 +887,12 @@ void pre_resample(Kasaria *ksr, Sample *sp)
     sp->loop_start  = (long)(sp->loop_start / a);
     sp->loop_end    = (long)(sp->loop_end / a);
 
+    // Clamp the lop start and loop end of each sample
+    if(sp->loop_end > newlen)
+        sp->loop_end = newlen;
+    if(sp->loop_start >= sp->loop_end)
+        sp->loop_start = sp->loop_end - 1;
+
     free(sp->data);
 
     sp->data        = (sample_t *)newdata;
