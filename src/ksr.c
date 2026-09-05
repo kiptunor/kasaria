@@ -117,6 +117,7 @@ Kasaria *ksr_init(bool disable_logs)
         return NULL;
 
     log_set_quiet(disable_logs);
+    ksr->retrigger_same_note = 1;
 
     memset(ksr, 0, sizeof(Kasaria));
     ksr->f_mmap = calloc(1, sizeof(FileMap));

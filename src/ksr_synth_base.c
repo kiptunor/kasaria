@@ -58,6 +58,7 @@ void reset_voices(Kasaria *ksr)
     }
     memset(ksr->channel_voice_count, 0, sizeof(ksr->channel_voice_count));
     memset(ksr->voice_by_channel_note, 0, sizeof(ksr->voice_by_channel_note));
+    memset(ksr->note_stack_count, 0, sizeof(ksr->note_stack_count));
 }
 
 void free_voice_push(Kasaria *ksr, int i)
@@ -86,7 +87,6 @@ void channel_voice_remove(Kasaria *ksr, int ch, int vi)
     ksr->channel_voice_count[ch] = n;
 }
 
-/*
 void select_sample(Kasaria *ksr, int v, Instrument *ip)
 {
     long    f, cdiff, diff;
@@ -131,71 +131,6 @@ void select_sample(Kasaria *ksr, int v, Instrument *ip)
             closest = sp;
         }
 
-        sp++;
-    }
-    ksr->voice[v].sample = closest;
-    return;
-}
-*/
-
-void select_sample(Kasaria *ksr, int v, Instrument *ip)
-{
-    long    f, cdiff, diff;
-    int     s, i;
-    Sample *sp, *closest;
-
-    s  = ip->samples;
-    sp = ip->sample;
-
-    if(s == 1)
-    {
-        ksr->voice[v].sample = sp;
-        return;
-    }
-
-    f = ksr->voice[v].orig_frequency;
-
-    // First pass: find the sample with the widest velocity range
-    // that matches the frequency range. This ensures the global layer
-    // (which covers all velocities 0-127) is always selected as primary.
-    int     best_vel_range = -1;
-    Sample *best = NULL;
-
-    sp = ip->sample;
-    for(i = 0; i < s; i++)
-    {
-        if(sp->low_freq <= f && sp->high_freq >= f)
-        {
-            int vel_range = sp->high_vel - sp->low_vel;
-            if(vel_range > best_vel_range)
-            {
-                best_vel_range = vel_range;
-                best = sp;
-            }
-        }
-        sp++;
-    }
-
-    if(best)
-    {
-        ksr->voice[v].sample = best;
-        return;
-    }
-
-    // No suitable sample found! Select the sample whose root
-    // frequency is closest to the one we want.
-    cdiff   = 0x7FFFFFFF;
-    closest = sp = ip->sample;
-    for(i = 0; i < s; i++)
-    {
-        diff = sp->root_freq - f;
-        if(diff < 0)
-            diff = -diff;
-        if(diff < cdiff)
-        {
-            cdiff   = diff;
-            closest = sp;
-        }
         sp++;
     }
     ksr->voice[v].sample = closest;
@@ -384,8 +319,8 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     }
 
     // FIX 3: Clear all voice_by_channel_note slots before setting new ones
-    for(int s = 0; s < 8; s++)
-        ksr->voice_by_channel_note[e->channel][e->key][s] = NULL;
+    // for(int s = 0; s < 8; s++)
+    //     ksr->voice_by_channel_note[e->channel][e->key][s] = NULL;
 
     channel_voice_add(ksr, e->channel, i);
     ksr->voice[i].status                            = VOICE_ON;
@@ -528,8 +463,35 @@ void note_on(Kasaria *ksr, MidiEvent *e)
     
     ksr->skip_note_active[e->channel][e->key] = 0;
     ksr->skip_note_vel[e->channel][e->key] = 0;
+
+    // Follow overlapped notes here
+    int *sc = &ksr->note_stack_count[e->channel][e->key];
+    
+    if(ksr->channel[e->channel].mono)
+    {
+        int n = ksr->channel_voice_count[e->channel];
+        while (n--) kill_note(ksr, ksr->channel_voice_list[e->channel][n]);
+        *sc = 1;                              // mono = single press semantics
+    }
+    else if(*sc > 0)
+        (*sc)++;                              // a press is still held → STACK, don't retrigger
+    else
+    {
+        // fresh press → keep your existing retrigger cleanup
+        for(int k = 0; k < 8; k++)
+        {
+            Voice *vp = ksr->voice_by_channel_note[e->channel][e->key][k];
+            
+            if(vp && vp->channel == e->channel && vp->note == e->key)
+                kill_note(ksr, (int)(vp - ksr->voice));
+            
+            ksr->voice_by_channel_note[e->channel][e->key][k] = NULL;
+        }
+        *sc = 1;
+    }
     
     // FIX 1: Retrigger — check ALL 8 slots, clear all after killing
+    /*
     if(ksr->channel[e->channel].mono)
     {
         int n = ksr->channel_voice_count[e->channel];
@@ -546,6 +508,7 @@ void note_on(Kasaria *ksr, MidiEvent *e)
             ksr->voice_by_channel_note[e->channel][e->key][k] = NULL;
         }
     }
+    */
     
     if(ksr->free_voice_count > 0)
     {
@@ -605,8 +568,33 @@ void note_off(Kasaria *ksr, MidiEvent *e)
         ksr->skip_note_vel[e->channel][e->key] = 0;
         return;
     }
+
+    int *sc = &ksr->note_stack_count[e->channel][e->key];
+    
+    if(*sc > 0)
+        (*sc)--;
+    
+    if(*sc > 0)
+        return;                     // another press still holds the key
+    
+    for(int i = 0; i < ksr->channel_voice_count[e->channel]; )
+    {
+        int vi = ksr->channel_voice_list[e->channel][i];
+        if(ksr->voice[vi].note == e->key && (ksr->voice[vi].status == VOICE_ON || ksr->voice[vi].status == VOICE_SUSTAINED))
+        {
+            if(ksr->channel[e->channel].sustain && ksr->voice[vi].status == VOICE_ON)
+                ksr->voice[vi].status = VOICE_SUSTAINED, i++;
+            else
+                finish_note(ksr, vi);        // swap-removes vi → don't advance i
+        }
+        else
+            i++;
+    }
+    for(int k = 0; k < 8; k++)              // tidy auxiliary slots
+        ksr->voice_by_channel_note[e->channel][e->key][k] = NULL;
     
     // FIX 2: Process all 8 slots and clear ALL of them
+    /*
     for(int k = 0; k < 8; k++)
     {
         Voice *v = ksr->voice_by_channel_note[e->channel][e->key][k];
@@ -619,11 +607,18 @@ void note_off(Kasaria *ksr, MidiEvent *e)
         }
         ksr->voice_by_channel_note[e->channel][e->key][k] = NULL;
     }
+    */
 }
 
 // Process the All Notes Off event
 void all_notes_off(Kasaria *ksr, int c)
 {
+
+    memset(ksr->note_stack_count[c], 0, sizeof(ksr->note_stack_count[c]));
+    for(int n = 0; n < 128; n++)
+        for(int k = 0; k < 8; k++)
+            ksr->voice_by_channel_note[c][n][k] = NULL;
+    
     int i = ksr->voices;
     while(i--)
         if(ksr->voice[i].status == VOICE_ON && ksr->voice[i].channel == c)
@@ -646,6 +641,11 @@ void drop_sustain(Kasaria *ksr, int c)
 // Process the All Sounds Off event
 void all_sounds_off(Kasaria *ksr, int c)
 {
+    memset(ksr->note_stack_count[c], 0, sizeof(ksr->note_stack_count[c]));
+    for(int n = 0; n < 128; n++)
+        for(int k = 0; k < 8; k++)
+                ksr->voice_by_channel_note[c][n][k] = NULL;
+        
     int i = ksr->voices;
     while(i--)
         if(ksr->voice[i].channel == c && ksr->voice[i].status != VOICE_FREE && ksr->voice[i].status != VOICE_DIE)

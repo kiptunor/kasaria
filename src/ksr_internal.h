@@ -685,6 +685,8 @@ struct Kasaria
     CompressorSettings compressor_settings;
     int                channel_voice_count[16];
     int                channel_voice_list[16][MAX_VOICES * 2];
+    int                note_stack_count[16][128];
+    int                retrigger_same_note;
 
     int  steal_scan;         // rotating round-robin pointer
 
