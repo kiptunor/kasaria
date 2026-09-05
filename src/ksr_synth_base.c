@@ -58,6 +58,8 @@ void reset_voices(Kasaria *ksr)
     }
     memset(ksr->channel_voice_count, 0, sizeof(ksr->channel_voice_count));
     memset(ksr->voice_by_channel_note, 0, sizeof(ksr->voice_by_channel_note));
+    memset(ksr->note_press, 0, sizeof(ksr->note_press));
+    ksr->note_gen = 0;
 }
 
 void free_voice_push(Kasaria *ksr, int i)
@@ -86,7 +88,6 @@ void channel_voice_remove(Kasaria *ksr, int ch, int vi)
     ksr->channel_voice_count[ch] = n;
 }
 
-/*
 void select_sample(Kasaria *ksr, int v, Instrument *ip)
 {
     long    f, cdiff, diff;
@@ -131,71 +132,6 @@ void select_sample(Kasaria *ksr, int v, Instrument *ip)
             closest = sp;
         }
 
-        sp++;
-    }
-    ksr->voice[v].sample = closest;
-    return;
-}
-*/
-
-void select_sample(Kasaria *ksr, int v, Instrument *ip)
-{
-    long    f, cdiff, diff;
-    int     s, i;
-    Sample *sp, *closest;
-
-    s  = ip->samples;
-    sp = ip->sample;
-
-    if(s == 1)
-    {
-        ksr->voice[v].sample = sp;
-        return;
-    }
-
-    f = ksr->voice[v].orig_frequency;
-
-    // First pass: find the sample with the widest velocity range
-    // that matches the frequency range. This ensures the global layer
-    // (which covers all velocities 0-127) is always selected as primary.
-    int     best_vel_range = -1;
-    Sample *best = NULL;
-
-    sp = ip->sample;
-    for(i = 0; i < s; i++)
-    {
-        if(sp->low_freq <= f && sp->high_freq >= f)
-        {
-            int vel_range = sp->high_vel - sp->low_vel;
-            if(vel_range > best_vel_range)
-            {
-                best_vel_range = vel_range;
-                best = sp;
-            }
-        }
-        sp++;
-    }
-
-    if(best)
-    {
-        ksr->voice[v].sample = best;
-        return;
-    }
-
-    // No suitable sample found! Select the sample whose root
-    // frequency is closest to the one we want.
-    cdiff   = 0x7FFFFFFF;
-    closest = sp = ip->sample;
-    for(i = 0; i < s; i++)
-    {
-        diff = sp->root_freq - f;
-        if(diff < 0)
-            diff = -diff;
-        if(diff < cdiff)
-        {
-            cdiff   = diff;
-            closest = sp;
-        }
         sp++;
     }
     ksr->voice[v].sample = closest;
@@ -505,10 +441,79 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     }
 }
 
+static void invalidate_press_for_voice(Kasaria *ksr, int vi)
+{
+    if(!ksr->overlapping_notes)
+        return;
+    
+    int ch  = ksr->voice[vi].channel;
+    int key = ksr->voice[vi].note;
+    
+    if(ch < 0 || key < 0)
+        return;
+    
+    for(int s = 0; s < MAX_NOTE_PRESSES; s++)
+    {
+        NotePress *p = &ksr->note_press[ch][key][s];
+        
+        if(p->active)
+        {
+            if(p->voice == vi)
+                p->voice = -1;
+            
+            if(p->voice2 == vi)
+                p->voice2 = -1;
+            
+            if(p->voice < 0 && p->voice2 < 0)
+                p->active = 0;
+        }
+    }
+}
+
 void kill_note(Kasaria *ksr, int i)
 {
+    invalidate_press_for_voice(ksr, i);
     ksr->voice[i].status = VOICE_DIE;
     channel_voice_remove(ksr, ksr->voice[i].channel, i);
+}
+
+
+static int count_held(Kasaria *ksr, int ch, int key)
+{
+    int n = 0;
+    for(int s = 0; s < MAX_NOTE_PRESSES; s++)
+        n += ksr->note_press[ch][key][s].active;
+    return n;
+}
+
+static int grab_voice(Kasaria *ksr)
+{
+    if(ksr->free_voice_count > 0)
+        return ksr->free_voice_stack[--ksr->free_voice_count];
+
+    int i = ksr->steal_scan, n = ksr->voices;
+    
+    while(n--)
+    {
+        if(ksr->voice[i].status != VOICE_ON && ksr->voice[i].status != VOICE_DIE)
+            break;
+        
+        i = (i + 1) % ksr->voices;
+    }
+    
+    if(ksr->voice[i].status == VOICE_ON || ksr->voice[i].status == VOICE_DIE)
+    {
+        ksr->lost_notes++;
+        return -1;
+    }
+    
+    ksr->steal_scan = (i + 1) % ksr->voices;
+    ksr->cut_notes++;
+    
+    invalidate_press_for_voice(ksr, i);
+    channel_voice_remove(ksr, ksr->voice[i].channel, i);
+    
+    return i;
 }
 
 // Only one instance of a note can be playing on a single channel.
@@ -527,9 +532,9 @@ void note_on(Kasaria *ksr, MidiEvent *e)
         }
     
     ksr->skip_note_active[e->channel][e->key] = 0;
-    ksr->skip_note_vel[e->channel][e->key] = 0;
-    
-    // FIX 1: Retrigger — check ALL 8 slots, clear all after killing
+    ksr->skip_note_vel[e->channel][e->key]    = 0;
+
+    // Retrigger — check ALL 8 slots, clear all after killing
     if(ksr->channel[e->channel].mono)
     {
         int n = ksr->channel_voice_count[e->channel];
@@ -538,47 +543,113 @@ void note_on(Kasaria *ksr, MidiEvent *e)
     }
     else
     {
-        for(int k = 0; k < 8; k++)
+        if(!ksr->overlapping_notes)
         {
-            Voice *vp = ksr->voice_by_channel_note[e->channel][e->key][k];
-            if(vp && vp->channel == e->channel && vp->note == e->key)
-                kill_note(ksr, (int)(vp - ksr->voice));
-            ksr->voice_by_channel_note[e->channel][e->key][k] = NULL;
+            for(int k = 0; k < 8; k++)
+            {
+                Voice *vp = ksr->voice_by_channel_note[e->channel][e->key][k];
+                
+                if(vp && vp->channel == e->channel && vp->note == e->key)
+                    kill_note(ksr, (int)(vp - ksr->voice));
+                
+                ksr->voice_by_channel_note[e->channel][e->key][k] = NULL;
+            }
         }
-    }
-    
-    if(ksr->free_voice_count > 0)
-    {
-        start_note(ksr, e, ksr->free_voice_stack[--ksr->free_voice_count]);
-        return;
     }
 
-    int i      = ksr->steal_scan;
-    int n      = ksr->voices;
-    int lowest = -1;
-    while(n--)
+    if(ksr->overlapping_notes)
     {
-        int st = ksr->voice[i].status;
-        if(st != VOICE_ON && st != VOICE_DIE)
+        for(int s = 0; s < 8; s++)
+            ksr->voice_by_channel_note[e->channel][e->key][s] = NULL;
+
+        int v = grab_voice(ksr);
+        
+        if(v < 0)
+            return;
+    
+        start_note(ksr, e, v);
+    
+        NotePress *ring = ksr->note_press[e->channel][e->key];
+        int slot        = -1;
+        int oldest      = -1;
+        u32 oldest_gen  = UINT32_MAX;
+    
+        for(int s = 0; s < MAX_NOTE_PRESSES; s++)
         {
-            lowest = i;
-            break;
+            if(!ring[s].active)
+            {
+                slot = s;
+                break;
+            }
+            
+            if(ring[s].gen < oldest_gen)
+            {
+                oldest_gen = ring[s].gen;
+                oldest = s;
+            }
         }
-        i = (i + 1) % ksr->voices;
-    }
-    ksr->steal_scan = lowest >= 0 ? (lowest + 1) % ksr->voices : 0;
-    if(lowest != -1)
-    {
-        ksr->cut_notes++;
-        channel_voice_remove(ksr, ksr->voice[lowest].channel, lowest);
-        start_note(ksr, e, lowest);
+    
+        if(slot < 0)
+        {
+            slot = oldest;
+            
+            if(ring[slot].voice  >= 0)
+                kill_note(ksr, ring[slot].voice);
+            
+            if(ring[slot].voice2 >= 0)
+                kill_note(ksr, ring[slot].voice2);
+        }
+    
+        ring[slot].active = 1;
+        ring[slot].gen    = ++ksr->note_gen;
+        ring[slot].voice  = v;
+        ring[slot].voice2 = -1;
+        
+        Voice *pv = ksr->voice_by_channel_note[e->channel][e->key][1]; // partner filled by start_note
+        
+        if(pv && pv->channel == e->channel && pv->note == e->key)
+            ring[slot].voice2 = (int)(pv - ksr->voice);
     }
     else
-        ksr->lost_notes++;
+    {
+        // No overlapping notes
+
+
+        if(ksr->free_voice_count > 0)
+        {
+            start_note(ksr, e, ksr->free_voice_stack[--ksr->free_voice_count]);
+            return;
+        }
+    
+        int i      = ksr->steal_scan;
+        int n      = ksr->voices;
+        int lowest = -1;
+        while(n--)
+        {
+            int st = ksr->voice[i].status;
+            if(st != VOICE_ON && st != VOICE_DIE)
+            {
+                lowest = i;
+                break;
+            }
+            i = (i + 1) % ksr->voices;
+        }
+        ksr->steal_scan = lowest >= 0 ? (lowest + 1) % ksr->voices : 0;
+        if(lowest != -1)
+        {
+            ksr->cut_notes++;
+            channel_voice_remove(ksr, ksr->voice[lowest].channel, lowest);
+            start_note(ksr, e, lowest);
+        }
+        else
+            ksr->lost_notes++;
+    }
 }
 
 void finish_note(Kasaria *ksr, int i)
 {
+    invalidate_press_for_voice(ksr, i); // Only works if overlapping_notes is enabled
+    
     if(ksr->voice[i].sample->modes & MODES_ENVELOPE)
     {
         // We need to get the envelope out of Sustain stage
@@ -597,8 +668,21 @@ void finish_note(Kasaria *ksr, int i)
     channel_voice_remove(ksr, ksr->voice[i].channel, i);
 }
 
+static NotePress *oldest_active(Kasaria *ksr, int ch, int key)
+{
+    NotePress *best = NULL;
+    uint32_t bg = UINT32_MAX;
+    for(int s = 0; s < MAX_NOTE_PRESSES; s++)
+    {
+        NotePress *p = &ksr->note_press[ch][key][s];
+        if(p->active && p->gen < bg) { bg = p->gen; best = p; }
+    }
+    return best;
+}
+
 void note_off(Kasaria *ksr, MidiEvent *e)
 {
+
     if(ksr->skip_note_active[e->channel][e->key])
     {
         ksr->skip_note_active[e->channel][e->key] = 0;
@@ -606,24 +690,80 @@ void note_off(Kasaria *ksr, MidiEvent *e)
         return;
     }
     
-    // FIX 2: Process all 8 slots and clear ALL of them
-    for(int k = 0; k < 8; k++)
+    if(ksr->overlapping_notes)
     {
-        Voice *v = ksr->voice_by_channel_note[e->channel][e->key][k];
-        if(v && v->status == VOICE_ON && v->channel == e->channel && v->note == e->key)
+        NotePress *p = oldest_active(ksr, e->channel, e->key);
+
+        if(!p)
+            return;             // OFF-before-ON or duplicate OFF → safe no-op
+    
+        if(p->voice >= 0)
         {
-            if(ksr->channel[e->channel].sustain)
-                v->status = VOICE_SUSTAINED;
-            else
-                finish_note(ksr, (int)(v - ksr->voice));
+            Voice *v = &ksr->voice[p->voice];
+            if(v->status == VOICE_ON || v->status == VOICE_SUSTAINED)
+            {
+                if(ksr->channel[e->channel].sustain && v->status == VOICE_ON)
+                    v->status = VOICE_SUSTAINED;
+                else
+                    finish_note(ksr, p->voice);
+            }
         }
-        ksr->voice_by_channel_note[e->channel][e->key][k] = NULL;
+    
+        if(p->voice2 >= 0)
+        {
+            Voice *v = &ksr->voice[p->voice2];
+            if(v->status == VOICE_ON || v->status == VOICE_SUSTAINED)
+            {
+                if(ksr->channel[e->channel].sustain && v->status == VOICE_ON)
+                    v->status = VOICE_SUSTAINED;
+                else
+                    finish_note(ksr, p->voice2);
+            }
+        }
+    
+        p->active = 0;
+        p->voice  = -1;
+        p->voice2 = -1;
+        
+        for(int s = 0; s < 8; s++)
+            ksr->voice_by_channel_note[e->channel][e->key][s] = NULL;
+    }
+    else
+    {
+        for(int k = 0; k < 8; k++)
+        {
+            Voice *v = ksr->voice_by_channel_note[e->channel][e->key][k];
+            if(v && v->status == VOICE_ON && v->channel == e->channel && v->note == e->key)
+            {
+                if(ksr->channel[e->channel].sustain)
+                    v->status = VOICE_SUSTAINED;
+                else
+                    finish_note(ksr, (int)(v - ksr->voice));
+            }
+            ksr->voice_by_channel_note[e->channel][e->key][k] = NULL;
+        }
     }
 }
 
 // Process the All Notes Off event
 void all_notes_off(Kasaria *ksr, int c)
 {
+    if(ksr->overlapping_notes)
+    {
+        for(int n = 0; n < 128; n++)
+        {
+            for(int s = 0; s < MAX_NOTE_PRESSES; s++)
+            {
+                ksr->note_press[c][n][s].active = 0;
+                ksr->note_press[c][n][s].voice  = -1;
+                ksr->note_press[c][n][s].voice2 = -1;
+            }
+            
+            for(int k = 0; k < 8; k++)
+                ksr->voice_by_channel_note[c][n][k] = NULL;
+        }
+    }
+    
     int i = ksr->voices;
     while(i--)
         if(ksr->voice[i].status == VOICE_ON && ksr->voice[i].channel == c)
@@ -646,6 +786,22 @@ void drop_sustain(Kasaria *ksr, int c)
 // Process the All Sounds Off event
 void all_sounds_off(Kasaria *ksr, int c)
 {
+    if(ksr->overlapping_notes)
+    {
+        for(int n = 0; n < 128; n++)
+        {
+            for(int s = 0; s < MAX_NOTE_PRESSES; s++)
+            {
+                ksr->note_press[c][n][s].active = 0;
+                ksr->note_press[c][n][s].voice  = -1;
+                ksr->note_press[c][n][s].voice2 = -1;
+            }
+            
+            for(int k = 0; k < 8; k++)
+                ksr->voice_by_channel_note[c][n][k] = NULL;
+        }
+    }
+    
     int i = ksr->voices;
     while(i--)
         if(ksr->voice[i].channel == c && ksr->voice[i].status != VOICE_FREE && ksr->voice[i].status != VOICE_DIE)
@@ -743,10 +899,6 @@ void do_compute_data(Kasaria *ksr, long count)
     int samples;
 
     samples = (ksr->play_mode.encoding & PE_MONO) ? count : (count * 2);
-
-    u64 t0 = 0;
-    if(ksr->profiling_enabled)
-        t0 = monotonic_ns();
 
     for(i = 0; i < samples; i++)
         ksr->buffer_pointer[i] = 0;

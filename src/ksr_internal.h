@@ -213,7 +213,7 @@ enum {
 
 // Causes the instrument's default panning to be used.
 #define NO_PANNING            -1
-
+#define MAX_NOTE_PRESSES 100
 
 
 
@@ -592,9 +592,18 @@ typedef struct
     u_char ended;
 }MidiStream;
 
+
+typedef struct
+{
+    uint32_t gen;
+    uint8_t  active;
+    int      voice;   /* primary */
+    int      voice2;  /* stereo partner, -1 if none */
+}NotePress;
+
 struct Kasaria
 {
-    int opt_pre_resamplation;
+    int            opt_pre_resamplation;
     char           current_filename[1024];
     PathList      *pathlist; // The paths in this list will be tried whenever we're reading a file
     ToneBank      *tonebank[128];
@@ -608,6 +617,7 @@ struct Kasaria
     bool           is_audio_init;
     bool           is_init_raw_midi_events;
     bool           is_audio_started;
+    bool           overlapping_notes;
     // int            dynamic_loading; // No longer it use
     PlayMode       play_mode;
     f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
@@ -685,17 +695,19 @@ struct Kasaria
     CompressorSettings compressor_settings;
     int                channel_voice_count[16];
     int                channel_voice_list[16][MAX_VOICES * 2];
+    NotePress          note_press[16][128][MAX_NOTE_PRESSES];
+    uint32_t           note_gen;
 
-    int  steal_scan;         // rotating round-robin pointer
+    int                steal_scan;         // rotating round-robin pointer
 
-    unsigned char skip_note_vel[16][128];    // velocity of a skipped note
-    unsigned char skip_note_active[16][128];
+    unsigned char      skip_note_vel[16][128];    // velocity of a skipped note
+    unsigned char      skip_note_active[16][128];
 
     ma_device_config   dev_config;
     ma_device          audio_device;
     int                audio_init_scope;
 
-    bool   profiling_enabled;
+    //bool   profiling_enabled;
 };
 
 
