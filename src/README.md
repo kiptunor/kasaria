@@ -4,7 +4,7 @@ Most important
 - [x] Fix all SF2 loader bugs and design flaws (Maybe I did fixed them all idk)
 - [ ] Implement SF2 effects (Failed)
 - [ ] Complete the functionality of the lazy SF2 loader (Neded to be done in the midi player)
-- [ ] Add more SoundFont Loading settings (Preset, MIDI Bank, XG Bank)
+- [x] Add more SoundFont Loading settings (Preset, MIDI Bank, XG Bank)
 - [x] Implement file mapping midi player
 - [x] Replace the logging library with a different one
 - [ ] Cleanup in the Kasaria struct members
