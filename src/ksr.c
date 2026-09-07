@@ -727,9 +727,9 @@ int ksr_load_soundfont_file_new(Kasaria *ksr, const char *filename, KsrSoundfont
 
     ksr->sf_loaded = 1;
 
-    if(soundfont_opts.preload_instruments)
-        //preload_soundfont_instruments(ksr);
-        preload_soundfont_presets(ksr, soundfont_opts.active_presets, soundfont_opts.load_percussion_bank);
+    log_debug("active_presets=%d", soundfont_opts.active_presets);
+
+    preload_soundfont_presets(ksr, soundfont_opts.active_presets, soundfont_opts.load_percussion_bank);
 
     ksr->is_soundfont_loaded = true;
     return 0;

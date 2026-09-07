@@ -39,7 +39,6 @@ int main(int argc, char *argv[])
         .active_presets = 10,
         .bank = 0,
         .preset = 0,
-        .preload_instruments = true,
         .load_percussion_bank = true,
     };
 
@@ -47,7 +46,6 @@ int main(int argc, char *argv[])
         .active_presets = 10,
         .bank = 0,
         .preset = 0,
-        .preload_instruments = true,
         .load_percussion_bank = true,
     };
 
