@@ -318,109 +318,16 @@ int preload_soundfont_instruments(Kasaria *ksr)
     return 1;
 }
 
-/*
 int preload_soundfont_presets(Kasaria *ksr, int active_presets, bool perc_bank)
 {
-    Instrument *instr;
-    int bank;
-    int program;
-
-    if(!ksr || !ksr->sf_loaded || !ksr->sf_info)
-        return 0;
-
-    int limit = active_presets;
-    // Very important !!! Limit the number of requested presets if the soundfont has less than that
-    if(limit > ksr->sf_info->npresets)
-        limit = ksr->sf_info->npresets;
-
-    for(int i = 0; i < limit; i++)
-    {
-        bank    = ksr->sf_info->preset[i].bank;
-        program = ksr->sf_info->preset[i].preset;
-
-        log_trace("BANK IDX: %d", bank);
-
-        if(bank < 0 || bank > 127)
-            continue;
-
-        if(program < 0 || program > 127)
-            continue;
-
-
-        if(!ksr->tonebank[bank])
-        {
-            ksr->tonebank[bank] = (ToneBank *)safe_malloc(sizeof(ToneBank));
-            memset(ksr->tonebank[bank], 0, sizeof(ToneBank));
-        }
-        
-        if(ksr->tonebank[bank]->tone[program].instrument)
-            continue;
-
-        if(bank == 128)
-            continue;
-        
-        instr = sndfont_load_instrument(ksr, bank, program);
-        
-        if(instr)
-            ksr->tonebank[bank]->tone[program].instrument = instr;
-        else
-            log_error("SF2: failed to load instrument bank=%d program=%d", bank, program);
-    }
-
-    if(perc_bank)
-    {
-        for(int i = 0; i < ksr->sf_info->npresets; i++)
-        {
-            bank    = ksr->sf_info->preset[i].bank;
-            program = ksr->sf_info->preset[i].preset;
-
-            if(bank == 128)
-            {
-                instr = sndfont_load_instrument(ksr, bank, program);
-            
-                if(!instr)
-                {
-                    log_error("SF2: drum load failed bank=%d program=%d", bank, program);
-                    continue;
-                }
-                
-                if(!ksr->drumset[0])
-                {
-                    ksr->drumset[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
-                    memset(ksr->drumset[0], 0, sizeof(ToneBank));
-                }
-                
-                for(int k = 0; k < instr->samples; k++)
-                {
-                    Sample *sp = &instr->sample[k];
-                    for(int key = sp->low_key; key <= sp->high_key && key < 128; key++)
-                        if(key >= 0)
-                            ksr->drumset[0]->tone[key].instrument = instr;
-                }
-                continue;
-            }
-        }
-    }
-    return 1;
-}
-*/
-
-
-
-int preload_soundfont_presets(Kasaria *ksr, int active_presets, bool perc_bank)
-{
-    int i;
-    int bank;
-    int program;
+    int i, bank, program;
     Instrument *inst;
+    int loaded = 0;
     
     if(!ksr || !ksr->sf_loaded || !ksr->sf_info)
         return 0;
-
-    log_debug("SF2 Preset count: %d", ksr->sf_info->npresets);
-    // for(int i = 0; i < ksr->sf_info->npresets; i++)
-    //     log_trace("preset %d: bank=%d preset=%d name=%s", i, ksr->sf_info->preset[i].bank, ksr->sf_info->preset[i].preset, ksr->sf_info->preset[i].hdr.name);
     
+    log_debug("SF2 Preset count: %d", ksr->sf_info->npresets);
     log_debug("Preloading soundfont instruments");
     
     for(i = 0; i < ksr->sf_info->npresets; i++)
@@ -428,28 +335,32 @@ int preload_soundfont_presets(Kasaria *ksr, int active_presets, bool perc_bank)
         bank    = ksr->sf_info->preset[i].bank;
         program = ksr->sf_info->preset[i].preset;
 
-        if(program < 0 || program > 127) // Is this required only for the percusion bank ?
+        if(program < 0 || program > 127) // percussion logins keep 0..127 too
             continue;
 
-        if(bank == 128 && perc_bank)   // SF2 percussion bank
+        if(bank == 128)   // SF2 percussion bank - independent of the preset budget
         {
+            if(!perc_bank)
+                continue;
+
             inst = sndfont_load_instrument(ksr, bank, program);
-        
+            
             if(!inst)
             {
                 log_error("SF2: drum load failed bank=%d program=%d", bank, program);
                 continue;
             }
-            
+
             if(!ksr->drumset[0])
             {
                 ksr->drumset[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
                 memset(ksr->drumset[0], 0, sizeof(ToneBank));
             }
-            
+
             for(int k = 0; k < inst->samples; k++)
             {
                 Sample *sp = &inst->sample[k];
+                
                 for(int key = sp->low_key; key <= sp->high_key && key < 128; key++)
                     if(key >= 0)
                         ksr->drumset[0]->tone[key].instrument = inst;
@@ -457,28 +368,33 @@ int preload_soundfont_presets(Kasaria *ksr, int active_presets, bool perc_bank)
             continue;
         }
 
-        if(i <= active_presets)
+        if(bank < 0 || bank > 127)
+            continue;
+
+        if(loaded >= active_presets)   // Load as many presets as the user requests
+            continue;
+
+        if(!ksr->tonebank[bank])
         {
-            if(bank < 0 || bank > 127)
-                continue;
-            
-            if(!ksr->tonebank[bank])
-            {
-                ksr->tonebank[bank] = (ToneBank *)safe_malloc(sizeof(ToneBank));
-                memset(ksr->tonebank[bank], 0, sizeof(ToneBank));
-            }
-            
-            if(ksr->tonebank[bank]->tone[program].instrument)
-                continue;
-            
-            inst = sndfont_load_instrument(ksr, bank, program);
-            
-            if(inst)
-                ksr->tonebank[bank]->tone[program].instrument = inst;
-            else
-                log_error("SF2: failed to load instrument bank=%d program=%d", bank, program);
+            ksr->tonebank[bank] = (ToneBank *)safe_malloc(sizeof(ToneBank));
+            memset(ksr->tonebank[bank], 0, sizeof(ToneBank));
         }
+
+        // After Fix 1, slots this font provides were cleared, so this guard
+        // only preserves instruments from earlier fonts. Keep it.
+        if(ksr->tonebank[bank]->tone[program].instrument)
+            continue;
+
+        inst = sndfont_load_instrument(ksr, bank, program);
+        
+        if(inst)
+        {
+            ksr->tonebank[bank]->tone[program].instrument = inst;
+            loaded++;
+        }
+        else
+            log_error("SF2: failed to load instrument bank=%d program=%d", bank, program);
     }
-    
+
     return 1;
 }
