@@ -74,11 +74,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    ksr_set_sample_rate(synth, SAMPLE_RATE);
-    ksr_set_max_voices(synth, 5000);
+    ksr_config_set_sample_rate(synth, SAMPLE_RATE);
+    ksr_config_set_max_voices(synth, 5000);
     ksr_load_soundfont_file(synth, "Full Grand Piano V2.sf2", true);
     ksr_load_soundfont_file(synth, "Arachno SoundFont Version 1.0.sf2", true);
-    ksr_set_antialiasing(synth, 1);
+    ksr_config_set_antialiasing(synth, 1);
 
     printf("Loading midi\n");
     if(!ksr_load_midi_file(synth, MIDI_MEMORY, argv[1]))

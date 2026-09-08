@@ -8,10 +8,10 @@ int main(void)
 {
     Kasaria *ksr = ksr_init(0);
     
-    ksr_set_amplification(ksr, 100);
-    ksr_set_sample_rate(ksr, 48000);
-    ksr_set_control_rate(ksr, 12000);
-    ksr_set_max_voices(ksr, 256);
+    ksr_config_set_amplification(ksr, 100);
+    ksr_config_set_sample_rate(ksr, 48000);
+    ksr_config_set_control_rate(ksr, 12000);
+    ksr_config_set_max_voices(ksr, 256);
     
     int r = ksr_load_soundfont_file(ksr, "Full Grand Piano V2.sf2", true);
     printf("SF2 load: %d\n", r);

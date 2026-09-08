@@ -13,14 +13,14 @@ int main(int argc, char *argv[])
 {
     converter = ksr_init(0);
 
-    ksr_set_fast_decay(converter, true);
-    ksr_set_antialiasing(converter, true);
-    ksr_set_sample_rate(converter, 48000); // Optional
-    ksr_set_max_voices(converter, 2026);
+    ksr_config_set_fast_decay(converter, true);
+    ksr_config_set_antialiasing(converter, true);
+    ksr_config_set_sample_rate(converter, 48000); // Optional
+    ksr_config_set_max_voices(converter, 9024);
     
     // Skip notes with velocities in between the low and high specified threasholds
     // And also enable the filter
-    ksr_set_note_velocity_skipping(converter, 0, 20, true);
+    ksr_config_set_note_skipping(converter, 0, 20, true);
 
     // The first preset of this soundfont overrides the first preset of the second loaded soundfont
     //ksr_load_soundfont_file(converter, "Full Grand Piano V2.sf2", true);
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
         doesn't have a preset for the required MIDI bank
     */
     ksr_load_soundfont_file(converter, "Arachno SoundFont Version 1.0.sf2", true);
-    ksr_load_soundfont_file(converter, "Full Grand Piano V2.sf2", true);
+    ksr_load_soundfont_file(converter, "/home/andre/disks/1_TB_1/bm/soundfonts/Dominics Grand Piano Collection v0.5.sf2", true);
 
     if(!ksr_load_midi_file(converter, MIDI_MEMORY, argv[1])) // Try to load a midi file
     {
@@ -40,8 +40,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    int rate     = ksr_get_sample_rate(converter);
-    int channels = ksr_get_mono(converter) ? 1 : 2;
+    int rate     = ksr_config_get_sample_rate(converter);
+    int channels = ksr_config_get_mono(converter) ? 1 : 2;
     
     ma_encoder_config config = ma_encoder_config_init(ma_encoding_format_wav, ma_format_f32, channels, rate);
     ma_encoder encoder;

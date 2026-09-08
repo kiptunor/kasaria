@@ -16,17 +16,17 @@ int main(int argc, char *argv[])
     
 
     // Set some parameters
-    ksr_set_fast_decay(synth, true);
-    ksr_set_antialiasing(synth, true);
-    ksr_set_sample_rate(synth, 48000); // Optional
-    ksr_set_pre_resample(synth, true);
+    ksr_config_set_fast_decay(synth, true);
+    ksr_config_set_antialiasing(synth, true);
+    ksr_config_set_sample_rate(synth, 48000); // Optional
+    ksr_config_set_pre_resample(synth, true);
     
     // Skip notes with velocities in between the low and high specified threasholds
     // And also enable the filter
-    ksr_set_note_velocity_skipping(synth, 0, 20, true);
+    ksr_config_set_note_skipping(synth, 0, 20, true);
 
     
-    ksr_set_max_voices(synth, 5000); // How many voices the synth can use
+    ksr_config_set_max_voices(synth, 5000); // How many voices the synth can use
     //ksr_set_audio_frame_size(synth, 688);
 
     // Initialize and open an audio device

@@ -75,14 +75,14 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    ksr_set_sample_rate(synth, SAMPLE_RATE);
-    ksr_set_max_voices(synth, 5000);
+    ksr_config_set_sample_rate(synth, SAMPLE_RATE);
+    ksr_config_set_max_voices(synth, 5000);
     //ksr_load_soundfont_file(synth, "Full Grand Piano V2.sf2", true);
     //ksr_load_soundfont_file(synth, "SgtPepperArc360.sf2", true);
     ksr_load_soundfont_file(synth, "Arachno SoundFont Version 1.0.sf2", true);
-    ksr_set_antialiasing(synth, 1);
-    ksr_set_fast_decay(synth, true);
-    ksr_set_note_velocity_skipping(synth, 0, 20, true);
+    ksr_config_set_antialiasing(synth, 1);
+    ksr_config_set_fast_decay(synth, true);
+    ksr_config_set_note_skipping(synth, 0, 20, true);
 
     printf("Loading midi\n");
     if(!ksr_load_midi_file(synth, MIDI_MEMORY, argv[1])) // Try to load a midi file

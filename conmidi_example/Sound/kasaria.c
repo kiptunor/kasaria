@@ -65,12 +65,12 @@ void KSR_Init()
 {
     ksr_inst = ksr_init(0);
 
-    ksr_set_amplification(ksr_inst, 100);
-    ksr_set_sample_rate(ksr_inst, SAMPLE_RATE);
+    ksr_config_set_amplification(ksr_inst, 100);
+    ksr_config_set_sample_rate(ksr_inst, SAMPLE_RATE);
     //ksr_set_control_rate(ksr_inst, SAMPLE_RATE / 4);
-    ksr_set_max_voices(ksr_inst, 5000);
-    ksr_set_antialiasing(ksr_inst, 0);
-    ksr_set_note_velocity_skipping(ksr_inst, 0, 32, true);
+    ksr_config_set_max_voices(ksr_inst, 5000);
+    ksr_config_set_antialiasing(ksr_inst, 0);
+    ksr_config_set_note_skipping(ksr_inst, 0, 32, true);
     ksr_print_config(ksr_inst);
     ksr_load_soundfont_file(ksr_inst, "Full Grand Piano V2.sf2", true);
     ksr_load_soundfont_file(ksr_inst, "Arachno SoundFont Version 1.0.sf2", true);
