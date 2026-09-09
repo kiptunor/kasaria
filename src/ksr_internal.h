@@ -48,7 +48,9 @@
 #include <math.h>
 #include <stdbool.h>
 
-
+#ifdef _WIN32
+    #include <Windows.h>
+#endif
 
 
 
@@ -547,7 +549,15 @@ typedef struct
 {
     u_char  *data;      // pointer to file bytes (page cache)
     size_t   len;
+#ifdef __linux__
     int      fd;
+#endif
+
+#ifdef _WIN32
+    HANDLE fd;
+    HANDLE h_map;
+    //LARGE_INTEGER len;
+#endif
 }FileMap;
 
 typedef struct

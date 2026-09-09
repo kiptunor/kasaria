@@ -38,7 +38,14 @@ playmidi.c -- random stuff in need of rearrangement
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
+
+#ifdef _WIN32
+    #include <Windows.h>
+#endif
+
+#ifdef __linux__
+    #include <unistd.h>
+#endif
 
 #define __USE_POSIX199309
 #include <time.h>
@@ -776,7 +783,8 @@ void ksr_unmap_file(FileMap *m)
 {
     if(!m)
         return;
-    
+
+#ifdef __linux__
     if(m->data && m->data != MAP_FAILED)
         munmap(m->data, m->len);
     
@@ -785,6 +793,29 @@ void ksr_unmap_file(FileMap *m)
     
     m->data = NULL;
     m->fd   = -1;
+#endif
+
+#ifdef _WIN32
+    if(m->data)
+    {
+        UnmapViewOfFile(m->data);
+        m->data = NULL;
+    }
+
+    if(m->h_map)
+    {
+        CloseHandle(m->h_map);
+        m->h_map = NULL;
+    }
+
+    if(m->fd != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(m->fd);
+        m->fd = INVALID_HANDLE_VALUE;
+    }
+
+    m->len = 0;
+#endif
 }
 
 static u32 read_vlq(const u_char **p)
@@ -1392,6 +1423,7 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
     if(loading_mode == MIDI_MAP)
     {
         log_debug("Opening file: %s", filename);
+#ifdef __linux__
         struct stat st;
         ksr->f_mmap->data = NULL;
         ksr->f_mmap->len  = 0;
@@ -1445,6 +1477,95 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
         ksr->last_smf[1023] = '\0';
         ksr->is_midi_loaded = true;
         log_info("Loaded MIDI (mapped stream): %s", ksr->last_smf);
+#endif
+
+#ifdef _WIN32
+        ksr->f_mmap->data  = NULL;
+        ksr->f_mmap->len   = 0;
+        ksr->f_mmap->fd    = INVALID_HANDLE_VALUE;
+        ksr->f_mmap->h_map = NULL;
+
+        ksr->f_mmap->fd    = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+        if(ksr->f_mmap->fd == INVALID_HANDLE_VALUE)
+        {
+            log_error("Failed to open MIDI file.");
+            return 0;
+        }
+
+        LARGE_INTEGER file_size;
+        if(!GetFileSizeEx(ksr->f_mmap->fd, &file_size) || file_size.QuadPart <= 0)
+        {
+            log_error("Failed to read MIDI file size.");
+        
+            CloseHandle(ksr->f_mmap->fd);
+            ksr->f_mmap->fd = INVALID_HANDLE_VALUE;
+        
+            return 0;
+        }
+
+        // Then cast the file size to size_t
+        ksr->f_mmap->len = (size_t)file_size.QuadPart;
+
+        log_debug("Creating file map...");
+        
+        ksr->f_mmap->h_map = CreateFileMappingA(ksr->f_mmap->fd, NULL, PAGE_READONLY, 0, 0, NULL);
+
+        if(ksr->f_mmap->h_map == NULL)
+        {
+            log_error("Failed to create file mapping.");
+
+            CloseHandle(ksr->f_mmap->fd);
+            ksr->f_mmap->fd = INVALID_HANDLE_VALUE;
+
+            return 0;
+        }
+        
+        log_debug("Mapping file into memory...");
+                
+        ksr->f_mmap->data  = MapViewOfFile(ksr->f_mmap->h_map, FILE_MAP_READ, 0, 0, 0);
+
+        if(ksr->f_mmap->data == NULL)
+        {
+            log_error("Failed to map file view.");
+
+            CloseHandle(ksr->f_mmap->h_map);
+            CloseHandle(ksr->f_mmap->fd);
+
+            ksr->f_mmap->h_map = NULL;
+            ksr->f_mmap->fd = INVALID_HANDLE_VALUE;
+
+            return 0;
+        }
+        
+        log_debug("MIDI file mapped: %zu bytes", ksr->f_mmap->len);
+
+        if(!stream_init( ksr, ksr->f_mmap->data, ksr->f_mmap->len))
+        {
+            log_error("Invalid or unsupported MIDI stream.");
+
+            ksr_unmap_file(ksr->f_mmap);
+            return 0;
+        }
+        
+        log_debug("MIDI Stream init");
+        
+        stream_rewind(ksr);
+        
+        while(stream_next(ksr)){ }
+        
+        ksr->sample_count = ksr->stream->st;
+        ksr->events_midi  = 0;
+        
+        stream_seek(ksr, 0);
+        
+        strncpy(ksr->last_smf, filename, 1023);
+        ksr->last_smf[1023] = '\0';
+        
+        ksr->is_midi_loaded = true;
+        
+        log_info("Loaded MIDI (mapped stream): %s", ksr->last_smf);
+#endif
         return 1;
     }
     

@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     ksr_config_set_fast_decay(converter, true);
     ksr_config_set_antialiasing(converter, true);
     ksr_config_set_sample_rate(converter, 48000); // Optional
-    ksr_config_set_max_voices(converter, 9024);
+    ksr_config_set_max_voices(converter, 5024);
     
     // Skip notes with velocities in between the low and high specified threasholds
     // And also enable the filter
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
         doesn't have a preset for the required MIDI bank
     */
     ksr_load_soundfont_file(converter, "Arachno SoundFont Version 1.0.sf2", true);
-    ksr_load_soundfont_file(converter, "/home/andre/disks/1_TB_1/bm/soundfonts/Dominics Grand Piano Collection v0.5.sf2", true);
+    ksr_load_soundfont_file(converter, "/home/andre/disks/1_TB_1/bm/soundfonts/Project CF-162.sf2", true);
 
     if(!ksr_load_midi_file(converter, MIDI_MEMORY, argv[1])) // Try to load a midi file
     {
