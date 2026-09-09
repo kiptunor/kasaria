@@ -35,20 +35,20 @@ playmidi.c -- random stuff in need of rearrangement
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
+
 #include <fcntl.h>
 
 #ifdef _WIN32
-    #include <Windows.h>
+    #include <windows.h>
 #endif
 
 #ifdef __linux__
     #include <unistd.h>
+    #include <sys/mman.h>
+    #include <sys/stat.h>
+    #define __USE_POSIX199309
+    #include <time.h>
 #endif
-
-#define __USE_POSIX199309
-#include <time.h>
 
 
 #ifndef _WIN32_WCE
@@ -1823,9 +1823,22 @@ int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long cou
 
 u64 monotonic_ns(void)
 {
+#ifdef __linux__
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
+#endif
+
+#ifdef _WIN32
+    static LARGE_INTEGER frequency;
+    LARGE_INTEGER counter;
+
+    if(frequency.QuadPart == 0)
+        QueryPerformanceFrequency(&frequency);
+    
+    QueryPerformanceCounter(&counter);
+    return (u64)((counter.QuadPart * 1000000000ULL) / (u64)frequency.QuadPart);
+#endif
 }
 
 double ksr_player_get_pos(Kasaria *ksr)

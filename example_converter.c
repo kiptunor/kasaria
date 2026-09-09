@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
         doesn't have a preset for the required MIDI bank
     */
     ksr_load_soundfont_file(converter, "Arachno SoundFont Version 1.0.sf2", true);
-    ksr_load_soundfont_file(converter, "/home/andre/disks/1_TB_1/bm/soundfonts/Project CF-162.sf2", true);
+    ksr_load_soundfont_file(converter, "Full Grand Piano V2.sf2", true);
 
     if(!ksr_load_midi_file(converter, MIDI_MEMORY, argv[1])) // Try to load a midi file
     {

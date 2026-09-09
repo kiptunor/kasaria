@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     //ksr_load_soundfont_file_new(synth, "Arachno SoundFont Version 1.0.sf2", s2);
 
 
-    if(!ksr_load_midi_file(synth, MIDI_MEMORY, argv[1])) // Try to load a midi file
+    if(!ksr_load_midi_file(synth, MIDI_MAP, argv[1])) // Try to load a midi file
     {
         printf("Failed to load MIDI file: %s\n", argv[1]);
         ksr_shutdown(synth);
