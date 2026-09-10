@@ -142,6 +142,7 @@ Kasaria *ksr_init(bool disable_logs)
     ksr->buffer_period_size            = 488;
     ksr->skip_initial_midi_silence     = false;
     ksr->overlapping_notes             = true;
+    ksr->audio_compressor              = true;
 
     ksr->is_midi_player_paused = false;
     ksr->is_midi_player_active = false;
@@ -219,6 +220,7 @@ void ksr_restore_defaults(Kasaria *ksr)
     ksr->skip_initial_midi_silence     = false;
     ksr->current_midi_player_position  = 0.0f;
     ksr->overlapping_notes             = true;
+    ksr->audio_compressor              = true;
 
     default_compressor_settings(ksr);
 

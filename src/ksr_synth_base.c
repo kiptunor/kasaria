@@ -909,5 +909,6 @@ void do_compute_data(Kasaria *ksr, long count)
             mix_voice(ksr, ksr->buffer_pointer, i, count);
     }
 
-    audio_compressor(&ksr->compressor_settings, (f32 *)ksr->buffer_pointer, samples * sizeof(f32));
+    if(ksr->audio_compressor)
+        audio_compressor(&ksr->compressor_settings, (f32 *)ksr->buffer_pointer, samples * sizeof(f32));
 }
