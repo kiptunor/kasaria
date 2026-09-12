@@ -69,38 +69,38 @@ void default_compressor_settings(Kasaria *ksr)
 
 void ksr_print_config(Kasaria *ksr)
 {
-    log_debug("fast_decay                 = %d",  ksr->fast_decay);
-    log_debug("antialiasing_allowed       = %d",  ksr->antialiasing_allowed);
-    log_debug("pre_resampling_allowed     = %d",  ksr->pre_resampling_allowed);
-    log_debug("sample_rate                = %ld", ksr->play_mode.rate);
-    log_debug("control_rate               = %ld", ksr->control_rate);
-    log_debug("control_ratio              = %ld", ksr->control_ratio);
-    log_debug("master_volume              = %f",  ksr->master_volume);
-    log_debug("drum_channels              = %ld", ksr->drumchannels);
-    log_debug("quiet_channels             = %ld", ksr->quietchannels);
-    log_debug("voice_limit                = %d",  ksr->voices);
-    log_debug("adjust_panning_immediately = %d",  ksr->adjust_panning_immediately);
-    log_debug("overlapping_notes          = %d",  ksr->overlapping_notes);
-    log_debug("skip_initial_silence       = %d",  ksr->skip_initial_midi_silence);
+    printf("fast_decay                 = %d",  ksr->fast_decay);
+    printf("antialiasing_allowed       = %d",  ksr->antialiasing_allowed);
+    printf("pre_resampling_allowed     = %d",  ksr->pre_resampling_allowed);
+    printf("sample_rate                = %ld", ksr->play_mode.rate);
+    printf("control_rate               = %ld", ksr->control_rate);
+    printf("control_ratio              = %ld", ksr->control_ratio);
+    printf("master_volume              = %f",  ksr->master_volume);
+    printf("drum_channels              = %ld", ksr->drumchannels);
+    printf("quiet_channels             = %ld", ksr->quietchannels);
+    printf("voice_limit                = %d",  ksr->voices);
+    printf("adjust_panning_immediately = %d",  ksr->adjust_panning_immediately);
+    printf("overlapping_notes          = %d",  ksr->overlapping_notes);
+    printf("skip_initial_silence       = %d",  ksr->skip_initial_midi_silence);
 
 
     printf("\n------------- [Filters and audio DSP Effects] -------------\n\n");
 
-    log_debug("note_vel_skipping -> enabled           = %d", ksr->note_vel_skipping);
-    log_debug("note_vel_skipping -> low_vel_treshold  = %u", ksr->low_vel_treshold);
-    log_debug("note_vel_skipping -> high_vel_treshold = %u\n\n", ksr->high_vel_treshold);
+    printf("note_vel_skipping -> enabled           = %d", ksr->note_vel_skipping);
+    printf("note_vel_skipping -> low_vel_treshold  = %u", ksr->low_vel_treshold);
+    printf("note_vel_skipping -> high_vel_treshold = %u\n\n", ksr->high_vel_treshold);
 
-    log_debug("compressor -> envelope      = %f", ksr->compressor_settings.envelope);
-    log_debug("compressor -> gain          = %f", ksr->compressor_settings.gain);
-    log_debug("compressor -> threshold     = %f", ksr->compressor_settings.threshold);
-    log_debug("compressor -> ratio         = %f", ksr->compressor_settings.ratio);
-    log_debug("compressor -> attack_coeff  = %f", ksr->compressor_settings.attack_coeff);
-    log_debug("compressor -> release_coeff = %f", ksr->compressor_settings.release_coeff);
-    log_debug("compressor -> makeup_gain   = %f", ksr->compressor_settings.makeup_gain);
-    log_debug("compressor -> attack_ms     = %f", ksr->compressor_settings.attack_ms);
-    log_debug("compressor -> release_ms    = %f", ksr->compressor_settings.release_ms);
-    log_debug("compressor -> sample_rate   = %f", ksr->compressor_settings.sample_rate);
-    log_debug("compressor -> makeup_gain   = %f", ksr->compressor_settings.makeup_gain);
+    printf("compressor -> envelope      = %f", ksr->compressor_settings.envelope);
+    printf("compressor -> gain          = %f", ksr->compressor_settings.gain);
+    printf("compressor -> threshold     = %f", ksr->compressor_settings.threshold);
+    printf("compressor -> ratio         = %f", ksr->compressor_settings.ratio);
+    printf("compressor -> attack_coeff  = %f", ksr->compressor_settings.attack_coeff);
+    printf("compressor -> release_coeff = %f", ksr->compressor_settings.release_coeff);
+    printf("compressor -> makeup_gain   = %f", ksr->compressor_settings.makeup_gain);
+    printf("compressor -> attack_ms     = %f", ksr->compressor_settings.attack_ms);
+    printf("compressor -> release_ms    = %f", ksr->compressor_settings.release_ms);
+    printf("compressor -> sample_rate   = %f", ksr->compressor_settings.sample_rate);
+    printf("compressor -> makeup_gain   = %f", ksr->compressor_settings.makeup_gain);
 }
 
 
