@@ -11,6 +11,13 @@ if is_plat("linux") then
     add_requires("sdl3",       {system = true})
     
     set_toolchains("clang")
+
+    -- Required to prevent any C++ library from being linked to kasaria library
+    set_toolset("cc", "clang")
+    set_toolset("cxx", "clang++")
+    set_toolset("ld", "clang")
+    set_toolset("sh", "clang")
+        
     add_cflags("-march=native", "-O3", "-ffast-math", "-fomit-frame-pointer")
     add_ldflags("-flto")
 elseif is_plat("mingw") then
