@@ -50,37 +50,7 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
-typedef enum
-{
-    ISA_UNKNOWN = 0,
-    ISA_SSE,
-    ISA_SSE2,
-    ISA_SSE3,
-    ISA_SSE4_1,
-    ISA_SSE4_2,
-    ISA_AVX,
-    ISA_AVX2,
-    ISA_AVX512,
-    ISA_AVX512F,
-    ISA_NEON,
-}cpu_isa;
 
-
-cpu_isa get_cpu_isa(void)
-{
-    cpu_isa isa_result = ISA_UNKNOWN;
-    unsigned eax, ebx, ecx, edx;
-    
-    if(__get_cpuid(1, &eax, &ebx, &ecx, &edx))
-    {
-        if(ecx & bit_SSE4_2)
-        {
-            isa_result = ISA_SSE4_2;
-        }
-    }
-
-    return isa_result;
-}
 
 Kasaria *raw_midi_event_ctx;
 
