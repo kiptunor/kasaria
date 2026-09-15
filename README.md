@@ -2,6 +2,8 @@
 
 A powerful and high efficiency midi synthesizer based on Timidity 0.2i
 
+The original version of Timidity 0.2i can be found [Here](https://github.com/datajake1999/Timidity_VSTi)
+
 
 
 # Features
