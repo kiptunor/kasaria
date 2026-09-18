@@ -5,6 +5,10 @@ add_rules("mode.debug", "mode.release", "plugin.compile_commands.autoupdate", "m
 -- add_cflags("-O0", "-g")
 
 
+
+
+
+
 set_languages("c11")
 
 if is_plat("linux") then
@@ -40,7 +44,10 @@ end
 
 
 
-
+option("build-examples")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Build examples")
 
 
 function copy_soundfonts(target)
@@ -69,69 +76,7 @@ target("kasaria")
     add_links("m")
     add_files("src/**.c")
 
-target("example-miniaudio")
-    set_kind("binary")
-    add_links("m")
-    add_files("example_miniaudio.c")
-    add_deps("kasaria")
-    after_build(copy_soundfonts)
 
-target("example-sokol")
-    set_kind("binary")
-    
-    if is_plat("linux") then
-        add_links("asound")
-    elseif is_plat("mingw") then
-         add_links("ole32")
-    end
-    add_links("m")
-    add_files("example_sokol.c")
-    add_deps("kasaria")
-    after_build(copy_soundfonts)
-
-target("example-sdl3")
-
-    if is_plat("mingw") then
-        set_default(false)
-    end
-    
-    set_kind("binary")
-    add_packages("sdl3")
-    add_links("m")
-    add_files("example_sdl3.c")
-    add_deps("kasaria")
-    after_build(copy_soundfonts)
-
-target("example-simple")
-    set_kind("binary")
-    add_links("m")
-    add_files("simple-example.c")
-    add_deps("kasaria")
-    after_build(copy_soundfonts)
-
-target("example-conmidi")
-
-    if is_plat("mingw") then
-        set_default(false)
-    end
-    
-    set_kind("binary")
-    add_packages("sdl3")
-    add_links("m", "pthread", "asound")
-    add_files("conmidi_example/**.c")
-    add_deps("kasaria")
-    after_build(copy_soundfonts)
-
-target("example-async")
-    set_kind("binary")
-    add_links("m", "pthread")
-    add_files("example_async.c")
-    add_deps("kasaria")
-    after_build(copy_soundfonts)
-
-target("example-converter")
-    set_kind("binary")
-    add_links("m", "pthread")
-    add_files("example_converter.c")
-    add_deps("kasaria")
-    after_build(copy_soundfonts)
+if has_config("build-examples") then
+    includes("examples/build_examples.lua")
+end
