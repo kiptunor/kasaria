@@ -27,6 +27,9 @@
 
     Copyright (C) 1996,1997 Takashi Iwai
     ================================================================
+
+    The original source file is part of the unofficial Timidity41 fork with major modifications.
+    Source: https://github.com/starg2/timidity41
 */
 
 

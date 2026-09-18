@@ -41,7 +41,9 @@
  *================================================================*/
 
 /*
- * Modified by Masanao Izumo <mo@goice.co.jp>
+ * Modified by:
+ * Masanao Izumo <mo@goice.co.jp>
+ * Kiptunor
  */
 
 

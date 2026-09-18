@@ -38,10 +38,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * The original source file is part of the unofficial Timidity41 fork
+ * Source: https://github.com/starg2/timidity41
  *================================================================*/
 
 /*
- * Modified by Masanao Izumo <mo@goice.co.jp>
+ * Modified by:
+ * Masanao Izumo <mo@goice.co.jp>
+ * Kiptunor
  */
 
 
