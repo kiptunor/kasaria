@@ -28,8 +28,10 @@ mix.c */
 
 
 
-#define KSR_RELEASE_FAST_FREE  1500   // free voices below this → fast release
-#define KSR_RELEASE_FAST_MULT  3      // release-rate multiplier under pressure
+#define KSR_RELEASE_FAST_FREE  9500   // free voices below this → fast release
+
+// release-rate multiplier under pressure
+#define KSR_RELEASE_FAST_MULT  4 // Larger multiplication shorter release
 
 
 
@@ -141,6 +143,8 @@ int recompute_envelope(Kasaria *ksr, int v)
 
     if(stage >= 3 && ksr->free_voice_count < KSR_RELEASE_FAST_FREE)
         ksr->voice[v].envelope_increment *= KSR_RELEASE_FAST_MULT;
+    //if(stage >= 3 && ksr->free_voice_count < (ksr->voices >> 1))
+    //    ksr->voice[v].envelope_increment *= KSR_RELEASE_FAST_MULT;
 
     return 0;
 }

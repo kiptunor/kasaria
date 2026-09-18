@@ -767,7 +767,8 @@ void        free_default_instrument(Kasaria *tm);
 //Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filename, int bank, int program);
 int         preload_soundfont_instruments(Kasaria *ksr);
 int         preload_soundfont_presets(Kasaria *ksr, int active_presets, bool perc_bank);
-void alloc_instrument_bank(int dr, int bk);
+void        alloc_instrument_bank(int dr, int bk);
+void        squash_sample_16to8(Sample *sp);
 
 
 
@@ -821,7 +822,7 @@ void        reset_controllers(Kasaria *ksr, int c);
 void        reset_midi(Kasaria *ksr);
 void        free_voice_push(Kasaria *ksr, int i);
 Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset);
-int load_font(Kasaria *ksr, SFInfo *sf, int pridx);
+int         load_font(Kasaria *ksr, SFInfo *sf, int pridx);
 
 
 u64         monotonic_ns(void);

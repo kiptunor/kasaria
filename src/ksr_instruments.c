@@ -56,6 +56,62 @@ ToneBank *tonebank[128 + MAP_BANK_COUNT] = {&standard_tonebank};
 ToneBank *drumset[128 + MAP_BANK_COUNT] = {&standard_drumset};
 
 
+
+
+
+
+#ifdef LOOKUP_HACK
+// ! Squash the 16-bit data into 8 bits.
+void squash_sample_16to8(Sample *sp)
+{
+	u8 *gulp, *ulp;
+
+	int l = sp->data_length >> FRACTION_BITS;
+
+	gulp = ulp = (u8 *)safe_malloc(l + 1);
+
+	switch(sp->data_type)
+	{
+	    case SAMPLE_TYPE_INT16:
+	    {
+		    i16 *swp;
+		    swp = (i16 *)sp->data;
+		    while(l--)
+		        *ulp++ = (*swp++ >> 8) & 0xff;
+	    }
+	    break;
+	    case SAMPLE_TYPE_INT32:
+	    {
+	        i32 *swp;
+	        swp = (i32 *)sp->data;
+	        while(l--)
+		        *ulp++ = (*swp++ >> 24) & 0xff;
+	    }
+	    break;
+	    case SAMPLE_TYPE_FLOAT:
+	    {
+	        f32 *swp = (f32 *)sp->data;
+	        while(l--)
+		        *ulp++ = *swp++ * 127.0;
+	    }
+	    break;
+	    case SAMPLE_TYPE_DOUBLE:
+	    {
+	        f64 *swp = (f64 *)sp->data;
+	        while(l--)
+		        *ulp++ = *swp++ * 127.0;
+	    }
+	    break;
+	    default:
+		    log_warn("invalid squash data_type %d", sp->data_type);
+		break;
+	}
+	safe_free(sp->data);
+	sp->data = (sample_t *)gulp;
+}
+#endif
+
+
 static void init_tone_bank_element(ToneBankElement *tone)
 {
 	tone->note           = -1;

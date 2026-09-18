@@ -16,11 +16,11 @@ int main(int argc, char *argv[])
     ksr_config_set_fast_decay(converter, true);
     ksr_config_set_antialiasing(converter, true);
     ksr_config_set_sample_rate(converter, 48000); // Optional
-    ksr_config_set_max_voices(converter, 5024);
+    ksr_config_set_max_voices(converter, 8024);
     
     // Skip notes with velocities in between the low and high specified threasholds
     // And also enable the filter
-    ksr_config_set_note_skipping(converter, 0, 20, true);
+    ksr_config_set_note_skipping(converter, 0, 20, false);
 
     // The first preset of this soundfont overrides the first preset of the second loaded soundfont
     //ksr_load_soundfont_file(converter, "Full Grand Piano V2.sf2", true);
@@ -31,9 +31,9 @@ int main(int argc, char *argv[])
         doesn't have a preset for the required MIDI bank
     */
     ksr_load_soundfont_file(converter, "Arachno SoundFont Version 1.0.sf2", true);
-    ksr_load_soundfont_file(converter, "Full Grand Piano V2.sf2", true);
+    ksr_load_soundfont_file(converter, "/home/andre/disks/1_TB_1/bm/soundfonts/Amr's Steinway Dream Piano.sf2", true);
 
-    if(!ksr_load_midi_file(converter, MIDI_MEMORY, argv[1])) // Try to load a midi file
+    if(!ksr_load_midi_file(converter, MIDI_MAP, argv[1])) // Try to load a midi file
     {
         printf("Failed to load MIDI file: %s\n", argv[1]);
         ksr_shutdown(converter);

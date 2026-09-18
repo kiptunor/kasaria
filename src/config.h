@@ -103,7 +103,7 @@
 /* 1000 here will give a control ratio of 22:1 with 22 kHz output.
    Higher CONTROLS_PER_SECOND values allow more accurate rendering
    of envelopes and tremolo. The cost is CPU time. */
-#define CONTROLS_PER_SECOND   200
+#define CONTROLS_PER_SECOND   50
 
 /* Strongly recommended. This option increases CPU usage by half, but
    without it sound quality is very poor. */
@@ -121,7 +121,7 @@
    Defining LOOKUP_HACK should save ~20% of CPU on an Intel machine.
    LOOKUP_INTERPOLATION might give another ~5% */
 
-//#define LOOKUP_HACK
+// #define LOOKUP_HACK // Breaks the soundfont loader
 #define LOOKUP_INTERPOLATION
 
 /* Make envelopes twice as fast. Saves ~20% CPU time (notes decay
@@ -140,7 +140,7 @@
 /* For some reason the sample volume is always set to maximum in all
    patch files. Define this for a crude adjustment that may help
    equalize instrument volumes. */
-#define ADJUST_SAMPLE_VOLUMES
+//#define ADJUST_SAMPLE_VOLUMES // Used nowhere
 
 /* If you have root access, you can define DANGEROUS_RENICE and chmod
    timidity setuid root to have it automatically raise its priority
@@ -167,7 +167,7 @@
 /* Shawn McHorse's resampling optimizations. These may not in fact be
    faster on your particular machine and compiler. You'll have to run
    a benchmark to find out. */
-#define PRECALC_LOOPS
+//#define PRECALC_LOOPS
 
 /* If calling ldexp() is faster than a floating point multiplication
    on your machine/compiler/libm, uncomment this. It doesn't make much
