@@ -16,7 +16,7 @@ Most important
 - [ ] Make it WASM compatible
 - [ ] Try to optimize the MIDI loader
 - [ ] Implement player position precalculation at MIDI loading time
-- [ ] Organize the code examples
+- [x] Organize the code examples
 - [ ] Add documentation on all API functions in kasaria.h
 - [ ] Add function API to get the version of kasaria
 
