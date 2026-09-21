@@ -676,6 +676,13 @@ struct Kasaria
     u64            wall_clock_last_ns;
     f64            phase_ema;
     int            phase_valid;
+    u64            player_pos_calc;
+
+    u64 position_start_ns;
+    //double position_start_sec;
+    long position_start_sample;
+    int position_clock_valid;
+
     int            opt_modulation_envelope;
     int            midi_loading_mode;
     FileMap       *f_mmap;

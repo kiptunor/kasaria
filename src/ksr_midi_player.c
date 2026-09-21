@@ -80,7 +80,15 @@ playmidi.c -- random stuff in need of rearrangement
 Kasaria *async_midi_player; // Required only for the async MIDI player
 
 
+static void position_clock_update(Kasaria *ksr, u64 callback_ns, long sample)
+{
+    if(!ksr)
+        return;
 
+    ksr->position_start_sample = sample;
+    ksr->position_start_ns = callback_ns;
+    ksr->position_clock_valid = 1;
+}
 
 void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
@@ -96,6 +104,9 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
         memset(pOutput, 0, frameCount * 2 * sizeof(float));
         return;
     }
+
+    const long start_sample = async_midi_player->current_sample;
+    const u64 start_ns      = monotonic_ns();
     
     float  raw_audio[async_midi_player->buffer_period_size * 2];
     float *out       = (float *)pOutput;
@@ -120,6 +131,8 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
         out       += chunk * 2;
         remaining -= chunk;
     }
+
+    position_clock_update(async_midi_player, start_ns, start_sample);
 }
 
 static void seek_forward(Kasaria *ksr, long until_time)
@@ -1684,17 +1697,18 @@ bool ksr_player_pause(Kasaria *ksr)
 {
     if(!ksr)
         return 1;
-
-    bool pause_ret;
-
-    pause_ret = ksr->is_midi_player_paused = !ksr->is_midi_player_paused;
+    
     if(!ksr->is_midi_player_paused)
     {
-        ksr->phase_valid = 0;
-        ksr_mark_pos_ns(ksr);
+        const double pos           = ksr_player_get_pos(ksr);
+        ksr->current_sample        = (long)(pos * (double)ksr->play_mode.rate);
+        ksr->is_midi_player_paused = true;
+        return 1;
     }
+    
+    ksr->is_midi_player_paused = false;
 
-    return pause_ret;
+    return 0;
 }
 
 int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long count)
@@ -1815,7 +1829,7 @@ int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long cou
             ksr_all_notes_off(ksr);
 
         ksr->current_sample += convert;
-        ksr_mark_pos_ns(ksr);
+        //ksr_mark_pos_ns(ksr);
         count               -= convert;
     }
     return 1;
@@ -1845,13 +1859,24 @@ double ksr_player_get_pos(Kasaria *ksr)
 {
     if(!ksr)
         return 0.0;
-
-    f64 base = (f64)ksr->current_sample / (f64)ksr->play_mode.rate;
-
-    if(ksr->is_midi_player_active && !ksr->is_midi_player_paused && !ksr->is_midi_ended && ksr->phase_valid)
-        return (f64)monotonic_ns() / 1e9 + ksr->phase_ema;
-
-    return base; // paused / ended / inactive → exact, frozen
+    
+    if(ksr->is_midi_player_paused || ksr->is_midi_ended || !ksr->is_midi_player_active || !ksr->position_clock_valid)
+        return (double)ksr->current_sample / (double)ksr->play_mode.rate;
+        
+    
+    const u64 now = monotonic_ns();
+    
+    double elapsed = (double)(now - ksr->position_start_ns) * 1e-9;
+    
+        /*
+         * One audio period.
+         */
+    const double max_elapsed = (double)ksr->buffer_period_size / (double)ksr->play_mode.rate;
+    
+    if(elapsed > max_elapsed)
+        elapsed = max_elapsed;
+    
+    return (double)ksr->position_start_sample / (double)ksr->play_mode.rate + elapsed;
 }
 
 int ksr_player_begin(Kasaria *ksr, bool wait_midi_ending)
@@ -1880,6 +1905,8 @@ int ksr_player_begin(Kasaria *ksr, bool wait_midi_ending)
     log_info("Starting MIDI playback...");
     ma_device_start(&async_midi_player->audio_device); // This may cause the midi player to get stuck when trying to play the midi again
 
+    //position_clock_start(ksr);
+    
     // Wait for the MIDI playback to finish (This is required if this function is called on the main thread so it won't exit)
     if(wait_midi_ending)
         while(!ksr->is_midi_ended)
@@ -1927,7 +1954,10 @@ int ksr_player_seek(Kasaria *ksr, long time)
     if(ksr->midi_loading_mode == MIDI_MAP)
         stream_seek(ksr, ksr_millis2samples(ksr, time));
 
-    ksr->phase_valid = 0;
+    // ksr->phase_valid = 0;
+
+    
+    ksr->position_clock_valid = 0;
     
     return ksr_get_current_time(ksr);
 }
