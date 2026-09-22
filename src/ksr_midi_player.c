@@ -80,59 +80,87 @@ playmidi.c -- random stuff in need of rearrangement
 Kasaria *async_midi_player; // Required only for the async MIDI player
 
 
-static void position_clock_update(Kasaria *ksr, u64 callback_ns, long sample)
-{
-    if(!ksr)
-        return;
 
-    ksr->position_start_sample = sample;
-    ksr->position_start_ns = callback_ns;
-    ksr->position_clock_valid = 1;
-}
 
 void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
+    (void)pDevice;
     (void)pInput;
-    
-    // Paused / ended: never advance the sequencer or position, just output silence.
+
     if(!async_midi_player ||
-           !async_midi_player->is_midi_loaded ||
-           (!async_midi_player->stream && !async_midi_player->current_event) ||
-           async_midi_player->is_midi_ended ||
-           async_midi_player->is_midi_player_paused)
+       !async_midi_player->is_midi_loaded ||
+       (!async_midi_player->stream &&
+        !async_midi_player->current_event) ||
+       async_midi_player->is_midi_ended ||
+       async_midi_player->is_midi_player_paused)
     {
-        memset(pOutput, 0, frameCount * 2 * sizeof(float));
+        memset(pOutput, 0, frameCount * 2 * sizeof(f32));
         return;
     }
 
-    const long start_sample = async_midi_player->current_sample;
-    const u64 start_ns      = monotonic_ns();
-    
-    float  raw_audio[async_midi_player->buffer_period_size * 2];
-    float *out       = (float *)pOutput;
-    int    remaining = frameCount;
+    // Position update on the start of the audio frame
+    const u64 start_frame = (u64)async_midi_player->current_sample;
+
+    // Then audio rendering
+    f32 raw_audio[async_midi_player->buffer_period_size * 2];
+    f32 *out = (f32 *)pOutput;
+    int remaining = (int)frameCount;
 
     while(remaining > 0)
     {
-        int chunk    = remaining > async_midi_player->buffer_period_size ? async_midi_player->buffer_period_size : remaining;
-        int rendered = ksr_player_get_stream(async_midi_player, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk);
+        int chunk = remaining > async_midi_player->buffer_period_size ? async_midi_player->buffer_period_size : remaining;
+        
+        int rendered = ksr_player_get_stream(async_midi_player, AUDIO_FLOAT, (u8 *)raw_audio, chunk);
 
         if(!rendered)
         {
-            memset(out, 0, remaining * 2 * sizeof(float));
+            memset(out, 0, remaining * 2 * sizeof(f32));
             return;
         }
 
-        for(int i = 0; i < chunk; i++)
-        {
-            out[i * 2 + 0] = raw_audio[i * 2 + 0];
-            out[i * 2 + 1] = raw_audio[i * 2 + 1];
-        }
-        out       += chunk * 2;
+        memcpy(out, raw_audio, chunk * 2 * sizeof(f32));
+
+        out += chunk * 2;
         remaining -= chunk;
     }
 
-    position_clock_update(async_midi_player, start_ns, start_sample);
+    // Position update on the end of the audio frame
+    const u64 end_frame   = (u64)async_midi_player->current_sample;
+    const u64 duration_ns = ((u64)frameCount * 1000000000ULL) / (u64)async_midi_player->play_mode.rate;
+    u64 now_ns            = monotonic_ns();
+    u64 start_ns;
+    
+    if(async_midi_player->position_clock_end_ns == 0)
+        start_ns = now_ns;
+    else
+    {
+        start_ns = async_midi_player->position_clock_end_ns;
+
+        if(start_ns < now_ns)
+            start_ns = now_ns;
+    }
+    
+    const u64 end_ns                         = start_ns + duration_ns;
+    async_midi_player->position_clock_end_ns = end_ns;
+    
+    u64 seq = atomic_load_explicit(&async_midi_player->position_seq, memory_order_relaxed);
+    atomic_store_explicit(&async_midi_player->position_seq, seq + 1, memory_order_release);
+    atomic_store_explicit(&async_midi_player->position_start_frame, start_frame, memory_order_relaxed);
+    atomic_store_explicit(&async_midi_player->position_end_frame, end_frame, memory_order_relaxed);
+    atomic_store_explicit(&async_midi_player->position_start_ns, start_ns, memory_order_relaxed);
+    atomic_store_explicit(&async_midi_player->position_end_ns, end_ns, memory_order_relaxed);
+    atomic_store_explicit(&async_midi_player->position_seq, seq + 2, memory_order_release);
+}
+
+static void reset_position_frame(Kasaria *ksr)
+{
+    ksr->position_clock_end_ns = 0;
+    
+    atomic_store_explicit(&ksr->position_seq, 0, memory_order_release);
+    atomic_store_explicit(&ksr->position_start_frame, 0, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_end_frame, 0, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_start_ns, 0, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_end_ns, 0, memory_order_relaxed);
 }
 
 static void seek_forward(Kasaria *ksr, long until_time)
@@ -144,59 +172,59 @@ static void seek_forward(Kasaria *ksr, long until_time)
         {
             // All notes stay off. Just handle the parameter changes.
 
-        case ME_PITCH_SENS:
-            ksr->channel[ksr->current_event->channel].pitchsens   = ksr->current_event->key;
-            ksr->channel[ksr->current_event->channel].pitchfactor = 0;
+            case ME_PITCH_SENS:
+                ksr->channel[ksr->current_event->channel].pitchsens   = ksr->current_event->key;
+                ksr->channel[ksr->current_event->channel].pitchfactor = 0;
             break;
-
-        case ME_PITCHWHEEL:
-            ksr->channel[ksr->current_event->channel].pitchbend   = ksr->current_event->key + ksr->current_event->vel * 128;
-            ksr->channel[ksr->current_event->channel].pitchfactor = 0;
+                
+            case ME_PITCHWHEEL:
+                ksr->channel[ksr->current_event->channel].pitchbend   = ksr->current_event->key + ksr->current_event->vel * 128;
+                ksr->channel[ksr->current_event->channel].pitchfactor = 0;
             break;
-
-        case ME_MAINVOLUME:
-            ksr->channel[ksr->current_event->channel].volume = ksr->current_event->key;
+                
+            case ME_MAINVOLUME:
+                ksr->channel[ksr->current_event->channel].volume = ksr->current_event->key;
             break;
-
-        case ME_PAN:
-            ksr->channel[ksr->current_event->channel].panning = ksr->current_event->key;
+                
+            case ME_PAN:
+                ksr->channel[ksr->current_event->channel].panning = ksr->current_event->key;
             break;
-
-        case ME_EXPRESSION:
-            ksr->channel[ksr->current_event->channel].expression = ksr->current_event->key;
+                
+            case ME_EXPRESSION:
+                ksr->channel[ksr->current_event->channel].expression = ksr->current_event->key;
             break;
-
-        case ME_PROGRAM:
-            if(ISDRUMCHANNEL(ksr, ksr->current_event->channel))
-                // Change drum set
-                ksr->channel[ksr->current_event->channel].bank = ksr->current_event->key;
-            else
-                ksr->channel[ksr->current_event->channel].program = ksr->current_event->key;
+                
+            case ME_PROGRAM:
+                if(ISDRUMCHANNEL(ksr, ksr->current_event->channel))
+                    // Change drum set
+                    ksr->channel[ksr->current_event->channel].bank = ksr->current_event->key;
+                else
+                    ksr->channel[ksr->current_event->channel].program = ksr->current_event->key;
+                break;
+                
+            case ME_SUSTAIN:
+                ksr->channel[ksr->current_event->channel].sustain = ksr->current_event->key;
             break;
-
-        case ME_SUSTAIN:
-            ksr->channel[ksr->current_event->channel].sustain = ksr->current_event->key;
+                
+            case ME_RESET_CONTROLLERS:
+                reset_controllers(ksr, ksr->current_event->channel);
             break;
-
-        case ME_RESET_CONTROLLERS:
-            reset_controllers(ksr, ksr->current_event->channel);
+                
+            case ME_MONO:
+                ksr->channel[ksr->current_event->channel].mono = 1;
             break;
-
-        case ME_MONO:
-            ksr->channel[ksr->current_event->channel].mono = 1;
+                
+            case ME_POLY:
+                ksr->channel[ksr->current_event->channel].mono = 0;
             break;
-
-        case ME_POLY:
-            ksr->channel[ksr->current_event->channel].mono = 0;
+                
+            case ME_TONE_BANK:
+                if(!ISDRUMCHANNEL(ksr, ksr->current_event->channel))
+                    ksr->channel[ksr->current_event->channel].bank = ksr->current_event->key;
             break;
-
-        case ME_TONE_BANK:
-            if(!ISDRUMCHANNEL(ksr, ksr->current_event->channel))
-                ksr->channel[ksr->current_event->channel].bank = ksr->current_event->key;
-            break;
-
-        case ME_EOT:
-            ksr->current_sample = ksr->current_event->time;
+                
+            case ME_EOT:
+                ksr->current_sample = ksr->current_event->time;
             return;
         }
         ksr->current_event++;
@@ -233,99 +261,99 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
 
             // Effects affecting a single note
 
-        case ME_NOTEON:
-            if(!(e->vel)) // Velocity 0?
+            case ME_NOTEON:
+                if(!(e->vel)) // Velocity 0?
+                    note_off(ksr, e);
+                else
+                    note_on(ksr, e);
+                break;
+                
+            case ME_NOTEOFF:
                 note_off(ksr, e);
-            else
-                note_on(ksr, e);
             break;
-
-        case ME_NOTEOFF:
-            note_off(ksr, e);
+                
+            case ME_KEYPRESSURE:
+                adjust_pressure(ksr, e);
             break;
-
-        case ME_KEYPRESSURE:
-            adjust_pressure(ksr, e);
+                
+                // Effects affecting a single channel
+                
+            case ME_PITCH_SENS:
+                ksr->channel[e->channel].pitchsens   = e->key;
+                ksr->channel[e->channel].pitchfactor = 0;
             break;
-
-            // Effects affecting a single channel
-
-        case ME_PITCH_SENS:
-            ksr->channel[e->channel].pitchsens   = e->key;
-            ksr->channel[e->channel].pitchfactor = 0;
+                
+            case ME_PITCHWHEEL:
+                ksr->channel[e->channel].pitchbend   = e->key + e->vel * 128;
+                ksr->channel[e->channel].pitchfactor = 0;
+                // Adjust pitch for notes already playing
+                adjust_pitchbend(ksr, e->channel);
             break;
-
-        case ME_PITCHWHEEL:
-            ksr->channel[e->channel].pitchbend   = e->key + e->vel * 128;
-            ksr->channel[e->channel].pitchfactor = 0;
-            // Adjust pitch for notes already playing
-            adjust_pitchbend(ksr, e->channel);
+                
+            case ME_MAINVOLUME:
+                ksr->channel[e->channel].volume = e->key;
+                adjust_volume(ksr, e->channel);
             break;
-
-        case ME_MAINVOLUME:
-            ksr->channel[e->channel].volume = e->key;
-            adjust_volume(ksr, e->channel);
+                
+            case ME_PAN:
+                ksr->channel[e->channel].panning = e->key;
+                
+                if(ksr->adjust_panning_immediately)
+                    adjust_panning(ksr, e->channel);
+                break;
+                
+            case ME_EXPRESSION:
+                ksr->channel[e->channel].expression = e->key;
+                adjust_volume(ksr, e->channel);
             break;
-
-        case ME_PAN:
-            ksr->channel[e->channel].panning = e->key;
-            if(ksr->adjust_panning_immediately)
-                adjust_panning(ksr, e->channel);
-
+                
+            case ME_PROGRAM:
+                if(ISDRUMCHANNEL(ksr, e->channel))
+                {
+                    // Change drum set
+                    if(ksr->drumset[e->key])
+                        ksr->channel[e->channel].bank = e->key;
+                }
+                else
+                    ksr->channel[e->channel].program = e->key;
+                
+                break;
+                
+            case ME_SUSTAIN:
+                ksr->channel[e->channel].sustain = e->key;
+                
+                if(!e->key)
+                    drop_sustain(ksr, e->channel);
+                break;
+                
+            case ME_RESET_CONTROLLERS:
+                reset_controllers(ksr, e->channel);
             break;
-
-        case ME_EXPRESSION:
-            ksr->channel[e->channel].expression = e->key;
-            adjust_volume(ksr, e->channel);
+                
+            case ME_ALL_NOTES_OFF:
+                all_notes_off(ksr, e->channel);
             break;
-
-        case ME_PROGRAM:
-            if(ISDRUMCHANNEL(ksr, e->channel))
-            {
-                // Change drum set
-                if(ksr->drumset[e->key])
-                    ksr->channel[e->channel].bank = e->key;
-            }
-            else
-                ksr->channel[e->channel].program = e->key;
-
+                
+            case ME_ALL_SOUNDS_OFF:
+                all_sounds_off(ksr, e->channel);
             break;
-
-        case ME_SUSTAIN:
-            ksr->channel[e->channel].sustain = e->key;
-            if(!e->key)
-                drop_sustain(ksr, e->channel);
-
+                
+            case ME_MONO:
+                ksr->channel[e->channel].mono = 1;
+                all_notes_off(ksr, e->channel);
             break;
-
-        case ME_RESET_CONTROLLERS:
-            reset_controllers(ksr, e->channel);
+                
+            case ME_POLY:
+                ksr->channel[e->channel].mono = 0;
+                all_notes_off(ksr, e->channel);
             break;
-
-        case ME_ALL_NOTES_OFF:
-            all_notes_off(ksr, e->channel);
-            break;
-
-        case ME_ALL_SOUNDS_OFF:
-            all_sounds_off(ksr, e->channel);
-            break;
-
-        case ME_MONO:
-            ksr->channel[e->channel].mono = 1;
-            all_notes_off(ksr, e->channel);
-            break;
-
-        case ME_POLY:
-            ksr->channel[e->channel].mono = 0;
-            all_notes_off(ksr, e->channel);
-            break;
-
-        case ME_TONE_BANK:
-            if(!ISDRUMCHANNEL(ksr, e->channel))
-            {
-                if(ksr->tonebank[e->key])
-                    ksr->channel[e->channel].bank = e->key;
-            }
+                
+            case ME_TONE_BANK:
+                if(!ISDRUMCHANNEL(ksr, e->channel))
+                {
+                    if(ksr->tonebank[e->key])
+                        ksr->channel[e->channel].bank = e->key;
+                }
             break;
         }
     }
@@ -372,34 +400,34 @@ static void read_midi_text(Kasaria *ksr)
 
         switch(buff & 0x00FFFF00)
         {
-        case 0x02FF00: // Copyright
-            buff = (buff & 0xFF000000) >> 24;
-            if(!strlen(ksr->song_copyright))
-            {
-                read                          = fread(ksr->song_copyright, 1, buff, ksr->fp_midi);
-                *(ksr->song_copyright + read) = '\0';
-            }
-            else
-                fseek(ksr->fp_midi, buff, SEEK_CUR);
+            case 0x02FF00: // Copyright
+                buff = (buff & 0xFF000000) >> 24;
+                if(!strlen(ksr->song_copyright))
+                {
+                    read                          = fread(ksr->song_copyright, 1, buff, ksr->fp_midi);
+                    *(ksr->song_copyright + read) = '\0';
+                }
+                else
+                    fseek(ksr->fp_midi, buff, SEEK_CUR);
             break;
-        case 0x03FF00: // Track
-            buff = (buff & 0xFF000000) >> 24;
-            if(!strlen(ksr->song_title))
-            {
-                read                      = fread(ksr->song_title, 1, buff, ksr->fp_midi);
-                *(ksr->song_title + read) = '\0';
-            }
-            else
-                fseek(ksr->fp_midi, buff, SEEK_CUR);
+            case 0x03FF00: // Track
+                buff = (buff & 0xFF000000) >> 24;
+                if(!strlen(ksr->song_title))
+                {
+                    read                      = fread(ksr->song_title, 1, buff, ksr->fp_midi);
+                    *(ksr->song_title + read) = '\0';
+                }
+                else
+                    fseek(ksr->fp_midi, buff, SEEK_CUR);
             break;
-        case 0x01FF00: // other text
-        case 0x04FF00: // Instrument
-        case 0x05FF00: // Lyrics
-        case 0x06FF00: // Marker
-        case 0x07FF00: // Cue
-        default:
-            buff = (buff & 0xFF000000) >> 24;
-            fseek(ksr->fp_midi, buff, SEEK_CUR);
+            case 0x01FF00: // other text
+            case 0x04FF00: // Instrument
+            case 0x05FF00: // Lyrics
+            case 0x06FF00: // Marker
+            case 0x07FF00: // Cue
+            default:
+                buff = (buff & 0xFF000000) >> 24;
+                fseek(ksr->fp_midi, buff, SEEK_CUR);
             break;
         }
     }
@@ -620,62 +648,63 @@ void ksr_channel_control_change(Kasaria *ksr, u_char channel, u_char controller,
     channel    = channel & 0x0f;
     controller = controller & 0x7f;
     value      = value & 0x7f;
+    
     switch(controller)
     {
-    case 0x00:
-        ksr_channel_set_bank(ksr, channel, value);
+        case 0x00:
+            ksr_channel_set_bank(ksr, channel, value);
         break;
-    case 0x06:
-        switch((ksr->rpn_msb[channel] << 8) | ksr->rpn_lsb[channel])
-        {
-        case 0x0000:
-            ksr_channel_set_pitch_range(ksr, channel, value);
-            break;
-        case 0x7f7f:
-            ksr_channel_set_pitch_range(ksr, channel, 2);
-            ksr->rpn_msb[channel] = 0xff;
+        case 0x06:
+            switch((ksr->rpn_msb[channel] << 8) | ksr->rpn_lsb[channel])
+            {
+                case 0x0000:
+                    ksr_channel_set_pitch_range(ksr, channel, value);
+                break;
+                case 0x7f7f:
+                    ksr_channel_set_pitch_range(ksr, channel, 2);
+                    ksr->rpn_msb[channel] = 0xff;
+                    ksr->rpn_lsb[channel] = 0xff;
+                break;
+            }
+        break;
+        case 0x07:
+            ksr_channel_set_volume(ksr, channel, value);
+        break;
+        case 0x0a:
+            ksr_channel_set_pan(ksr, channel, value);
+        break;
+        case 0x0b:
+            ksr_channel_set_expression(ksr, channel, value);
+        break;
+        case 0x40:
+            ksr_channel_set_sustain(ksr, channel, value);
+        break;
+        case 0x62:
             ksr->rpn_lsb[channel] = 0xff;
-            break;
-        }
         break;
-    case 0x07:
-        ksr_channel_set_volume(ksr, channel, value);
+        case 0x63:
+            ksr->rpn_msb[channel] = 0xff;
         break;
-    case 0x0a:
-        ksr_channel_set_pan(ksr, channel, value);
+        case 0x64:
+            ksr->rpn_msb[channel] = value;
         break;
-    case 0x0b:
-        ksr_channel_set_expression(ksr, channel, value);
+        case 0x65:
+            ksr->rpn_lsb[channel] = value;
         break;
-    case 0x40:
-        ksr_channel_set_sustain(ksr, channel, value);
+        case 0x78:
+            ksr_channel_all_sounds_off(ksr, channel);
         break;
-    case 0x62:
-        ksr->rpn_lsb[channel] = 0xff;
+        case 0x79:
+            ksr_channel_reset_controllers(ksr, channel);
         break;
-    case 0x63:
-        ksr->rpn_msb[channel] = 0xff;
+        case 0x7b:
+            ksr_channel_all_notes_off(ksr, channel);
         break;
-    case 0x64:
-        ksr->rpn_msb[channel] = value;
+        case 0x7e:
+            ksr_channel_mono_mode(ksr, channel);
         break;
-    case 0x65:
-        ksr->rpn_lsb[channel] = value;
-        break;
-    case 0x78:
-        ksr_channel_all_sounds_off(ksr, channel);
-        break;
-    case 0x79:
-        ksr_channel_reset_controllers(ksr, channel);
-        break;
-    case 0x7b:
-        ksr_channel_all_notes_off(ksr, channel);
-        break;
-    case 0x7e:
-        ksr_channel_mono_mode(ksr, channel);
-        break;
-    case 0x7f:
-        ksr_channel_poly_mode(ksr, channel);
+        case 0x7f:
+            ksr_channel_poly_mode(ksr, channel);
         break;
     }
 }
@@ -684,39 +713,41 @@ void ksr_write_midi_ev(Kasaria *ksr, u_char byte1, u_char byte2, u_char byte3)
 {
     u_char type    = byte1 & 0xf0;
     u_char channel = byte1 & 0x0f;
+    
     if(!ksr)
         return;
 
     switch(type)
     {
-    case 0x80:
-        ksr_channel_note_off(ksr, channel, byte2);
+        case 0x80:
+            ksr_channel_note_off(ksr, channel, byte2);
         break;
-    case 0x90:
-        ksr_channel_note_on(ksr, channel, byte2, byte3);
+        case 0x90:
+            ksr_channel_note_on(ksr, channel, byte2, byte3);
         break;
-    case 0xa0:
-        ksr_channel_key_pressure(ksr, channel, byte2, byte3);
+        case 0xa0:
+            ksr_channel_key_pressure(ksr, channel, byte2, byte3);
         break;
-    case 0xb0:
-        ksr_channel_control_change(ksr, channel, byte2, byte3);
+        case 0xb0:
+            ksr_channel_control_change(ksr, channel, byte2, byte3);
         break;
-    case 0xc0:
-        ksr_channel_set_program(ksr, channel, byte2);
+        case 0xc0:
+            ksr_channel_set_program(ksr, channel, byte2);
         break;
-    case 0xe0:
-        ksr_channel_set_pitch_wheel(ksr, channel, (u_short)((byte3 << 7) | byte2));
+        case 0xe0:
+            ksr_channel_set_pitch_wheel(ksr, channel, (u_short)((byte3 << 7) | byte2));
         break;
     }
 }
 
 void ksr_write_midi_ev_packed(Kasaria *ksr, u_long data)
-{
+{    
+    if(!ksr)
+        return;
+
     u_char byte1 = data & 0xff;
     u_char byte2 = (data >> 8) & 0x7f;
     u_char byte3 = (data >> 16) & 0x7f;
-    if(!ksr)
-        return;
 
     ksr_write_midi_ev(ksr, byte1, byte2, byte3);
 }
@@ -727,6 +758,7 @@ void ksr_write_sysex(Kasaria *ksr, u_char *buffer, long count)
     const u_char gm2_reset_array[6] = { 0xF0, 0x7E, 0x7F, 0x09, 0x03, 0xF7 };
     const u_char gs_reset_array[11] = { 0xF0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7F, 0x00, 0x41, 0xF7 };
     const u_char xg_reset_array[9]  = { 0xF0, 0x43, 0x10, 0x4C, 0x00, 0x00, 0x7E, 0x00, 0xF7 };
+    
     if(!ksr || !buffer)
         return;
 
@@ -838,6 +870,7 @@ static u32 read_vlq(const u_char **p)
     {
         u_char b = *(*p)++;
         v = (v << 7) | (b & 0x7f);
+        
         if(!(b & 0x80))
             break;
     }
@@ -846,9 +879,9 @@ static u32 read_vlq(const u_char **p)
 
 static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
 {
-    const u_char **p = &s->cur[t];
+    const u_char **p  = &s->cur[t];
     const u_char *end = s->end[t];
-    long at = s->abs_tick[t];
+    long at           = s->abs_tick[t];
 
     for(;;)
     {
@@ -862,6 +895,7 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
             
             if(*p > end)
                 *p = end;
+            
             continue;
         }
         if(me == 0xFF)                            // meta
@@ -884,7 +918,10 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
                 return 1;
             }
             *p += len;
-            if(*p > end) *p = end;
+            
+            if(*p > end)
+                *p = end;
+            
             continue;
         }
 
@@ -894,19 +931,26 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
         {
             s->lastchan[t]   = me & 0x0F;
             s->laststatus[t] = (me >> 4) & 0x07;
+            
             if(*p >= end)
                 return 0;
+            
             a = *(*p)++ & 0x7F;
         }
         else                                      // running status
         {
-            if(*p >= end) return 0;
+            if(*p >= end)
+                return 0;
+            
             a = me & 0x7F;
         }
 
         switch(s->laststatus[t])
         {
-        case 0: case 1: case 2: case 6:           // 2 data bytes
+            case 0:
+            case 1:
+            case 2:
+            case 6:           // 2 data bytes
         
             if(*p >= end)
                 return 0;
@@ -919,107 +963,112 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
             ev->type = s->laststatus[t] == 0 ? ME_NOTEOFF :
                        s->laststatus[t] == 1 ? ME_NOTEON :
                        s->laststatus[t] == 2 ? ME_KEYPRESSURE : ME_PITCHWHEEL;
+            
             s->abs_tick[t] = at;
             return 1;
 
-        case 4:                                   // program change: 1 byte
-            ev->time = at;
-            ev->channel = s->lastchan[t];
-            ev->type = ME_PROGRAM;
-            ev->key  = a;
-            ev->vel  = 0;
-            s->abs_tick[t] = at;
+            case 4:                                   // program change: 1 byte
+                ev->time = at;
+                ev->channel = s->lastchan[t];
+                ev->type = ME_PROGRAM;
+                ev->key  = a;
+                ev->vel  = 0;
+                s->abs_tick[t] = at;
             return 1;
-
-        case 5:                                   // channel pressure: dropped
-            continue;
-
-        case 3:                                   // control change remap
-        {
-            if(*p >= end) return 0;
-            b = *(*p)++ & 0x7F;
-            int control = 255, chan = s->lastchan[t];
-            switch(a)
-            {
-            case 7:
-                control = ME_MAINVOLUME;
-            break;
-            case 10:
-                control = ME_PAN;
-            break;
-            case 11:
-                control = ME_EXPRESSION;
-            break;
-            case 64:
-                control = ME_SUSTAIN; b = (b >= 64);
-            break;
-            case 120:
-                control = ME_ALL_SOUNDS_OFF;
-            break;
-            case 121:
-                control = ME_RESET_CONTROLLERS;
-            break;
-            case 123:
-                control = ME_ALL_NOTES_OFF;
-            break;
-            case 126:
-                control = ME_MONO;
-            break;
-            case 127:
-                control = ME_POLY;
-            break;
-            case 0:
-                control = ME_TONE_BANK;
-            break;
-            case 32:  break;
-            case 100:
-                s->nrpn[t] = 0;
-                s->rpn_msb[t][chan] = b;
-            break;
-            case 101:
-                s->nrpn[t] = 0;
-                s->rpn_lsb[t][chan] = b;
-            break;
-            case 99:
-                s->nrpn[t] = 1;
-                s->rpn_msb[t][chan] = b;
-            break;
-            case 98:
-                s->nrpn[t] = 1;
-                s->rpn_lsb[t][chan] = b;
-                break;
-            case 6:
-                if(s->nrpn[t])
-                    break;
                 
-                switch((s->rpn_msb[t][chan] << 8) | s->rpn_lsb[t][chan])
+            case 5:                                   // channel pressure: dropped
+            continue;
+                
+            case 3:                                   // control change remap
+            {
+                if(*p >= end) return 0;
+                b = *(*p)++ & 0x7F;
+                int control = 255, chan = s->lastchan[t];
+                switch(a)
                 {
-                case 0x0000:
-                    control = ME_PITCH_SENS;
+                    case 7:
+                        control = ME_MAINVOLUME;
                     break;
-                case 0x7F7F:
-                    ev->time    = at;
+                    case 10:
+                        control = ME_PAN;
+                    break;
+                    case 11:
+                        control = ME_EXPRESSION;
+                    break;
+                    case 64:
+                        control = ME_SUSTAIN; b = (b >= 64);
+                    break;
+                    case 120:
+                        control = ME_ALL_SOUNDS_OFF;
+                    break;
+                    case 121:
+                        control = ME_RESET_CONTROLLERS;
+                    break;
+                    case 123:
+                        control = ME_ALL_NOTES_OFF;
+                    break;
+                    case 126:
+                        control = ME_MONO;
+                    break;
+                    case 127:
+                        control = ME_POLY;
+                    break;
+                    case 0:
+                        control = ME_TONE_BANK;
+                    break;
+                    case 32:
+                    break;
+                    case 100:
+                        s->nrpn[t] = 0;
+                        s->rpn_msb[t][chan] = b;
+                    break;
+                    case 101:
+                        s->nrpn[t] = 0;
+                        s->rpn_lsb[t][chan] = b;
+                    break;
+                    case 99:
+                        s->nrpn[t] = 1;
+                        s->rpn_msb[t][chan] = b;
+                    break;
+                    case 98:
+                        s->nrpn[t] = 1;
+                        s->rpn_lsb[t][chan] = b;
+                    break;
+                    case 6:
+                        if(s->nrpn[t])
+                            break;
+                        
+                        switch((s->rpn_msb[t][chan] << 8) | s->rpn_lsb[t][chan])
+                        {
+                            case 0x0000:
+                                control = ME_PITCH_SENS;
+                            break;
+                            case 0x7F7F:
+                                ev->time    = at;
+                                ev->channel = chan;
+                                ev->type    = ME_PITCH_SENS;
+                                ev->key     = 2; ev->vel = 0;
+                                s->abs_tick[t] = at;
+                                return 1;
+                            default:
+                            break;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                
+                if(control != 255)
+                {
+                    ev->time = at;
                     ev->channel = chan;
-                    ev->type    = ME_PITCH_SENS;
-                    ev->key     = 2; ev->vel = 0;
+                    ev->type = control;
+                    ev->key = b; ev->vel = 0;
                     s->abs_tick[t] = at;
                     return 1;
-                default: break;
                 }
-                break;
-            default: break;
+                continue;
             }
-            if(control != 255)
-            {
-                ev->time = at;
-                ev->channel = chan;
-                ev->type = control;
-                ev->key = b; ev->vel = 0;
-                s->abs_tick[t] = at;
-                return 1;
-            }
-            continue;
-        }
         default: continue;
         }
     }
@@ -1037,52 +1086,54 @@ static int stream_groom(Kasaria *ksr, MidiEvent *raw)
         skip_this_event = 1;
     else switch(raw->type)
     {
-    case ME_PROGRAM:
-        if(ISDRUMCHANNEL(ksr, raw->channel))
-        {
-            long new_value = ksr->drumset[raw->key] ? raw->key : (raw->key = 0);
-            if(s->current_set[raw->channel] != new_value)
-                s->current_set[raw->channel] = new_value;
+        case ME_PROGRAM:
+            if(ISDRUMCHANNEL(ksr, raw->channel))
+            {
+                long new_value = ksr->drumset[raw->key] ? raw->key : (raw->key = 0);
+                if(s->current_set[raw->channel] != new_value)
+                    s->current_set[raw->channel] = new_value;
+                else
+                    skip_this_event = 1;
+            }
             else
-                skip_this_event = 1;
-        }
-        else
-        {
-            long new_value = raw->key;
-            if(s->current_program[raw->channel] != SPECIAL_PROGRAM && s->current_program[raw->channel] != new_value)
-                s->current_program[raw->channel] = new_value;
-            else
-                skip_this_event = 1;
-        }
+            {
+                long new_value = raw->key;
+                
+                if(s->current_program[raw->channel] != SPECIAL_PROGRAM && s->current_program[raw->channel] != new_value)
+                    s->current_program[raw->channel] = new_value;
+                else
+                    skip_this_event = 1;
+            }
         break;
-
-    case ME_NOTEON:
-        if(s->counting_time)
-            s->counting_time = 1;
-        
-        if(ISDRUMCHANNEL(ksr, raw->channel) && ksr->drumset[s->current_set[raw->channel]])
-        {
-            if(!(ksr->drumset[s->current_set[raw->channel]]->tone[raw->key].instrument))
-                ksr->drumset[s->current_set[raw->channel]]->tone[raw->key].instrument = MAGIC_LOAD_INSTRUMENT;
-        }
-        else if(ksr->tonebank[s->current_bank[raw->channel]])
-        {
-            if(s->current_program[raw->channel] == SPECIAL_PROGRAM)
-                break;
-            if(!(ksr->tonebank[s->current_bank[raw->channel]]->tone[s->current_program[raw->channel]].instrument))
-                ksr->tonebank[s->current_bank[raw->channel]]->tone[s->current_program[raw->channel]].instrument = MAGIC_LOAD_INSTRUMENT;
-        }
+            
+        case ME_NOTEON:
+            if(s->counting_time)
+                s->counting_time = 1;
+            
+            if(ISDRUMCHANNEL(ksr, raw->channel) && ksr->drumset[s->current_set[raw->channel]])
+            {
+                if(!(ksr->drumset[s->current_set[raw->channel]]->tone[raw->key].instrument))
+                    ksr->drumset[s->current_set[raw->channel]]->tone[raw->key].instrument = MAGIC_LOAD_INSTRUMENT;
+            }
+            else if(ksr->tonebank[s->current_bank[raw->channel]])
+            {
+                if(s->current_program[raw->channel] == SPECIAL_PROGRAM)
+                    break;
+                
+                if(!(ksr->tonebank[s->current_bank[raw->channel]]->tone[s->current_program[raw->channel]].instrument))
+                    ksr->tonebank[s->current_bank[raw->channel]]->tone[s->current_program[raw->channel]].instrument = MAGIC_LOAD_INSTRUMENT;
+            }
         break;
-
-    case ME_TONE_BANK:
-        if(ISDRUMCHANNEL(ksr, raw->channel)) { skip_this_event = 1; break; }
-        {
-            long new_value = ksr->tonebank[raw->key] ? raw->key : (raw->key = 0);
-            if(s->current_bank[raw->channel] != new_value)
-                s->current_bank[raw->channel] = new_value;
-            else
-                skip_this_event = 1;
-        }
+            
+        case ME_TONE_BANK:
+            if(ISDRUMCHANNEL(ksr, raw->channel)) { skip_this_event = 1; break; }
+            {
+                long new_value = ksr->tonebank[raw->key] ? raw->key : (raw->key = 0);
+                if(s->current_bank[raw->channel] != new_value)
+                    s->current_bank[raw->channel] = new_value;
+                else
+                    skip_this_event = 1;
+            }
         break;
     }
 
@@ -1387,12 +1438,21 @@ static void stream_seek(Kasaria *ksr, long until_time)
         
         switch(e->type)
         {
-        case ME_PITCH_SENS: case ME_PITCHWHEEL: case ME_MAINVOLUME:
-        case ME_PAN: case ME_EXPRESSION: case ME_PROGRAM: case ME_SUSTAIN:
-        case ME_RESET_CONTROLLERS: case ME_MONO: case ME_POLY: case ME_TONE_BANK:
-            play_midi(ksr, e);
+            case ME_PITCH_SENS:
+            case ME_PITCHWHEEL:
+            case ME_MAINVOLUME:
+            case ME_PAN:
+            case ME_EXPRESSION:
+            case ME_PROGRAM:
+            case ME_SUSTAIN:
+            case ME_RESET_CONTROLLERS:
+            case ME_MONO:
+            case ME_POLY:
+            case ME_TONE_BANK:
+                play_midi(ksr, e);
             break;
-        default: break;
+            default:
+            break;
         }
         stream_advance(ksr);
     }
@@ -1406,6 +1466,7 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
 
     ksr->midi_loading_mode = loading_mode;
 
+    reset_position_frame(ksr);
     ksr_unload_midi(ksr);
 
     if(loading_mode == MIDI_MEMORY)
@@ -1422,7 +1483,7 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
             return 0;
         }
 
-        //load_missing_instruments(ksr); // Is this necessary???
+        //load_missing_instruments(ksr); // Is this necessary??? And thid must be done much differently
 
         read_midi_text(ksr);
         skip_to(ksr, 0);
@@ -1700,8 +1761,11 @@ bool ksr_player_pause(Kasaria *ksr)
     
     if(!ksr->is_midi_player_paused)
     {
-        const double pos           = ksr_player_get_pos(ksr);
-        ksr->current_sample        = (long)(pos * (double)ksr->play_mode.rate);
+        u64 byte_pos;
+        ksr_player_get_byte_pos(ksr, &byte_pos);
+        
+        const f64 pos              = ksr_byte_pos2sec(ksr, byte_pos);
+        ksr->current_sample        = (long)(pos * (f64)ksr->play_mode.rate);
         ksr->is_midi_player_paused = true;
         return 1;
     }
@@ -1768,61 +1832,61 @@ int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long cou
 
         switch(audio_fmt)
         {
-        case AUDIO_CHAR:
-            ksr_render_char(ksr, (u_char *)buffer, convert);
-            if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(u_char);
-            else
-                buffer += convert * sizeof(u_char);
-
+            case AUDIO_CHAR:
+                ksr_render_char(ksr, (u_char *)buffer, convert);
+                
+                if(!(ksr->play_mode.encoding & PE_MONO))
+                    buffer += convert * 2 * sizeof(u_char);
+                else
+                    buffer += convert * sizeof(u_char);
             break;
-        case AUDIO_SHORT:
-            ksr_render_short(ksr, (short *)buffer, convert);
-            if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(short);
-            else
-                buffer += convert * sizeof(short);
-
+            case AUDIO_SHORT:
+                ksr_render_short(ksr, (short *)buffer, convert);
+                
+                if(!(ksr->play_mode.encoding & PE_MONO))
+                    buffer += convert * 2 * sizeof(short);
+                else
+                    buffer += convert * sizeof(short);
+                break;
+            case AUDIO_INT24:
+                ksr_render_int24(ksr, (int24 *)buffer, convert);
+                
+                if(!(ksr->play_mode.encoding & PE_MONO))
+                    buffer += convert * 2 * sizeof(int24);
+                else
+                    buffer += convert * sizeof(int24);
             break;
-        case AUDIO_INT24:
-            ksr_render_int24(ksr, (int24 *)buffer, convert);
-            if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(int24);
-            else
-                buffer += convert * sizeof(int24);
-
+            case AUDIO_LONG:
+                ksr_render_long(ksr, (long *)buffer, convert);
+                
+                if(!(ksr->play_mode.encoding & PE_MONO))
+                    buffer += convert * 2 * sizeof(long);
+                else
+                    buffer += convert * sizeof(long);
             break;
-        case AUDIO_LONG:
-            ksr_render_long(ksr, (long *)buffer, convert);
-            if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(long);
-            else
-                buffer += convert * sizeof(long);
-
+            case AUDIO_FLOAT:
+                ksr_render_float(ksr, (f32 *)buffer, convert);
+                
+                if(!(ksr->play_mode.encoding & PE_MONO))
+                    buffer += convert * 2 * sizeof(f32);
+                else
+                    buffer += convert * sizeof(f32);
             break;
-        case AUDIO_FLOAT:
-            ksr_render_float(ksr, (f32 *)buffer, convert);
-            if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(f32);
-            else
-                buffer += convert * sizeof(f32);
-
+            case AUDIO_DOUBLE:
+                ksr_render_double(ksr, (f64 *)buffer, convert);
+                
+                if(!(ksr->play_mode.encoding & PE_MONO))
+                    buffer += convert * 2 * sizeof(f64);
+                else
+                    buffer += convert * sizeof(f64);
             break;
-        case AUDIO_DOUBLE:
-            ksr_render_double(ksr, (f64 *)buffer, convert);
-            if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(f64);
-            else
-                buffer += convert * sizeof(f64);
-
-            break;
-        case AUDIO_ULAW:
-            ksr_render_ulaw(ksr, (u_char *)buffer, convert);
-            if(!(ksr->play_mode.encoding & PE_MONO))
-                buffer += convert * 2 * sizeof(u_char);
-            else
-                buffer += convert * sizeof(u_char);
-
+            case AUDIO_ULAW:
+                ksr_render_ulaw(ksr, (u_char *)buffer, convert);
+                
+                if(!(ksr->play_mode.encoding & PE_MONO))
+                    buffer += convert * 2 * sizeof(u_char);
+                else
+                    buffer += convert * sizeof(u_char);
             break;
         }
         if(ksr->current_sample == ksr->sample_count)
@@ -1833,6 +1897,83 @@ int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long cou
         count               -= convert;
     }
     return 1;
+}
+
+void ksr_player_get_byte_pos(Kasaria *ksr, uint64_t *position)
+{
+    if(!position)
+        return;
+    
+    *position = 0;
+    
+    if(!ksr)
+        return;
+    
+    u64 start_frame;
+    u64 end_frame;
+    u64 start_ns;
+    u64 end_ns;
+    
+    for(;;)
+    {
+        u64 seq1 = atomic_load_explicit(&ksr->position_seq, memory_order_acquire);
+
+        if(seq1 & 1)
+            continue;
+
+        start_frame = atomic_load_explicit(&ksr->position_start_frame, memory_order_relaxed);
+        end_frame   = atomic_load_explicit(&ksr->position_end_frame, memory_order_relaxed);
+        start_ns    = atomic_load_explicit(&ksr->position_start_ns, memory_order_relaxed);
+        end_ns      = atomic_load_explicit(&ksr->position_end_ns, memory_order_relaxed);
+        u64 seq2    = atomic_load_explicit(&ksr->position_seq, memory_order_acquire);
+
+        if(seq1 == seq2)
+            break;
+    }
+    
+    if(end_frame <= start_frame || end_ns <= start_ns)
+    {
+        *position = end_frame * sizeof(f32) * 2;
+        return;
+    }
+    
+    u64 now = monotonic_ns();
+    
+    if(now <= start_ns)
+    {
+        *position = start_frame * sizeof(f32) * 2;
+        return;
+    }
+    
+    if(now >= end_ns)
+    {
+        *position = end_frame * sizeof(f32) * 2;
+        return;
+    }
+    
+    const u64 elapsed     = now - start_ns;
+    const u64 duration    = end_ns - start_ns;
+    const u64 frame_delta = end_frame - start_frame;
+    
+#if defined(__SIZEOF_INT128__)
+    __uint128_t interpolated = (__uint128_t)elapsed * (__uint128_t)frame_delta;
+    interpolated /= duration;
+    u64 frame = start_frame + (u64)interpolated;
+    
+#else
+    u64 frame = start_frame + (u64)(((long f64)elapsed * (long f64)frame_delta) / (long f64)duration);
+#endif
+    
+    *position = frame * sizeof(f32) * 2;
+}
+
+f64 ksr_byte_pos2sec(Kasaria *ksr, u64 byte_pos)
+{
+    if(!ksr || ksr->play_mode.rate <= 0)
+        return 0.0;
+    
+    const u64 bytes_per_frame = sizeof(f32) * 2;
+    return (f64)byte_pos / ((f64)bytes_per_frame * (f64)ksr->play_mode.rate);
 }
 
 u64 monotonic_ns(void)
@@ -1853,30 +1994,6 @@ u64 monotonic_ns(void)
     QueryPerformanceCounter(&counter);
     return (u64)((counter.QuadPart * 1000000000ULL) / (u64)frequency.QuadPart);
 #endif
-}
-
-double ksr_player_get_pos(Kasaria *ksr)
-{
-    if(!ksr)
-        return 0.0;
-    
-    if(ksr->is_midi_player_paused || ksr->is_midi_ended || !ksr->is_midi_player_active || !ksr->position_clock_valid)
-        return (double)ksr->current_sample / (double)ksr->play_mode.rate;
-        
-    
-    const u64 now = monotonic_ns();
-    
-    double elapsed = (double)(now - ksr->position_start_ns) * 1e-9;
-    
-        /*
-         * One audio period.
-         */
-    const double max_elapsed = (double)ksr->buffer_period_size / (double)ksr->play_mode.rate;
-    
-    if(elapsed > max_elapsed)
-        elapsed = max_elapsed;
-    
-    return (double)ksr->position_start_sample / (double)ksr->play_mode.rate + elapsed;
 }
 
 int ksr_player_begin(Kasaria *ksr, bool wait_midi_ending)
@@ -1954,10 +2071,7 @@ int ksr_player_seek(Kasaria *ksr, long time)
     if(ksr->midi_loading_mode == MIDI_MAP)
         stream_seek(ksr, ksr_millis2samples(ksr, time));
 
-    // ksr->phase_valid = 0;
-
-    
-    ksr->position_clock_valid = 0;
+    reset_position_frame(ksr);
     
     return ksr_get_current_time(ksr);
 }

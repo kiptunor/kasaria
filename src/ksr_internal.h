@@ -47,6 +47,7 @@
 
 #include <math.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -678,10 +679,33 @@ struct Kasaria
     int            phase_valid;
     u64            player_pos_calc;
 
-    u64 position_start_ns;
+    //u64 position_start_ns;
     //double position_start_sec;
-    long position_start_sample;
-    int position_clock_valid;
+    // long position_start_sample;
+    // int position_clock_valid;
+    // _Atomic uint64_t player_byte_pos;
+
+    /*
+    _Atomic uint64_t position_start_byte;
+    _Atomic uint64_t position_end_byte;
+    _Atomic uint64_t position_start_ns;
+    _Atomic uint64_t position_duration_ns;
+    _Atomic uint64_t position_seq;
+    _Atomic uint64_t position_end_ns;
+    _Atomic uint64_t position_start_frame;
+    _Atomic uint64_t position_end_frame;
+    uint64_t position_clock_end_ns;
+    */
+
+    _Atomic uint64_t position_seq;
+    
+    _Atomic uint64_t position_start_frame;
+    _Atomic uint64_t position_end_frame;
+    
+    _Atomic uint64_t position_start_ns;
+    _Atomic uint64_t position_end_ns;
+    
+    uint64_t position_clock_end_ns;
 
     int            opt_modulation_envelope;
     int            midi_loading_mode;
