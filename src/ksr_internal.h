@@ -629,6 +629,8 @@ struct Kasaria
     bool           is_init_raw_midi_events;
     bool           is_audio_started;
     bool           overlapping_notes;
+    bool           midi_chunk_limit_enabled;
+    int            midi_chunk_size;
     // int            dynamic_loading; // No longer it use
     PlayMode       play_mode;
     f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples

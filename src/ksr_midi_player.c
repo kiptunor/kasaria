@@ -67,9 +67,6 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
-#ifndef KSR_MIN_RENDER_CHUNK
-    #define KSR_MIN_RENDER_CHUNK 800
-#endif
 
 
 
@@ -1832,8 +1829,8 @@ int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long cou
         }
 
         // Sounds almost like realtime simulation
-        //if(convert < KSR_MIN_RENDER_CHUNK)
-        //    convert = KSR_MIN_RENDER_CHUNK;
+        if(convert < ksr->midi_chunk_size && ksr->midi_chunk_limit_enabled)
+            convert = ksr->midi_chunk_size;
         
         
         if(convert > count || convert <= 0) // I could prob count the number of events here ??

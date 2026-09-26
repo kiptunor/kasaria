@@ -146,6 +146,9 @@ Kasaria *ksr_init(bool disable_logs)
     ksr->skip_initial_midi_silence     = false;
     ksr->overlapping_notes             = true;
     ksr->audio_compressor              = true;
+    ksr->midi_chunk_limit_enabled      = false;
+    ksr->midi_chunk_size               = 64;
+    
 
     ksr->is_midi_player_paused = false;
     ksr->is_midi_player_active = false;
@@ -224,6 +227,8 @@ void ksr_restore_defaults(Kasaria *ksr)
     ksr->current_midi_player_position  = 0.0f;
     ksr->overlapping_notes             = true;
     ksr->audio_compressor              = true;
+    ksr->midi_chunk_limit_enabled      = false;
+    ksr->midi_chunk_size               = 64;
 
     default_compressor_settings(ksr);
 
@@ -263,6 +268,8 @@ KasariaConfig ksr_get_config(Kasaria *ksr)
     config.audio_compressor        = ksr->audio_compressor;
     config.skip_initial_silence    = ksr->skip_initial_midi_silence;
     config.allow_overlapping_notes = ksr->overlapping_notes;
+    config.midi_chunk_limiter      = ksr->midi_chunk_limit_enabled;
+    config.midi_chunk_size         = ksr->midi_chunk_size;
 
     return config;
 }
@@ -288,6 +295,8 @@ void ksr_set_config(Kasaria *ksr, KasariaConfig config)
     ksr->note_vel_skipping          = config.velocity_skipping;
     ksr->audio_compressor           = config.audio_compressor;
     ksr->skip_initial_midi_silence  = config.skip_initial_silence;
+    ksr->midi_chunk_limit_enabled   = config.midi_chunk_limiter;
+    ksr->midi_chunk_size            = config.midi_chunk_size;
 
     // Again don't let the user disable overlapping notes if the synth is initialized for raw MIDI events
     if(ksr->audio_init_scope == RAW_MIDI_EVENTS)

@@ -43,6 +43,15 @@ void ksr_config_set_overlapping_notes(Kasaria *ksr, bool value)
     ksr->overlapping_notes = value;
 }
 
+void ksr_config_set_midi_chunk_limit(Kasaria *ksr, int size, bool enabled)
+{
+    if(!ksr)
+        return;
+
+    ksr->midi_chunk_size = size;
+    ksr->midi_chunk_limit_enabled = enabled;
+}
+
 void ksr_config_set_audio_frame_size(Kasaria *ksr, int size)
 {
     if(!ksr)
