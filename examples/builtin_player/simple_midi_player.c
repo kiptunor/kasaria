@@ -63,7 +63,8 @@ int main(int argc, char *argv[])
 
     // And the second has only 5 presets available which means that the first 5 presets of the first soundfont
     // will be overridden by the presets of the second soundfont
-    ksr_load_soundfont_file_new(synth, "Full Grand Piano V2.sf2", s2);
+    //ksr_load_soundfont_file_new(synth, "Full Grand Piano V2.sf2", s2);
+    ksr_load_soundfont_file_new(synth, "/home/andre/disks/1_TB_1/bm/soundfonts/Amr's Steinway Dream Piano.sf2", s2);
 
 
     // Load a MIDI with file mapping (Set on the second function argument)

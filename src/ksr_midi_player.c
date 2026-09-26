@@ -67,7 +67,9 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
-
+#ifndef KSR_MIN_RENDER_CHUNK
+    #define KSR_MIN_RENDER_CHUNK 800
+#endif
 
 
 
@@ -1474,7 +1476,10 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
 
         ksr->fp_midi = open_file(ksr, filename, 1, OF_VERBOSE);
         if(!ksr->fp_midi)
+        {
+            log_error("Failed to open MIDI file: %s", filename);
             return 0;
+        }
 
         ksr->event_list = read_midi_file(ksr, ksr->fp_midi, &ksr->events_midi, &ksr->sample_count);
         if(!ksr->event_list || !ksr->events_midi || !ksr->sample_count)
@@ -1825,6 +1830,10 @@ int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long cou
 
             convert = ksr->current_event->time - ksr->current_sample;
         }
+
+        // Sounds almost like realtime simulation
+        //if(convert < KSR_MIN_RENDER_CHUNK)
+        //    convert = KSR_MIN_RENDER_CHUNK;
         
         
         if(convert > count || convert <= 0) // I could prob count the number of events here ??
