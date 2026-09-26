@@ -57,6 +57,9 @@ void ksr_config_set_audio_frame_size(Kasaria *ksr, int size)
     if(!ksr)
         return;
 
+    if(size < 10)
+        size = 10;
+
     ksr->buffer_period_size = size;
 }
 
