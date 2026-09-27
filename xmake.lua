@@ -49,6 +49,11 @@ option("build-examples")
     set_showmenu(true)
     set_description("Build examples")
 
+option("static-lib")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Build kasaria as a static library")
+
 
 function copy_soundfonts(target)
     local destdir = target:targetdir()
@@ -63,6 +68,28 @@ end
 target("kasaria")
     add_defines("LOGC__USER_SETTINGS")
     set_kind("shared")
+   -- set_toolset("sh", "clang")
+    
+    if is_plat("linux") then
+        add_ldflags("-Wl,--as-needed")
+        add_links("m")
+    elseif is_plat("mingw") then
+        --set_prefixname("")
+        add_links("kernel32")
+    end
+    
+    add_links("m")
+    add_files("src/**.c")
+
+
+target("kasaria")
+    if has_config("static-lib") then
+        set_default(true)
+    else
+        set_default(false)
+    end
+    add_defines("LOGC__USER_SETTINGS")
+    set_kind("static")
    -- set_toolset("sh", "clang")
     
     if is_plat("linux") then
