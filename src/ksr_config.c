@@ -23,6 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include "kasaria.h"
 #include "ksr_internal.h"
+#include "ext_deps/log_c/log.h"
 
 
 
@@ -39,6 +40,11 @@ void ksr_config_set_overlapping_notes(Kasaria *ksr, bool value)
         ksr->overlapping_notes = true;
         return; // Ignore the user XD
     }
+
+    
+    // Prevent any stale voices from being held when changing overlapping notes
+    if(ksr->is_midi_player_active)
+        reset_voices(ksr);
     
     ksr->overlapping_notes = value;
 }
