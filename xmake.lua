@@ -65,8 +65,9 @@ function copy_soundfonts(target)
     end
 end
 
-target("kasaria")
+target("kasaria_shared")
     add_defines("LOGC__USER_SETTINGS")
+    set_basename("kasaria")
     set_kind("shared")
    -- set_toolset("sh", "clang")
     
@@ -82,7 +83,8 @@ target("kasaria")
     add_files("src/**.c")
 
 
-target("kasaria")
+target("kasaria_static")
+    set_basename("kasaria")
     if has_config("static-lib") then
         set_default(true)
     else
