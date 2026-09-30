@@ -1797,7 +1797,7 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 	//}
 
 	// resample it if possible
-	if(ksr->opt_pre_resamplation && sample->note_to_use && !(sample->modes & MODES_LOOPING))
+	if(ksr->pre_resampling_allowed && sample->note_to_use && !(sample->modes & MODES_LOOPING))
 		pre_resample(ksr, sample);
 		
 #ifdef LOOKUP_HACK

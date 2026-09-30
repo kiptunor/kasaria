@@ -66,7 +66,7 @@ function copy_soundfonts(target)
 end
 
 target("kasaria_shared")
-    add_defines("LOGC__USER_SETTINGS")
+    add_defines("LOGC__USER_SETTINGS", "BUILD_LIBTYPE_SHARED")
     set_basename("kasaria")
     set_kind("shared")
    -- set_toolset("sh", "clang")

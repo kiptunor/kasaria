@@ -511,6 +511,9 @@ static void preserve_instrument(Instrument *ip)
 
 int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_instruments)
 {
+    log_error("Broken function. Don't use it!!");
+    return -1; // - Aura boooooooooo
+    /*
     FILE *fp;
     const char *ext;
     
@@ -659,6 +662,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_ins
     ksr->is_soundfont_loaded = true;
 
     return 1;
+    */
 }
 
 int ksr_load_soundfont_file_new(Kasaria *ksr, const char *filename, KsrSoundfontOpts soundfont_opts)
