@@ -247,64 +247,6 @@ void ksr_restore_defaults(Kasaria *ksr)
     adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
 }
 
-KasariaConfig ksr_get_config(Kasaria *ksr)
-{
-    KasariaConfig config;
-
-    config.amplification           = ksr->master_volume * 100.0L;
-    config.voice_limit             = ksr->voices;
-    config.audio_frame_size        = ksr->buffer_period_size;
-    config.sample_rate             = ksr->play_mode.rate;
-    config.control_rate            = ksr->control_rate;
-    config.default_program         = ksr->default_program;
-    config.low_note_velocity       = ksr->low_vel_treshold;
-    config.high_note_velocity      = ksr->high_vel_treshold;
-    config.immediate_panning       = ksr->adjust_panning_immediately;
-    config.mono_audio              = ksr->play_mode.encoding == 1;
-    config.fast_decay              = ksr->fast_decay;
-    config.antialiasing            = ksr->antialiasing_allowed;
-    config.pre_resample            = ksr->pre_resampling_allowed;
-    config.velocity_skipping       = ksr->note_vel_skipping;
-    config.audio_compressor        = ksr->audio_compressor;
-    config.skip_initial_silence    = ksr->skip_initial_midi_silence;
-    config.allow_overlapping_notes = ksr->overlapping_notes;
-    config.midi_chunk_limiter      = ksr->midi_chunk_limit_enabled;
-    config.midi_chunk_size         = ksr->midi_chunk_size;
-
-    return config;
-}
-
-void ksr_set_config(Kasaria *ksr, KasariaConfig config)
-{
-    if(!ksr)
-        return;
-
-    ksr->master_volume              = config.amplification / 100.0L;
-    ksr->voices                     = config.voice_limit;
-    ksr->buffer_period_size         = config.audio_frame_size;
-    ksr->play_mode.rate             = config.sample_rate;
-    ksr->control_rate               = config.control_rate;
-    ksr->default_program            = config.default_program;
-    ksr->low_vel_treshold           = config.low_note_velocity;
-    ksr->high_vel_treshold          = config.high_note_velocity;
-    ksr->adjust_panning_immediately = config.immediate_panning;
-    ksr->play_mode.encoding         = config.mono_audio ? 1 : 0;
-    ksr->fast_decay                 = config.fast_decay;
-    ksr->antialiasing_allowed       = config.antialiasing;
-    ksr->pre_resampling_allowed     = config.pre_resample;
-    ksr->note_vel_skipping          = config.velocity_skipping;
-    ksr->audio_compressor           = config.audio_compressor;
-    ksr->skip_initial_midi_silence  = config.skip_initial_silence;
-    ksr->midi_chunk_limit_enabled   = config.midi_chunk_limiter;
-    ksr->midi_chunk_size            = config.midi_chunk_size;
-
-    // Again don't let the user disable overlapping notes if the synth is initialized for raw MIDI events
-    if(ksr->audio_init_scope == RAW_MIDI_EVENTS)
-        ksr->overlapping_notes = true;
-    else
-        ksr->overlapping_notes          = config.allow_overlapping_notes;
-}
-
 static void hard_kill_voice(Kasaria *ksr, int v)
 {
     Voice *vp = &ksr->voice[v];
@@ -374,6 +316,7 @@ static bool remap_voice(Kasaria *ksr, int v)
     return true;
 }
 
+// Probably unused
 static void unload_instruments(Kasaria *ksr)
 {
     int          i, j, k, n, v;
