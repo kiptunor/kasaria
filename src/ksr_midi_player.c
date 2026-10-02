@@ -307,7 +307,7 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
             break;
 
             case ME_REVERB:
-                ksr->channel[e->channel].reverb=e->vel;
+                ksr->channel[e->channel].reverb=e->key;
             break;
                 
             case ME_PROGRAM:
@@ -539,7 +539,7 @@ void ksr_channel_set_reverb(Kasaria *ksr, unsigned char channel, unsigned char r
     memset(&ev, 0, sizeof(ev));
     ev.channel = channel & 0x0f;
     ev.type    = ME_REVERB;
-    ev.vel     = reverb & 0x7f;
+    ev.key     = reverb & 0x7f;
     play_midi(ksr, &ev);
 }
 

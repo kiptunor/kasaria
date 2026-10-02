@@ -908,7 +908,8 @@ void do_compute_data(Kasaria *ksr, long count)
     samples = (ksr->play_mode.encoding & PE_MONO) ? count : (count * 2);
 
     if(ksr->reverb_enabled)
-        memset(ksr->reverb_send_buffer, 0, count * 4);
+        // memset(ksr->reverb_send_buffer, 0, count * 4);
+        memset(ksr->reverb_send_buffer, 0, count * sizeof(ksr->reverb_send_buffer[0]));
     
 
     for(i = 0; i < samples; i++)

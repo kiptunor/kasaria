@@ -151,7 +151,7 @@ Kasaria *ksr_init(bool disable_logs)
     ksr->reverb_only                   = false;
     ksr->reverb_level                  = 1.0;
     ksr->reverb_preset                 = KSR_REVERB_PRESET_PADDEDCELL;
-    ksr->reverb_enabled                = true;
+    ksr->reverb_enabled                = false;
     
 
     ksr->is_midi_player_paused = false;
@@ -1248,13 +1248,12 @@ void ksr_shutdown(Kasaria *ksr)
 
     free_sf2_sample_cache();
 
-    free(ksr->f_mmap);
-
     if(ksr->is_audio_init)
         ma_device_uninit(&ksr->audio_device);
 
     reset_midi(ksr);
     ksr_unload_midi(ksr); // This also calls reset_midi()
+    free(ksr->f_mmap);
     free_default_instrument(ksr);
     free_tables(ksr);
     memset(ksr, 0, sizeof(Kasaria));

@@ -195,8 +195,8 @@ void set_reverb_preset(Kasaria *ksr, int preset)
 
 void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count)
 {
-    f32 mono_in[AUDIO_BUFFER_SIZE];
-        f32 stereo_out[AUDIO_BUFFER_SIZE * 2];
+    f32 mono_in[REVERB_BUFFERSIZE];
+        f32 stereo_out[REVERB_BUFFERSIZE * 2];
         long scale;
         long i;
         
@@ -205,8 +205,8 @@ void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count)
         
         scale = 1 << (31 - GUARD_BITS);
         
-        if(count > AUDIO_BUFFER_SIZE)
-            count = AUDIO_BUFFER_SIZE;
+        if(count > REVERB_BUFFERSIZE)
+            count = REVERB_BUFFERSIZE;
         
         for(i=0; i<count; i++)
             mono_in[i] = (f32)send_buf[i] / (f32)scale;
@@ -218,8 +218,12 @@ void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count)
         {
             // f32 wl = stereo_out[i*2+0] * (f32)scale * (f32)ksr->reverb_level;
             // f32 wr = stereo_out[i*2+1] * (f32)scale * (f32)ksr->reverb_level;
-            f32 wl = stereo_out[i*2+0] * (f32)ksr->reverb_level;
-            f32 wr = stereo_out[i*2+1] * (f32)ksr->reverb_level;
+            
+            // f32 wl = stereo_out[i*2+0] * (f32)ksr->reverb_level;
+            // f32 wr = stereo_out[i*2+1] * (f32)ksr->reverb_level;
+
+            f32 wl = stereo_out[i*2+0] * (f32)scale * (f32)ksr->reverb_level;
+            f32 wr = stereo_out[i*2+1] * (f32)scale * (f32)ksr->reverb_level;
             
             if(ksr->reverb_only)
             {
