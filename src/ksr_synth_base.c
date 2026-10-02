@@ -870,6 +870,7 @@ void reset_controllers(Kasaria *ksr, int c)
     ksr->channel[c].mono        = 0;
     ksr->channel[c].pitchbend   = 0x2000;
     ksr->channel[c].pitchfactor = 0; // to be computed
+    ksr->channel[c].reverb      = 40;
 }
 
 void reset_midi(Kasaria *ksr)

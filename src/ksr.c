@@ -160,6 +160,8 @@ Kasaria *ksr_init(bool disable_logs)
     ksr->wall_clock_last_ns    = 0;
     ksr->is_audio_init         = false;
 
+    init_reverb(ksr);
+
     default_compressor_settings(ksr);
 
     ksr->low_vel_treshold  = 0;
@@ -1241,6 +1243,8 @@ void ksr_shutdown(Kasaria *ksr)
     // Maybe the shutdown is forced
     if(!ksr->is_midi_player_paused)
         ksr_player_pause(ksr);
+
+    free_reverb(ksr);
 
     free_sf2_sample_cache();
 

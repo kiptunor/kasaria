@@ -861,6 +861,8 @@ int         load_font(Kasaria *ksr, SFInfo *sf, int pridx);
 // ------------- Channel FX -------------
 void reset_reverb(Kasaria *ksr);
 void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count);
+void init_reverb(Kasaria *ksr);
+void free_reverb(Kasaria *ksr);
 
 
 u64         monotonic_ns(void);
