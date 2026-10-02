@@ -685,6 +685,36 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
     }
 }
 
+static void mix_reverb_send(Kasaria *ksr, sample_t *sp, long *lp, int v, int count)
+{
+    Voice *vp = ksr->voice + v;
+    long channel_reverb = ksr->channel[vp->channel].reverb;
+    final_volume_t gain;
+    sample_t s;
+    if (channel_reverb <= 0 || count <= 0)
+    {
+        return;
+    }
+    if (vp->panned == PANNED_MYSTERY)
+    {
+        gain = (vp->left_mix + vp->right_mix) / 2;
+    }
+    else
+    {
+        gain = vp->left_mix;
+    }
+    gain = (gain * channel_reverb) / 127;
+    if (!gain)
+    {
+        return;
+    }
+    while (count--)
+    {
+        s = *sp++;
+        MIXATION(gain);
+    }
+}
+
 
 /**************** interface function ******************/
 
@@ -742,6 +772,11 @@ void mix_voice(Kasaria *ksr, f32 *buf, int v, long c)
                 else
                     mix_single(ksr, sp, buf, v, c);
             }
+        }
+
+        if (ksr->reverb_enabled)
+        {
+            mix_reverb_send(ksr, sp, ksr->reverb_send_buffer, v, c);
         }
     }
 }

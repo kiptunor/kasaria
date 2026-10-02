@@ -890,6 +890,12 @@ void reset_midi(Kasaria *ksr)
         ksr->rpn_lsb[i]           = 0xff;
     }
     reset_voices(ksr);
+
+    if (ksr->reverb_enabled)
+    {
+        reset_reverb(ksr);
+    }
+    
     ksr->lost_notes = 0;
     ksr->cut_notes  = 0;
 }

@@ -695,6 +695,9 @@ void ksr_channel_control_change(Kasaria *ksr, u_char channel, u_char controller,
         case 0x40:
             ksr_channel_set_sustain(ksr, channel, value);
         break;
+        case 0x5b:
+            ksr_channel_set_reverb(ksr, channel, value);
+        break;
         case 0x62:
             ksr->rpn_lsb[channel] = 0xff;
         break;

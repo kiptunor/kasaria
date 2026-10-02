@@ -150,7 +150,7 @@ Kasaria *ksr_init(bool disable_logs)
     ksr->midi_chunk_size               = 64;
     ksr->reverb_only                   = false;
     ksr->reverb_level                  = 1.0;
-    ksr->reverb_preset                 = KSR_REVERB_PRESET_GENERIC;
+    ksr->reverb_preset                 = KSR_REVERB_PRESET_CAVE;
     ksr->reverb_enabled                = true;
     
 
