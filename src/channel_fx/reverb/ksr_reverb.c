@@ -216,8 +216,10 @@ void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count)
         
         for(i=0; i<count; i++)
         {
-            f32 wl = stereo_out[i*2+0] * (f32)scale * (f32)ksr->reverb_level;
-            f32 wr = stereo_out[i*2+1] * (f32)scale * (f32)ksr->reverb_level;
+            // f32 wl = stereo_out[i*2+0] * (f32)scale * (f32)ksr->reverb_level;
+            // f32 wr = stereo_out[i*2+1] * (f32)scale * (f32)ksr->reverb_level;
+            f32 wl = stereo_out[i*2+0] * (f32)ksr->reverb_level;
+            f32 wr = stereo_out[i*2+1] * (f32)ksr->reverb_level;
             
             if(ksr->reverb_only)
             {
