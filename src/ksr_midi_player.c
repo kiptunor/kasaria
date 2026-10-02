@@ -1037,6 +1037,9 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
                     break;
                     case 32:
                     break;
+                    case 91:
+                        control = ME_REVERB;
+                    break;
                     case 100:
                         s->nrpn[t] = 0;
                         s->rpn_msb[t][chan] = b;
