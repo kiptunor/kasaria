@@ -900,6 +900,10 @@ void do_compute_data(Kasaria *ksr, long count)
 
     samples = (ksr->play_mode.encoding & PE_MONO) ? count : (count * 2);
 
+    if(ksr->reverb_enabled)
+        memset(ksr->reverb_send_buffer, 0, count * 4);
+    
+
     for(i = 0; i < samples; i++)
         ksr->buffer_pointer[i] = 0;
 
@@ -907,6 +911,11 @@ void do_compute_data(Kasaria *ksr, long count)
     {
         if(ksr->voice[i].status != VOICE_FREE)
             mix_voice(ksr, ksr->buffer_pointer, i, count);
+    }
+
+    if(ksr->reverb_enabled)
+    {
+        process_reverb(ksr, ksr->buffer_pointer, ksr->reverb_send_buffer, count);
     }
 
     if(ksr->audio_compressor)

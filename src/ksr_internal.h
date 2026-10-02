@@ -59,6 +59,12 @@
 #include "ext_deps/miniaudio/miniaudio.h"
 
 
+#include "internal_types.h"
+
+
+#include "channel_fx/reverb/ksr_reverb_effect.h"
+
+
 #include "config.h"
 #include "kasaria.h"
 #include "ksr_sf2.h"
@@ -185,6 +191,7 @@ enum {
 #define ME_POLY               16
 #define ME_TEMPO              17
 #define ME_COARSE_TUNING      18
+#define ME_REVERB             19
 #define ME_EOT                99
 
 // Data format encoding bits
@@ -230,20 +237,6 @@ enum {
 
 
 
-
-typedef uint8_t        u8;
-typedef uint16_t       u16;
-typedef uint32_t       u32;
-typedef uint64_t       u64;
-typedef int8_t         i8;
-typedef int16_t        i16;
-typedef int32_t        i32;
-typedef int64_t        i64;
-typedef float          f32;
-typedef double         f64;
-typedef unsigned long  u_long;
-typedef unsigned short u_short;
-typedef unsigned char  u_char;
 
 #ifdef LOOKUP_SINE
 f64 sine(int x);
@@ -446,6 +439,7 @@ typedef struct
     int sustain;
     int panning;
     int pitchbend;
+    int reverb;
     int expression;
     int mono; // one note only on this channel
     int pitchsens;
@@ -624,6 +618,8 @@ struct Kasaria
     bool           antialiasing_allowed;
     bool           pre_resampling_allowed;
     bool           fast_decay;
+    bool           reverb_enabled;
+    bool           reverb_only;
     bool           preload_soundfont_instruments;
     bool           is_audio_init;
     bool           is_init_raw_midi_events;
@@ -637,11 +633,14 @@ struct Kasaria
     f32           *buffer_pointer;
     volatile f32   current_midi_player_position;
     Channel        channel[16];
+    ReverbEffect   reverb;
+    f64            reverb_level;
     Voice          voice[MAX_VOICES];
     Voice         *voice_by_channel_note[16][128][8];
     long           control_rate;
     long           control_ratio;
     f64            master_volume;
+    long           reverb_send_buffer[AUDIO_BUFFER_SIZE];
     long           drumchannels;
     long           quietchannels;
     long           lost_notes;
@@ -680,6 +679,7 @@ struct Kasaria
     f64            phase_ema;
     int            phase_valid;
     u64            player_pos_calc;
+    int            reverb_preset;
 
     //u64 position_start_ns;
     //double position_start_sec;
@@ -856,6 +856,11 @@ void        reset_midi(Kasaria *ksr);
 void        free_voice_push(Kasaria *ksr, int i);
 Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset);
 int         load_font(Kasaria *ksr, SFInfo *sf, int pridx);
+
+
+// ------------- Channel FX -------------
+void reset_reverb(Kasaria *ksr);
+void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count);
 
 
 u64         monotonic_ns(void);

@@ -118,6 +118,23 @@ void ksr_config_set_mono(Kasaria *ksr, bool value)
         ksr->play_mode.encoding &= ~PE_MONO;
 }
 
+void ksr_config_enable_reverb(Kasaria *ksr, bool value)
+{
+    if(!ksr)
+        return;
+    
+    ksr->reverb_enabled = value;
+    reset_reverb(ksr);
+}
+
+void ksr_config_set_reverb_only(Kasaria *ksr, bool value)
+{
+    if(!ksr)
+        return;
+    
+    ksr->reverb_only = value;
+}
+
 void ksr_config_set_fast_decay(Kasaria *ksr, bool value)
 {
     if(!ksr)

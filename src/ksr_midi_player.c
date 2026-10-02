@@ -305,6 +305,10 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
                 ksr->channel[e->channel].expression = e->key;
                 adjust_volume(ksr, e->channel);
             break;
+
+            case ME_REVERB:
+                ksr->channel[e->channel].reverb=e->vel;
+            break;
                 
             case ME_PROGRAM:
                 if(ISDRUMCHANNEL(ksr, e->channel))
@@ -523,6 +527,19 @@ void ksr_channel_set_sustain(Kasaria *ksr, u_char channel, u_char sustain)
     ev.channel = channel & 0x0f;
     ev.type    = ME_SUSTAIN;
     ev.key     = sustain & 0x7f;
+    play_midi(ksr, &ev);
+}
+
+void ksr_channel_set_reverb(Kasaria *ksr, unsigned char channel, unsigned char reverb)
+{
+    MidiEvent ev;
+    if(!ksr)
+        return;
+    
+    memset(&ev, 0, sizeof(ev));
+    ev.channel = channel & 0x0f;
+    ev.type    = ME_REVERB;
+    ev.vel     = reverb & 0x7f;
     play_midi(ksr, &ev);
 }
 

@@ -16,11 +16,12 @@ int main(int argc, char *argv[])
     ksr_config_set_fast_decay(converter, true);
     ksr_config_set_antialiasing(converter, true);
     ksr_config_set_sample_rate(converter, 48000); // Optional
-    ksr_config_set_max_voices(converter, 1008004);
+    ksr_config_set_max_voices(converter, 5000);
     
     // Skip notes with velocities in between the low and high specified threasholds
     // And also enable the filter
     ksr_config_set_note_skipping(converter, 0, 20, false);
+    ksr_config_set_midi_chunk_limit(converter, 800, true);
 
     // Load 2 soundfont files
     // but first set the options for both soundfonts
@@ -53,8 +54,8 @@ int main(int argc, char *argv[])
 
     // And the second has only 5 presets available which means that the first 5 presets of the first soundfont
     // will be overridden by the presets of the second soundfont
-    ksr_load_soundfont_file_new(converter, "Full Grand Piano V2.sf2", s2);
-    //ksr_load_soundfont_file_new(converter, "/home/andre/disks/1_TB_1/bm/soundfonts/Amr's Steinway Dream Piano.sf2", s2);
+    //ksr_load_soundfont_file_new(converter, "Full Grand Piano V2.sf2", s2);
+    ksr_load_soundfont_file_new(converter, "/home/andre/disks/1_TB_1/bm/soundfonts/Amr's Steinway Dream Piano.sf2", s2);
 
     // ==============[Load MIDI file]==============
     // For this approach file mapping is set which does not store any midi data in RAM

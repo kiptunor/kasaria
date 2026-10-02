@@ -148,6 +148,10 @@ Kasaria *ksr_init(bool disable_logs)
     ksr->audio_compressor              = true;
     ksr->midi_chunk_limit_enabled      = false;
     ksr->midi_chunk_size               = 64;
+    ksr->reverb_only                   = false;
+    ksr->reverb_level                  = 1.0;
+    ksr->reverb_preset                 = KSR_REVERB_PRESET_GENERIC;
+    ksr->reverb_enabled                = true;
     
 
     ksr->is_midi_player_paused = false;
@@ -229,6 +233,11 @@ void ksr_restore_defaults(Kasaria *ksr)
     ksr->audio_compressor              = true;
     ksr->midi_chunk_limit_enabled      = false;
     ksr->midi_chunk_size               = 64;
+
+    ksr->reverb_only                   = false;
+    ksr->reverb_level                  = 1.0;
+    ksr->reverb_preset                 = KSR_REVERB_PRESET_GENERIC;
+    ksr->reverb_enabled                = true;
 
     default_compressor_settings(ksr);
 
