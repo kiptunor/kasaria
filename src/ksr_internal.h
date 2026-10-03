@@ -94,11 +94,11 @@
 #endif
 
 #ifdef USE_LDEXP
-    #define FSCALE(a, b)    ldexp((double)(a), (b))
-    #define FSCALENEG(a, b) ldexp((double)(a), -(b))
+    #define FSCALE(a, b)    ldexp((f64)(a), (b))
+    #define FSCALENEG(a, b) ldexp((f64)(a), -(b))
 #else
-    #define FSCALE(a, b)    ((a) * (double)(1 << (b)))
-    #define FSCALENEG(a, b) ((a) * (1.0L / (double)(1 << (b))))
+    #define FSCALE(a, b)    ((a) * (f64)(1 << (b)))
+    #define FSCALENEG(a, b) ((a) * (1.0L / (f64)(1 << (b))))
 #endif
 
 #define FP_EQ(a, b) (fp_equals(a, b, 0.001f))
@@ -112,12 +112,12 @@
 #define ISDRUMCHANNEL(tm, c)  ((tm->drumchannels & (1 << (c))))
 #define ISQUIETCHANNEL(tm, c) ((tm->quietchannels & (1 << (c))))
 #define MAGIC_LOAD_INSTRUMENT ((Instrument *)(-1))
-#define DIV_200 (double)(0.005) // 1/200
-#define DIV_1000 (double)(0.001) // 1/1000
-#define DIV_1200 (double)(8.3333333333333333333333333333333e-4) // 1/1200
-#define DIV_1024 (double)(0.0009765625)
-#define DIV_100 (double)(0.01) // 1/100
-#define DIV_127 (double)(0.007874015748031496062992125984252) // 1/127
+#define DIV_200  (f64)(0.005) // 1/200
+#define DIV_1000 (f64)(0.001) // 1/1000
+#define DIV_1200 (f64)(8.3333333333333333333333333333333e-4) // 1/1200
+#define DIV_1024 (f64)(0.0009765625)
+#define DIV_100  (f64)(0.01) // 1/100
+#define DIV_127  (f64)(0.007874015748031496062992125984252) // 1/127
 
 #define divi_2(i) ((i) / 2)
 #define divi_4(i) ((i) / 4)
