@@ -47,7 +47,7 @@ With the current changes the old GUS Patch code is replaced by the SF2 soundfont
 #include "ext_deps/log_c/log.h"
 
 #include "ksr_internal.h"
-#include "ksr_sf2.h"
+#include "soundfont/sf2/ksr_sf2.h"
 
 
 

@@ -67,7 +67,7 @@
 
 #include "config.h"
 #include "kasaria.h"
-#include "ksr_sf2.h"
+#include "soundfont/sf2/ksr_sf2.h"
 
 
 
