@@ -25,7 +25,8 @@
 
 
 
-
+#define MIDI_MAP_MAX_TRACK_COUNT 85535 // More bc some weirdos like to deal with large MIDI files for some unknown reason
+//#define MIDI_MAP_MAX_TRACK_COUNT 1000
 
 #define DEFAULT_SOUNDFONT_ORDER 0
 #define MAP_BANK_COUNT 768

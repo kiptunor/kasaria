@@ -1375,30 +1375,36 @@ static void stream_free(Kasaria *ksr)
     ksr->stream = NULL;
 }
 
-static int stream_init(Kasaria *ksr, const u_char *data, size_t len)
+static StreamError stream_init(Kasaria *ksr, const u_char *data, size_t len)
 {
     MidiStream *s;
-    if(len < 14 || memcmp(data, "MThd", 4)) return 0;
+    if(len < 14)
+        return STREAM_ERR_INVALID_HEADER;
+
+    if(memcmp(data, "MThd", 4) != 0)
+        return STREAM_ERR_INVALID_HEADER;
     
     long chunk = be32(data + 4);
     
     if(chunk < 6)
-        return 0;
+        return STREAM_ERR_INVALID_CHUNK;
     
     u_char h[6];
     memcpy(h, data + 8, 6);
     
     short format = (short)((h[0] << 8) | h[1]);
-    short tracks = (short)((h[2] << 8) | h[3]);
+    u32   tracks = (u32)((h[2] << 8) | h[3]);
     short div    = (short)((h[4] << 8) | h[5]);
+
+    log_info("MIDI header: format=%d tracks=%u div=%d", format, tracks, div);
     
-    if(format < 0 || format > 2 || tracks < 1 || tracks > 1024)
-        return 0;
+    if(format < 0 || format > 2 || tracks < 1 || tracks > MIDI_MAP_MAX_TRACK_COUNT)
+        return STREAM_ERR_INVALID_TRACKS;
 
     s = ksr->stream = calloc(1, sizeof *s);
     
     if(!s)
-        return 0;
+        return STREAM_ERR_OUT_OF_MEMORY;
     
     s->data        = data;
     s->len         = len;
@@ -1411,7 +1417,7 @@ static int stream_init(Kasaria *ksr, const u_char *data, size_t len)
     {
         free(s);
         ksr->stream = NULL;
-        return 0;
+        return STREAM_ERR_TRACK_DATA_BOUNDS;
     }
 
     s->cur           = calloc(tracks, sizeof *s->cur);
@@ -1431,9 +1437,9 @@ static int stream_init(Kasaria *ksr, const u_char *data, size_t len)
        !s->nrpn || !s->rpn_msb || !s->rpn_lsb || !s->pending || !s->pending_valid || !s->alive || !s->heap)
     {
         stream_free(ksr);
-        return 0;
+        return STREAM_ERR_OUT_OF_MEMORY;
     }
-    return 1;
+    return STREAM_OK;
 }
 
 static void stream_seek(Kasaria *ksr, long until_time)
@@ -1554,10 +1560,42 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
         }
 
         madvise(ksr->f_mmap->data, ksr->f_mmap->len, MADV_WILLNEED);
+
+        StreamError err = stream_init(ksr, ksr->f_mmap->data, ksr->f_mmap->len);
         
-        if(!stream_init(ksr, ksr->f_mmap->data, ksr->f_mmap->len))
+        if(err != STREAM_OK)
         {
-            log_error("Invalid or unsupported MIDI stream.");
+            switch(err)
+            {
+                case STREAM_ERR_INVALID_HEADER:
+                    log_error("Invalid MIDI header.");
+                break;
+        
+                case STREAM_ERR_INVALID_CHUNK:
+                    log_error("Invalid MIDI header chunk.");
+                break;
+        
+                case STREAM_ERR_INVALID_FORMAT:
+                    log_error("Unsupported MIDI format.");
+                break;
+        
+                case STREAM_ERR_INVALID_TRACKS:
+                    log_error("Invalid number of MIDI tracks.");
+                break;
+        
+                case STREAM_ERR_OUT_OF_MEMORY:
+                    log_error("Out of memory while initializing MIDI stream.");
+                break;
+        
+                case STREAM_ERR_TRACK_DATA_BOUNDS:
+                    log_error("MIDI track data extends beyond the file.");
+                break;
+        
+                default:
+                    log_error("Unknown MIDI stream initialization error.");
+                break;
+            }
+
             ksr_unmap_file(ksr->f_mmap);
             return 0;
         }
@@ -1639,9 +1677,40 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
         
         log_debug("MIDI file mapped: %zu bytes", ksr->f_mmap->len);
 
-        if(!stream_init( ksr, ksr->f_mmap->data, ksr->f_mmap->len))
+        StreamError err = stream_init(ksr, ksr->f_mmap->data, ksr->f_mmap->len);
+
+        if(err != STREAM_OK)
         {
-            log_error("Invalid or unsupported MIDI stream.");
+            switch(err)
+            {
+                case STREAM_ERR_INVALID_HEADER:
+                    log_error("Invalid MIDI header.");
+                break;
+        
+                case STREAM_ERR_INVALID_CHUNK:
+                    log_error("Invalid MIDI header chunk.");
+                break;
+        
+                case STREAM_ERR_INVALID_FORMAT:
+                    log_error("Unsupported MIDI format.");
+                break;
+        
+                case STREAM_ERR_INVALID_TRACKS:
+                    log_error("Invalid number of MIDI tracks.");
+                break;
+        
+                case STREAM_ERR_OUT_OF_MEMORY:
+                    log_error("Out of memory while initializing MIDI stream.");
+                break;
+        
+                case STREAM_ERR_TRACK_DATA_BOUNDS:
+                    log_error("MIDI track data extends beyond the file.");
+                break;
+        
+                default:
+                    log_error("Unknown MIDI stream initialization error.");
+                break;
+            }
 
             ksr_unmap_file(ksr->f_mmap);
             return 0;
@@ -2037,10 +2106,9 @@ int ksr_player_begin(Kasaria *ksr, bool wait_midi_ending)
     }
 
     if(!ksr->is_midi_loaded)
-    {
-        log_error("No MIDI File was loaded!");
+        //log_error("No MIDI File was loaded!");
         return 0;
-    }
+    
 
     async_midi_player = ksr; // Get the current synth context for the async player
 

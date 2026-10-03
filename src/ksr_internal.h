@@ -597,6 +597,17 @@ typedef struct
     u_char ended;
 }MidiStream;
 
+typedef enum
+{
+    STREAM_OK = 1,
+    STREAM_ERR_INVALID_HEADER,
+    STREAM_ERR_INVALID_CHUNK,
+    STREAM_ERR_INVALID_FORMAT,
+    STREAM_ERR_INVALID_TRACKS,
+    STREAM_ERR_OUT_OF_MEMORY,
+    STREAM_ERR_TRACK_DATA_BOUNDS
+}StreamError;
+
 
 typedef struct
 {
