@@ -84,7 +84,7 @@ extern int progbase;
 typedef struct _SFBags
 {
     int       nbags;
-    uint16_t *bag;
+    u16      *bag;
     int       ngens;
     SFGenRec *gen;
 } SFBags;
@@ -109,7 +109,7 @@ static int READCHUNK(SFChunk *vp, FILE *fp)
     return 1;
 }
 
-static int READDW(uint32_t *vp, FILE *fp)
+static int READDW(u32 *vp, FILE *fp)
 {
     if(fread(vp, 4, 1, fp) != 1)
         return -1;
@@ -119,7 +119,7 @@ static int READDW(uint32_t *vp, FILE *fp)
     return 1;
 }
 
-static int READW(uint16_t *vp, FILE *fp)
+static int READW(u16 *vp, FILE *fp)
 {
     if(fread(vp, 2, 1, fp) != 1)
         return -1;
@@ -694,13 +694,13 @@ static void load_sample_info(int size, SFInfo *sf, FILE *fp)
         if(sf->version > 1)
             READSTR(sf->sample[i].name, fp);
 
-        READDW((uint32_t *)&sf->sample[i].startsample, fp);
-        READDW((uint32_t *)&sf->sample[i].endsample, fp);
-        READDW((uint32_t *)&sf->sample[i].startloop, fp);
-        READDW((uint32_t *)&sf->sample[i].endloop, fp);
+        READDW((u32*)&sf->sample[i].startsample, fp);
+        READDW((u32*)&sf->sample[i].endsample, fp);
+        READDW((u32*)&sf->sample[i].startloop, fp);
+        READDW((u32*)&sf->sample[i].endloop, fp);
         if(sf->version > 1)
         {
-            READDW((uint32_t *)&sf->sample[i].samplerate, fp);
+            READDW((u32*)&sf->sample[i].samplerate, fp);
             READB(sf->sample[i].originalPitch, fp);
             READB(sf->sample[i].pitchCorrection, fp);
             READW(&sf->sample[i].samplelink, fp);

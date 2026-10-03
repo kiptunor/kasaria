@@ -64,6 +64,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include "internal_types.h"
 
 
 #ifndef KSR_SF2_H
@@ -76,14 +77,14 @@ typedef off_t off_size_t;
 typedef struct _SFChunk
 {
     char    id[4];
-    int32_t size;
+    i32 size;
 } SFChunk;
 
 // generator record
 typedef struct _SFGenRec
 {
-    int16_t oper;
-    int16_t amount;
+    i16 oper;
+    i16 amount;
 } SFGenRec;
 
 // layered generators record
@@ -97,7 +98,7 @@ typedef struct _SFGenLayer
 typedef struct _SFHeader
 {
     char        name[20];
-    uint16_t    bagNdx;
+    u16    bagNdx;
     // layered stuff
     int         nlayers;
     SFGenLayer *layer;
@@ -107,7 +108,7 @@ typedef struct _SFHeader
 typedef struct _SFPresetHdr
 {
     SFHeader hdr;
-    uint16_t preset, bank;
+    u16 preset, bank;
     // int32 lib, genre, morphology; // not used
 } SFPresetHdr;
 
@@ -121,17 +122,17 @@ typedef struct _SFInstHdr
 typedef struct _SFSampleInfo
 {
     char     name[20];
-    int32_t  startsample, endsample;
-    int32_t  startloop, endloop;
+    i32  startsample, endsample;
+    i32  startloop, endloop;
     // ver.2 additional info
-    int32_t  samplerate;
-    uint8_t  originalPitch;
-    int8_t   pitchCorrection;
-    uint16_t samplelink;
-    uint16_t sampletype; // 1=mono, 2=right, 4=left, 8=linked, $8000=ROM
+    i32  samplerate;
+    u8  originalPitch;
+    i8   pitchCorrection;
+    u16 samplelink;
+    u16 sampletype; // 1=mono, 2=right, 4=left, 8=linked, $8000=ROM
     // optional info
-    int32_t  size;     // sample size
-    int32_t  loopshot; // short-shot loop size
+    i32  size;     // sample size
+    i32  loopshot; // short-shot loop size
 } SFSampleInfo;
 
 
@@ -145,10 +146,10 @@ typedef struct _SFInfo
     char         *sf_name;
 
     // version of this file
-    uint16_t      version, minorversion;
+    u16      version, minorversion;
     // sample position (from origin) & total size (in bytes)
     long          samplepos;
-    int32_t       samplesize;
+    i32       samplesize;
 
     // raw INFO chunk list
     long          infopos, infosize;
