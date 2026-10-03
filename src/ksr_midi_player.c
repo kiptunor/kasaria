@@ -61,7 +61,7 @@ playmidi.c -- random stuff in need of rearrangement
 #include "ext_deps/miniaudio/miniaudio.h"
 
 #include "ksr_internal.h"
-#include "ksr_sf2.h"
+#include "soundfont/sf2/ksr_sf2.h"
 #include "kasaria.h"
 
 
