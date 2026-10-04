@@ -56,19 +56,6 @@ Kasaria *raw_midi_event_ctx;
 
 
 
-void default_compressor_settings(Kasaria *ksr)
-{
-    ksr->compressor_settings.envelope      = 0.0f;
-    ksr->compressor_settings.gain          = 1.0f;
-    ksr->compressor_settings.attack_ms     = 2.0f;
-    ksr->compressor_settings.release_ms    = 80.0f;
-    ksr->compressor_settings.sample_rate   = ksr->play_mode.rate;
-    ksr->compressor_settings.attack_coeff  = expf(-1.0f / (ksr->compressor_settings.attack_ms * 0.001f * ksr->compressor_settings.sample_rate));
-    ksr->compressor_settings.release_coeff = expf(-1.0f / (ksr->compressor_settings.release_ms * 0.001f * ksr->compressor_settings.sample_rate));
-    ksr->compressor_settings.threshold     = 2000000.0f;
-    ksr->compressor_settings.ratio         = 4.0f;
-    ksr->compressor_settings.makeup_gain   = 1.0f;
-}
 
 void ksr_print_config(Kasaria *ksr)
 {
@@ -109,9 +96,17 @@ void ksr_print_config(Kasaria *ksr)
 
 void init_internal_state(Kasaria *ksr)
 {
+    ksr->f_mmap = calloc(1, sizeof(FileMap));
+
     ksr->is_midi_loaded = false;
     ksr->is_midi_ended  = false;
 
+    // Internal MIDI Player State setup
+    ksr->is_midi_player_paused = false;
+    ksr->is_midi_player_active = false;
+    ksr->is_soundfont_loaded   = false;
+    ksr->wall_clock_last_ns    = 0;
+    ksr->is_audio_init         = false;
 }
 
 Kasaria *ksr_init(bool disable_logs)
@@ -119,71 +114,16 @@ Kasaria *ksr_init(bool disable_logs)
     Kasaria *ksr = (Kasaria *)safe_malloc(sizeof(Kasaria));
     if(!ksr)
         return NULL;
+    memset(ksr, 0, sizeof(Kasaria));
 
     log_set_quiet(disable_logs);
 
-    memset(ksr, 0, sizeof(Kasaria));
-    ksr->f_mmap = calloc(1, sizeof(FileMap));
-    ksr->default_program        = DEFAULT_PROGRAM;
-    ksr->antialiasing_allowed   = 1;
-    ksr->pre_resampling_allowed = 1;
-#ifdef FAST_DECAY
-    ksr->fast_decay = 1;
-#else
-    ksr->fast_decay = 0;
-#endif
-    // ksr->dynamic_loading                           = 0;
-    ksr->voices                        = DEFAULT_VOICES;
-    ksr->play_mode.rate                = DEFAULT_RATE;
-    ksr->play_mode.encoding            = 0;
-    ksr->control_rate                  = CONTROLS_PER_SECOND;
-    ksr->control_ratio                 = ksr->play_mode.rate / ksr->control_rate;
-    ksr->drumchannels                  = DEFAULT_DRUMCHANNELS;
-    ksr->quietchannels                 = 0;
-    ksr->adjust_panning_immediately    = 1;
-    ksr->preload_soundfont_instruments = 1;
-    ksr->buffer_period_size            = 488;
-    ksr->skip_initial_midi_silence     = false;
-    ksr->overlapping_notes             = true;
-    ksr->audio_compressor              = true;
-    ksr->midi_chunk_limit_enabled      = false;
-    ksr->midi_chunk_size               = 64;
-    ksr->reverb_only                   = false;
-    ksr->reverb_level                  = 1.0;
-    ksr->reverb_preset                 = KSR_REVERB_PRESET_PADDEDCELL;
-    ksr->reverb_enabled                = false;
+    set_default_config(ksr);
     
-
-    ksr->is_midi_player_paused = false;
-    ksr->is_midi_player_active = false;
-    ksr->is_soundfont_loaded   = false;
-    ksr->wall_clock_last_ns    = 0;
-    ksr->is_audio_init         = false;
-
-    init_reverb(ksr);
-
-    default_compressor_settings(ksr);
-
-    ksr->low_vel_treshold  = 0;
-    ksr->high_vel_treshold = 32;
-
-    // This might be temporary
-    if(!ksr->tonebank[0])
-    {
-        ksr->tonebank[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
-        memset(ksr->tonebank[0], 0, sizeof(ToneBank));
-    }
-    if(!ksr->drumset[0])
-    {
-        ksr->drumset[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
-        memset(ksr->drumset[0], 0, sizeof(ToneBank));
-    }
-
     init_internal_state(ksr);
-
+    init_reverb(ksr);
     init_tables(ksr);
     reset_midi(ksr);
-    adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
 
     log_info("Kasaria Init\n\n");
 
@@ -210,52 +150,7 @@ void ksr_restore_defaults(Kasaria *ksr)
         return;
 
     reset_voices(ksr);
-    ksr->default_program        = DEFAULT_PROGRAM;
-    ksr->antialiasing_allowed   = 1;
-    ksr->pre_resampling_allowed = 1;
-#ifdef FAST_DECAY
-    ksr->fast_decay = 1;
-#else
-    ksr->fast_decay = 0;
-#endif
-    // ksr->dynamic_loading            = 0;
-    ksr->voices                        = DEFAULT_VOICES;
-    ksr->play_mode.rate                = DEFAULT_RATE;
-    ksr->play_mode.encoding            = 0;
-    ksr->control_rate                  = CONTROLS_PER_SECOND;
-    ksr->control_ratio                 = ksr->play_mode.rate / ksr->control_rate;
-    ksr->drumchannels                  = DEFAULT_DRUMCHANNELS;
-    ksr->quietchannels                 = 0;
-    ksr->adjust_panning_immediately    = 1;
-    ksr->preload_soundfont_instruments = 1;
-    ksr->buffer_period_size            = 488;
-    ksr->skip_initial_midi_silence     = false;
-    ksr->current_midi_player_position  = 0.0f;
-    ksr->overlapping_notes             = true;
-    ksr->audio_compressor              = true;
-    ksr->midi_chunk_limit_enabled      = false;
-    ksr->midi_chunk_size               = 64;
-
-    ksr->reverb_only                   = false;
-    ksr->reverb_level                  = 1.0;
-    ksr->reverb_preset                 = KSR_REVERB_PRESET_GENERIC;
-    ksr->reverb_enabled                = true;
-
-    default_compressor_settings(ksr);
-
-    // This might be temporary
-    if(!ksr->tonebank[0])
-    {
-        ksr->tonebank[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
-        memset(ksr->tonebank[0], 0, sizeof(ToneBank));
-    }
-    if(!ksr->drumset[0])
-    {
-        ksr->drumset[0] = (ToneBank *)safe_malloc(sizeof(ToneBank));
-        memset(ksr->drumset[0], 0, sizeof(ToneBank));
-    }
-
-    adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
+    set_default_config(ksr);
 }
 
 static void hard_kill_voice(Kasaria *ksr, int v)

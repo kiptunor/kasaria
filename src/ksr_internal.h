@@ -788,6 +788,8 @@ typedef struct _MBlockList
 
 
 
+void set_default_config(Kasaria *ksr);
+
 // ------------- Utility functions (utils.c) -------------
 FILE       *open_file(Kasaria *tm, const char *name, int decompress, int noise_mode);
 void        add_to_pathlist(Kasaria *tm, char *s);

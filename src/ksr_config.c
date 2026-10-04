@@ -27,6 +27,63 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 
 
+void default_compressor_settings(Kasaria *ksr)
+{
+    ksr->compressor_settings.envelope      = 0.0f;
+    ksr->compressor_settings.gain          = 1.0f;
+    ksr->compressor_settings.attack_ms     = 2.0f;
+    ksr->compressor_settings.release_ms    = 80.0f;
+    ksr->compressor_settings.sample_rate   = ksr->play_mode.rate;
+    ksr->compressor_settings.attack_coeff  = expf(-1.0f / (ksr->compressor_settings.attack_ms * 0.001f * ksr->compressor_settings.sample_rate));
+    ksr->compressor_settings.release_coeff = expf(-1.0f / (ksr->compressor_settings.release_ms * 0.001f * ksr->compressor_settings.sample_rate));
+    ksr->compressor_settings.threshold     = 2000000.0f;
+    ksr->compressor_settings.ratio         = 4.0f;
+    ksr->compressor_settings.makeup_gain   = 1.0f;
+}
+
+
+void set_default_config(Kasaria *ksr)
+{
+    if(!ksr)
+        return;
+    log_trace("setting config");
+    ksr->default_program        = DEFAULT_PROGRAM;
+    ksr->antialiasing_allowed   = 1;
+    ksr->pre_resampling_allowed = 1;
+#ifdef FAST_DECAY
+    ksr->fast_decay = 1;
+#else
+    ksr->fast_decay = 0;
+#endif
+
+    ksr->voices                        = DEFAULT_VOICES;
+    ksr->play_mode.rate                = DEFAULT_RATE;
+    ksr->play_mode.encoding            = 0;
+    ksr->control_rate                  = CONTROLS_PER_SECOND;
+    ksr->control_ratio                 = ksr->play_mode.rate / ksr->control_rate;
+    ksr->drumchannels                  = DEFAULT_DRUMCHANNELS;
+    ksr->quietchannels                 = 0;
+    ksr->adjust_panning_immediately    = 1;
+    ksr->preload_soundfont_instruments = 1;
+    ksr->buffer_period_size            = 488;
+    ksr->skip_initial_midi_silence     = false;
+    ksr->overlapping_notes             = true;
+    ksr->audio_compressor              = true;
+    ksr->midi_chunk_limit_enabled      = false;
+    ksr->midi_chunk_size               = 64;
+    ksr->reverb_only                   = false;
+    ksr->reverb_level                  = 1.0;
+    ksr->reverb_preset                 = KSR_REVERB_PRESET_PADDEDCELL;
+    ksr->reverb_enabled                = false;
+
+    default_compressor_settings(ksr);
+
+    ksr->low_vel_treshold  = 0;
+    ksr->high_vel_treshold = 32;
+
+    adjust_amplification(ksr, DEFAULT_AMPLIFICATION);
+}
+
 
 void ksr_config_set_overlapping_notes(Kasaria *ksr, bool value)
 {
