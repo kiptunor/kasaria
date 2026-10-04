@@ -64,7 +64,7 @@ void set_default_config(Kasaria *ksr)
     ksr->drumchannels                  = DEFAULT_DRUMCHANNELS;
     ksr->quietchannels                 = 0;
     ksr->adjust_panning_immediately    = 1;
-    ksr->preload_soundfont_instruments = 1;
+    // ksr->preload_soundfont_instruments = 1; // Unused
     ksr->buffer_period_size            = 488;
     ksr->skip_initial_midi_silence     = false;
     ksr->overlapping_notes             = true;

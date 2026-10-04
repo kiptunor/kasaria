@@ -537,7 +537,7 @@ typedef struct
     int              control_counter;
     int              panning;
     int              panned;
-    SoundFontEffects sf2_effects;
+    // SoundFontEffects sf2_effects;
 } Voice;
 
 typedef struct
@@ -617,156 +617,6 @@ typedef struct
     int      voice2;  /* stereo partner, -1 if none */
 }NotePress;
 
-struct Kasaria
-{
-    int            opt_pre_resamplation;
-    char           current_filename[1024];
-    PathList      *pathlist; // The paths in this list will be tried whenever we're reading a file
-    ToneBank      *tonebank[128];
-    ToneBank      *drumset[128];
-    Instrument    *default_instrument; // This is only used for tracks that don't specify a program
-    int            default_program;    // This is a special instrument, used for all melodic programs
-    bool           antialiasing_allowed;
-    bool           pre_resampling_allowed;
-    bool           fast_decay;
-    bool           reverb_enabled;
-    bool           reverb_only;
-    bool           preload_soundfont_instruments;
-    bool           is_audio_init;
-    bool           is_init_raw_midi_events;
-    bool           is_audio_started;
-    bool           overlapping_notes;
-    bool           midi_chunk_limit_enabled;
-    int            midi_chunk_size;
-    // int            dynamic_loading; // No longer it use
-    PlayMode       play_mode;
-    f32            common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
-    f32           *buffer_pointer;
-    volatile f32   current_midi_player_position;
-    Channel        channel[16];
-    ReverbEffect   reverb;
-    f64            reverb_level;
-    Voice          voice[MAX_VOICES];
-    Voice         *voice_by_channel_note[16][128][8];
-    long           control_rate;
-    long           control_ratio;
-    f64            master_volume;
-    long           reverb_send_buffer[AUDIO_BUFFER_SIZE];
-    long           drumchannels;
-    long           quietchannels;
-    long           lost_notes;
-    long           cut_notes;
-    bool           adjust_panning_immediately;
-    int            voices;
-    u32            buffer_period_size;
-    bool           note_vel_skipping;
-    bool           audio_compressor;
-    u8             low_vel_treshold;
-    u8             high_vel_treshold;
-    u_char         rpn_msb[16];
-    u_char         rpn_lsb[16];
-    MidiEvent     *event_list;
-    MidiEvent     *current_event;
-    MidiStream     *stream;
-    long           sample_count;
-    long           current_sample;
-    FILE          *fp_midi;
-    long           events_midi;
-    char           song_title[256];
-    char           song_copyright[256];
-    char           last_smf[1024];
-    bool           is_midi_loaded;
-    bool           is_midi_ended;
-    bool           is_midi_player_paused;
-    bool           is_midi_player_active;
-    bool           is_soundfont_loaded; // Works for at least one soundfont
-    int            free_voice_stack[MAX_VOICES];
-    int            free_voice_count;
-    int            total_midi_tracks;
-    int            current_loaded_track;
-    bool           skip_initial_midi_silence;
-    short          midi_file_format;
-    u64            wall_clock_last_ns;
-    f64            phase_ema;
-    int            phase_valid;
-    u64            player_pos_calc;
-    int            reverb_preset;
-
-    //u64 position_start_ns;
-    //double position_start_sec;
-    // long position_start_sample;
-    // int position_clock_valid;
-    // _Atomic uint64_t player_byte_pos;
-
-    /*
-    _Atomic uint64_t position_start_byte;
-    _Atomic uint64_t position_end_byte;
-    _Atomic uint64_t position_start_ns;
-    _Atomic uint64_t position_duration_ns;
-    _Atomic uint64_t position_seq;
-    _Atomic uint64_t position_end_ns;
-    _Atomic uint64_t position_start_frame;
-    _Atomic uint64_t position_end_frame;
-    uint64_t position_clock_end_ns;
-    */
-
-    _Atomic uint64_t position_seq;
-    
-    _Atomic uint64_t position_start_frame;
-    _Atomic uint64_t position_end_frame;
-    
-    _Atomic uint64_t position_start_ns;
-    _Atomic uint64_t position_end_ns;
-    
-    uint64_t position_clock_end_ns;
-
-    int            opt_modulation_envelope;
-    int            midi_loading_mode;
-    FileMap       *f_mmap;
-    // to avoid some unnecessary parameter passing
-    MidiEventList *evlist;
-    long           event_count;
-    FILE          *fp;
-    long           at;
-    SFInfo         *sf_info;
-    /*
-        These would both fit into 32 bits, but they are often added in
-        large multiples, so it's simpler to have two roomy ints */
-    // samples per MIDI delta-t
-    long           sample_increment;
-    long           sample_correction;
-    sample_t       resample_buffer[AUDIO_BUFFER_SIZE];
-#ifdef LOOKUP_HACK
-    long *mixup;
-    #ifdef LOOKUP_INTERPOLATION
-    char *iplookup;
-    #endif
-#endif
-    char               def_instr_name[256];
-    int                sf_loaded;
-    //SFInfo             sf_info;
-    char               sf_filename[1024];
-    CompressorSettings compressor_settings;
-    int                channel_voice_count[16];
-    int                channel_voice_list[16][MAX_VOICES * 2];
-    NotePress          note_press[16][128][MAX_NOTE_PRESSES];
-    uint32_t           note_gen;
-
-    int                steal_scan;         // rotating round-robin pointer
-
-    unsigned char      skip_note_vel[16][128];    // velocity of a skipped note
-    unsigned char      skip_note_active[16][128];
-
-    ma_device_config   dev_config;
-    ma_device          audio_device;
-    int                audio_init_scope;
-
-    //bool   profiling_enabled;
-};
-
-
-#define MIN_MBLOCK_SIZE 8192
-
 typedef struct _MBlockNode
 {
     size_t block_size;
@@ -783,6 +633,156 @@ typedef struct _MBlockList
     MBlockNode *first;
     size_t allocated;
 } MBlockList;
+
+struct Kasaria
+{
+    // int            opt_pre_resamplation;
+    char      current_filename[1024];
+    FILE     *fp;
+    PathList *pathlist; // The paths in this list will be tried whenever we're reading a file
+
+    // Soundfont vars
+    char        sf_filename[1024];
+    SFInfo     *sf_info;
+    ToneBank   *tonebank[128];
+    ToneBank   *drumset[128];
+    Instrument *default_instrument; // This is only used for tracks that don't specify a program
+    int         default_program;    // This is a special instrument, used for all melodic programs
+
+    // Audio / output sample vars
+    PlayMode play_mode;
+    f32      common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
+    f32     *buffer_pointer;
+
+    
+    // ==============[Channel FX]==============
+    
+    ReverbEffect reverb;
+    f64          reverb_level;
+    int          reverb_preset;
+    long         reverb_send_buffer[AUDIO_BUFFER_SIZE];
+    
+    // Player vars
+    FileMap    *f_mmap;
+    MidiStream *stream;
+    long        sample_count;
+    long        current_sample;
+    FILE       *fp_midi;
+
+    // MIDI loader (Memory based)
+    char  song_title[256];
+    char  song_copyright[256];
+    char  last_smf[1024];
+    long           at;
+    int   total_midi_tracks;
+    int   current_loaded_track;
+    short midi_file_format;
+
+    // Voice management
+    int    voices;
+    Voice  voice[MAX_VOICES];
+    Voice *voice_by_channel_note[16][128][8];
+    int    free_voice_stack[MAX_VOICES];
+    int    free_voice_count;
+
+    // Player position tracking (Based on streamed audio)
+    u64 wall_clock_last_ns;
+    f64 phase_ema;
+    int phase_valid;
+    _Atomic u64 position_seq;
+    _Atomic u64 position_start_frame;
+    _Atomic u64 position_end_frame;
+    _Atomic u64 position_start_ns;
+    _Atomic u64 position_end_ns;
+    u64 position_clock_end_ns;
+
+    // Resample vars
+    long     sample_increment;
+    long     sample_correction;
+    sample_t resample_buffer[AUDIO_BUFFER_SIZE];
+#ifdef LOOKUP_HACK
+    long *mixup;
+#ifdef LOOKUP_INTERPOLATION
+    char *iplookup;
+#endif
+#endif
+
+    // MIDI Event processing
+    MidiEventList *evlist;
+    long           event_count;
+    MidiEvent     *event_list;
+    MidiEvent     *current_event;
+    long           events_midi;
+    u_char         rpn_msb[16];
+    u_char         rpn_lsb[16];
+
+    // MIDI Channel
+    Channel channel[16];
+    long    drumchannels;
+    long    quietchannels;
+    int     channel_voice_count[16];
+    int     channel_voice_list[16][MAX_VOICES * 2];
+
+    // Note handler
+    NotePress note_press[16][128][MAX_NOTE_PRESSES];
+    u32       note_gen;
+    int       steal_scan;         // rotating round-robin pointer
+    u_char    skip_note_vel[16][128];    // velocity of a skipped note
+    u_char    skip_note_active[16][128];
+    long      lost_notes;
+    long      cut_notes;
+
+    // Internal Audio Handler
+    ma_device_config dev_config;
+    ma_device        audio_device;
+    int              audio_init_scope;
+
+/*
+    ==========================================================================
+    --------------------------------------------------------------------------
+    ==========================================================================
+*/
+
+    // ==============[Internal State]==============
+    bool is_audio_init;
+    bool is_init_raw_midi_events;
+    bool is_audio_started;
+    bool is_midi_loaded;
+    bool is_midi_ended;
+    bool is_midi_player_paused;
+    bool is_midi_player_active;
+    bool is_soundfont_loaded; // Works for at least one soundfont
+    int  midi_loading_mode;
+    int  sf_loaded;
+    
+
+    // ==============[Config Vars]==============
+    bool antialiasing_allowed;
+    bool pre_resampling_allowed;
+    bool fast_decay;
+    bool reverb_enabled;
+    bool reverb_only;
+    bool overlapping_notes;
+    bool adjust_panning_immediately;
+    bool skip_initial_midi_silence;
+    u32  buffer_period_size;
+    int  opt_modulation_envelope; // This may not be bridged with the API
+    long control_rate;
+    long control_ratio;
+    f64  master_volume;
+
+    // MIDI Chunk Limiter
+    bool midi_chunk_limit_enabled;
+    int  midi_chunk_size;
+
+    // Note Velocity Skipping
+    bool note_vel_skipping;
+    u8   low_vel_treshold;
+    u8   high_vel_treshold;
+    
+    bool               audio_compressor;
+    CompressorSettings compressor_settings;
+};
 
 
 

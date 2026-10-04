@@ -24,7 +24,7 @@
 
 
 
-
+#define MIN_MBLOCK_SIZE 8192
 #define MIDI_MAP_MAX_TRACK_COUNT 85535 // More bc some weirdos like to deal with large MIDI files for some unknown reason
 //#define MIDI_MAP_MAX_TRACK_COUNT 1000
 
