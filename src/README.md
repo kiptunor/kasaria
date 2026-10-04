@@ -13,7 +13,7 @@ Most important
 - [x] Replace the logging library with a different one
 - [ ] Solidify return value convention for all API functions
 - [ ] Use a better naming convention for all internal functions / implementations
-- [ ] Cleanup in the Kasaria struct members
+- [x] Cleanup in the Kasaria struct members
 - [ ] Add navigation comments in the entire codebase based on the context
 - [ ] Add API functions to read NPS, Polyphony, Tempo Changes
 - [ ] Add API function and type for reading MIDI Info (PPQ, Tracks, Format, Note count)
