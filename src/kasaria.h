@@ -490,6 +490,8 @@ KSR_API int  ksr_player_get_stream(Kasaria *ksr, long audio_fmt, unsigned char *
 
 
 KSR_API void ksr_player_get_byte_pos(Kasaria *ksr, uint64_t *position);
+KSR_API void ksr_player_pos_start_update(Kasaria *ksr);
+KSR_API void ksr_player_pos_end_update(Kasaria *ksr, unsigned int frame_count);
 
 /*
 @brief                  Start the internal player handler

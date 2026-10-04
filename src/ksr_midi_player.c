@@ -98,7 +98,7 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
     }
 
     // Position update on the start of the audio frame
-    const u64 start_frame = (u64)async_midi_player->current_sample;
+    ksr_player_pos_start_update(async_midi_player);
 
     // Then audio rendering
     f32 raw_audio[async_midi_player->buffer_period_size * 2];
@@ -124,31 +124,41 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
     }
 
     // Position update on the end of the audio frame
-    const u64 end_frame   = (u64)async_midi_player->current_sample;
-    const u64 duration_ns = ((u64)frameCount * 1000000000ULL) / (u64)async_midi_player->play_mode.rate;
-    u64 now_ns            = monotonic_ns();
-    u64 start_ns;
+    ksr_player_pos_end_update(async_midi_player, frameCount);
+}
+
+void ksr_player_pos_start_update(Kasaria *ksr)
+{
+    //const u64 start_frame = (u64)ksr->current_sample;
+    ksr->start_frame = (u64)ksr->current_sample;
+}
+
+void ksr_player_pos_end_update(Kasaria *ksr, unsigned int frame_count)
+{
+    ksr->end_frame   = (u64)ksr->current_sample;
+    ksr->duration_ns = ((u64)frame_count * 1000000000ULL) / (u64)ksr->play_mode.rate;
+    ksr->now_ns      = monotonic_ns();
     
-    if(async_midi_player->position_clock_end_ns == 0)
-        start_ns = now_ns;
+    if(ksr->position_clock_end_ns == 0)
+        ksr->start_ns = ksr->now_ns;
     else
     {
-        start_ns = async_midi_player->position_clock_end_ns;
+        ksr->start_ns = ksr->position_clock_end_ns;
 
-        if(start_ns < now_ns)
-            start_ns = now_ns;
+        if(ksr->start_ns < ksr->now_ns)
+            ksr->start_ns = ksr->now_ns;
     }
     
-    const u64 end_ns                         = start_ns + duration_ns;
-    async_midi_player->position_clock_end_ns = end_ns;
+    u64 end_ns = ksr->start_ns + ksr->duration_ns;
+    ksr->position_clock_end_ns = end_ns;
     
-    u64 seq = atomic_load_explicit(&async_midi_player->position_seq, memory_order_relaxed);
-    atomic_store_explicit(&async_midi_player->position_seq, seq + 1, memory_order_release);
-    atomic_store_explicit(&async_midi_player->position_start_frame, start_frame, memory_order_relaxed);
-    atomic_store_explicit(&async_midi_player->position_end_frame, end_frame, memory_order_relaxed);
-    atomic_store_explicit(&async_midi_player->position_start_ns, start_ns, memory_order_relaxed);
-    atomic_store_explicit(&async_midi_player->position_end_ns, end_ns, memory_order_relaxed);
-    atomic_store_explicit(&async_midi_player->position_seq, seq + 2, memory_order_release);
+    u64 seq = atomic_load_explicit(&ksr->position_seq, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_seq,          seq + 1,          memory_order_release);
+    atomic_store_explicit(&ksr->position_start_frame,  ksr->start_frame, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_end_frame,    ksr->end_frame,   memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_start_ns,     ksr->start_ns,    memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_end_ns,       end_ns,           memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_seq,          seq + 2,          memory_order_release);
 }
 
 static void reset_position_frame(Kasaria *ksr)
@@ -1000,9 +1010,12 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
                 
             case 3:                                   // control change remap
             {
-                if(*p >= end) return 0;
+                if(*p >= end)
+                    return 0;
+                
                 b = *(*p)++ & 0x7F;
                 int control = 255, chan = s->lastchan[t];
+                
                 switch(a)
                 {
                     case 7:
@@ -1832,7 +1845,6 @@ int ksr_reload_midi(Kasaria *ksr)
 
 static void ksr_mark_pos_ns(Kasaria *ksr)
 {
-    //ksr->wall_clock_last_ns = monotonic_ns();
     u64 now = monotonic_ns();
     f64 y   = (f64)ksr->current_sample / (f64)ksr->play_mode.rate;
     f64 x   = (f64)now / 1e9;

@@ -686,15 +686,20 @@ struct Kasaria
     int    free_voice_count;
 
     // Player position tracking (Based on streamed audio)
-    u64 wall_clock_last_ns;
-    f64 phase_ema;
-    int phase_valid;
+    u64         wall_clock_last_ns;
+    f64         phase_ema;
+    int         phase_valid;
+    u64         start_frame;
+    u64         end_frame;
+    u64         duration_ns;
+    u64         now_ns;
+    u64         start_ns;
     _Atomic u64 position_seq;
     _Atomic u64 position_start_frame;
     _Atomic u64 position_end_frame;
     _Atomic u64 position_start_ns;
     _Atomic u64 position_end_ns;
-    u64 position_clock_end_ns;
+    u64         position_clock_end_ns;
 
     // Resample vars
     long     sample_increment;
