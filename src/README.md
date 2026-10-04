@@ -2,6 +2,10 @@
 
 Most important
 - [x] Fix all SF2 loader bugs and design flaws (Maybe I did fixed them all idk)
+- [ ] Fix high memory usage in the SF2 loader
+- [ ] Fix a bug in the internal midi player when switching soundfonts
+- [ ] Re-Fix instrument layering
+- [ ] Add chorus effect
 - [ ] Implement SF2 effects (Failed)
 - [ ] Complete the functionality of the lazy SF2 loader (Neded to be done in the midi player)
 - [x] Add more SoundFont Loading settings (Preset, MIDI Bank, XG Bank)
