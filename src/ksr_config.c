@@ -72,9 +72,27 @@ void set_default_config(Kasaria *ksr)
     ksr->midi_chunk_limit_enabled      = false;
     ksr->midi_chunk_size               = 64;
     ksr->reverb_only                   = false;
-    ksr->reverb_level                  = 1.0;
-    ksr->reverb_preset                 = KSR_REVERB_PRESET_PADDEDCELL;
-    ksr->reverb_enabled                = false;
+    ksr->reverb_level                  = 8.0;
+    // Reverb presets I like
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_GENERIC;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_CASTLE_SHORTPASSAGE; // One of the best
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_CASTLE_LONGPASSAGE;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_SPACESTATION_SHORTPASSAGE;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_SPACESTATION_LONGPASSAGE;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_SPORT_EMPTYSTADIUM;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_SPORT_FULLSTADIUM;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DOME_TOMB;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_PIPE_RESONANT;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_MOOD_HEAVEN;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_PITGARAGE;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_INCAR_RACER; // not my favorite but still very interesting
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_EMPTYGRANDSTAND;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_TUNNEL;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_MUSEUM;
+    ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_LIBRARY;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_ABANDONED;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DUSTYROOM;
+    ksr->reverb_enabled                = true;
 
     default_compressor_settings(ksr);
 
