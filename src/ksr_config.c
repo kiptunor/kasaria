@@ -210,6 +210,14 @@ void ksr_config_set_reverb_only(Kasaria *ksr, bool value)
     ksr->reverb_only = value;
 }
 
+void ksr_config_set_reverb_preset(Kasaria *ksr, int preset)
+{
+    if(!ksr)
+        return;
+    
+    ksr->reverb_preset = preset;
+}
+
 void ksr_config_set_fast_decay(Kasaria *ksr, bool value)
 {
     if(!ksr)

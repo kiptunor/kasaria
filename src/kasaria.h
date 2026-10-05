@@ -327,6 +327,7 @@ KSR_API void ksr_config_set_immediate_panning(Kasaria *ksr, bool value);    // T
 KSR_API void ksr_config_set_mono(Kasaria *ksr, bool value);                 // This makes weird noise // Renders mono audio buffers if enabled, interleaved stereo otherwise
 KSR_API void ksr_config_enable_reverb(Kasaria *ksr, bool value);
 KSR_API void ksr_config_set_reverb_only(Kasaria *ksr, bool value);
+KSR_API void ksr_config_set_reverb_preset(Kasaria *ksr, int preset);
 
 // These next few functions reload the current sample bank before returning
 KSR_API void ksr_config_set_fast_decay(Kasaria *ksr, bool value);
