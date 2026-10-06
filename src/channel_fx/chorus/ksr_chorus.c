@@ -83,14 +83,14 @@ void apply_chorus_depth(Kasaria *ksr)
 void process_chorus(Kasaria *ksr, f32 *buf, long *send_buf, long count)
 {
     
-    //long scale;
+    long scale;
     long i;
     
     if((!ksr->chorus_l && !ksr->chorus_r) || !ksr->chorus_enabled || ksr->chorus_depth <= 0.0 || count <= 0)
         return;
     
     
-    //scale = 1 << (31 - GUARD_BITS);
+    scale = 1 << (31 - GUARD_BITS);
     
     if(count > AUDIO_BUFFER_SIZE)
         count = AUDIO_BUFFER_SIZE;
@@ -101,12 +101,16 @@ void process_chorus(Kasaria *ksr, f32 *buf, long *send_buf, long count)
         {
             // buf[i*2+0] += (long)(sk_chorus_tick(ksr->chorus_l, (f32)send_buf[i] / (f32)scale) * (f32)scale);
             // buf[i*2+1] += (long)(sk_chorus_tick(ksr->chorus_r, (f32)send_buf[i] / (f32)scale) * (f32)scale);
-            buf[i * 2 + 0] += sk_chorus_tick(ksr->chorus_l, send_buf[i]);
-            buf[i * 2 + 1] += sk_chorus_tick(ksr->chorus_r, send_buf[i]);
+            // buf[i * 2 + 0] += sk_chorus_tick(ksr->chorus_l, send_buf[i]);
+            // buf[i * 2 + 1] += sk_chorus_tick(ksr->chorus_r, send_buf[i]);
+
+            buf[i*2+0] += (f32)(sk_chorus_tick(ksr->chorus_l, (f32)send_buf[i] / (f32)scale) * (f32)scale);
+            buf[i*2+1] += (f32)(sk_chorus_tick(ksr->chorus_r, (f32)send_buf[i] / (f32)scale) * (f32)scale);
         }
         else
             //buf[i] += (long)(sk_chorus_tick(ksr->chorus_l, (f32)send_buf[i] / (f32)scale) * (f32)scale);
-            buf[i] += sk_chorus_tick(ksr->chorus_l, send_buf[i]);
+            //buf[i] += sk_chorus_tick(ksr->chorus_l, send_buf[i]);
+            buf[i] += (f32)(sk_chorus_tick(ksr->chorus_l, (f32)send_buf[i] / (f32)scale) * (f32)scale);
         
     }
 }
