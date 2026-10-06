@@ -121,7 +121,10 @@ Kasaria *ksr_init(bool disable_logs)
     set_default_config(ksr);
     
     init_internal_state(ksr);
+    
     init_reverb(ksr);
+    init_chorus(ksr);
+    
     init_tables(ksr);
     reset_midi(ksr);
 
@@ -1140,6 +1143,7 @@ void ksr_shutdown(Kasaria *ksr)
         ksr_player_pause(ksr);
 
     free_reverb(ksr);
+    free_chorus(ksr);
 
     free_sf2_sample_cache();
 

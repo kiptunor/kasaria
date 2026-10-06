@@ -63,6 +63,7 @@
 
 
 #include "channel_fx/reverb/ksr_reverb_effect.h"
+#include "channel_fx/chorus/ksr_sk_chorus.h"
 
 
 #include "config.h"
@@ -192,6 +193,7 @@ enum {
 #define ME_TEMPO              17
 #define ME_COARSE_TUNING      18
 #define ME_REVERB             19
+#define ME_CHORUS             20
 #define ME_EOT                99
 
 // Data format encoding bits
@@ -440,6 +442,7 @@ typedef struct
     int panning;
     int pitchbend;
     int reverb;
+    int chorus;
     int expression;
     int mono; // one note only on this channel
     int pitchsens;
@@ -661,6 +664,12 @@ struct Kasaria
     f64          reverb_level;
     int          reverb_preset;
     long         reverb_send_buffer[AUDIO_BUFFER_SIZE];
+
+    
+    sk_chorus *chorus_l;
+    sk_chorus *chorus_r;
+    f64        chorus_depth;
+    long       chorus_send_buffer[AUDIO_BUFFER_SIZE];
     
     // Player vars
     FileMap    *f_mmap;
@@ -767,6 +776,7 @@ struct Kasaria
     bool fast_decay;
     bool reverb_enabled;
     bool reverb_only;
+    bool chorus_enabled;
     bool overlapping_notes;
     bool adjust_panning_immediately;
     bool skip_initial_midi_silence;
@@ -881,6 +891,12 @@ void reset_reverb(Kasaria *ksr);
 void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count);
 void init_reverb(Kasaria *ksr);
 void free_reverb(Kasaria *ksr);
+
+void init_chorus(Kasaria *ksr);
+void free_chorus(Kasaria *ksr);
+void reset_chorus(Kasaria *ksr);
+void apply_chorus_depth(Kasaria *ksr);
+void process_chorus(Kasaria *ksr, f32 *buf, long *send_buf, long count);
 
 
 u64         monotonic_ns(void);

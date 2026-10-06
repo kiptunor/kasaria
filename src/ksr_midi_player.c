@@ -202,6 +202,14 @@ static void seek_forward(Kasaria *ksr, long until_time)
             case ME_EXPRESSION:
                 ksr->channel[ksr->current_event->channel].expression = ksr->current_event->key;
             break;
+
+            case ME_REVERB:
+                ksr->channel[ksr->current_event->channel].reverb = ksr->current_event->key;
+            break;
+                
+            case ME_CHORUS:
+                ksr->channel[ksr->current_event->channel].chorus = ksr->current_event->key;
+            break;
                 
             case ME_PROGRAM:
                 if(ISDRUMCHANNEL(ksr, ksr->current_event->channel))
@@ -318,6 +326,10 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
 
             case ME_REVERB:
                 ksr->channel[e->channel].reverb=e->key;
+            break;
+
+            case ME_CHORUS:
+                ksr->channel[e->channel].chorus=e->key;
             break;
                 
             case ME_PROGRAM:
@@ -550,6 +562,20 @@ void ksr_channel_set_reverb(Kasaria *ksr, unsigned char channel, unsigned char r
     ev.channel = channel & 0x0f;
     ev.type    = ME_REVERB;
     ev.key     = reverb & 0x7f;
+    play_midi(ksr, &ev);
+}
+
+void ksr_channel_set_chorus(Kasaria *ksr, u_char channel, u_char level)
+{
+    MidiEvent ev;
+    
+    if(!ksr)
+        return;
+    
+    memset(&ev, 0, sizeof(ev));
+    ev.channel = channel & 0x0f;
+    ev.type = ME_CHORUS;
+    ev.key = level & 0x7f;
     play_midi(ksr, &ev);
 }
 

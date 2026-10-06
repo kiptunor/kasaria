@@ -569,6 +569,7 @@ KSR_API void ksr_channel_set_pan(Kasaria *ksr, unsigned char channel, unsigned c
 KSR_API void ksr_channel_set_expression(Kasaria *ksr, unsigned char channel, unsigned char expression);
 KSR_API void ksr_channel_set_sustain(Kasaria *ksr, unsigned char channel, unsigned char sustain);
 KSR_API void ksr_channel_set_reverb(Kasaria *ksr, unsigned char channel, unsigned char reverb);
+KSR_API void ksr_channel_set_chorus(Kasaria *ksr, unsigned char channel, unsigned char level);
 KSR_API void ksr_channel_set_pitch_wheel(Kasaria *ksr, unsigned char channel, unsigned short pitch);
 KSR_API void ksr_channel_set_pitch_range(Kasaria *ksr, unsigned char channel, unsigned char range);
 KSR_API void ksr_channel_set_program(Kasaria *ksr, unsigned char channel, unsigned char program);

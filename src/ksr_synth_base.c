@@ -871,6 +871,7 @@ void reset_controllers(Kasaria *ksr, int c)
     ksr->channel[c].pitchbend   = 0x2000;
     ksr->channel[c].pitchfactor = 0; // to be computed
     ksr->channel[c].reverb      = 40;
+    ksr->channel[c].chorus      = 0;
 }
 
 void reset_midi(Kasaria *ksr)
@@ -891,10 +892,12 @@ void reset_midi(Kasaria *ksr)
     }
     reset_voices(ksr);
 
-    if (ksr->reverb_enabled)
-    {
+    if(ksr->reverb_enabled)
         reset_reverb(ksr);
-    }
+
+    if(ksr->chorus_enabled)
+        reset_chorus(ksr);
+    
     
     ksr->lost_notes = 0;
     ksr->cut_notes  = 0;
@@ -910,6 +913,10 @@ void do_compute_data(Kasaria *ksr, long count)
     if(ksr->reverb_enabled)
         // memset(ksr->reverb_send_buffer, 0, count * 4);
         memset(ksr->reverb_send_buffer, 0, count * sizeof(ksr->reverb_send_buffer[0]));
+
+    if(ksr->chorus_enabled)
+        memset(ksr->chorus_send_buffer, 0, count * 4);
+    
     
 
     for(i = 0; i < samples; i++)
@@ -922,9 +929,12 @@ void do_compute_data(Kasaria *ksr, long count)
     }
 
     if(ksr->reverb_enabled)
-    {
         process_reverb(ksr, ksr->buffer_pointer, ksr->reverb_send_buffer, count);
-    }
+
+    if(ksr->chorus_enabled)
+        process_chorus(ksr, ksr->buffer_pointer, ksr->chorus_send_buffer, count);
+    
+    
 
     if(ksr->audio_compressor)
         audio_compressor(&ksr->compressor_settings, (f32 *)ksr->buffer_pointer, samples * sizeof(f32));

@@ -92,7 +92,10 @@ void set_default_config(Kasaria *ksr)
     ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_LIBRARY;
     //ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_ABANDONED;
     //ksr->reverb_preset                 = KSR_REVERB_PRESET_DUSTYROOM;
-    ksr->reverb_enabled                = true;
+    ksr->reverb_enabled                = false;
+
+    ksr->chorus_enabled                = true;
+    ksr->chorus_depth                  = 0.25;
 
     default_compressor_settings(ksr);
 
