@@ -560,6 +560,8 @@ KSR_API bool ksr_player_is_ended(Kasaria *ksr);
 * The Following API functions are used for precise control over the MIDI events
 */
 
+void ksr_set_chorus_depth(Kasaria *ksr, int percent);
+
 // --------------------------- MIDI Event API ---------------------------
 KSR_API void ksr_channel_note_on(Kasaria *ksr, unsigned char channel, unsigned char note, unsigned char velocity);
 KSR_API void ksr_channel_note_off(Kasaria *ksr, unsigned char channel, unsigned char note);

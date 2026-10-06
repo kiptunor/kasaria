@@ -194,6 +194,7 @@ enum {
 #define ME_COARSE_TUNING      18
 #define ME_REVERB             19
 #define ME_CHORUS             20
+#define ME_CHORUS_DEPTH       21
 #define ME_EOT                99
 
 // Data format encoding bits

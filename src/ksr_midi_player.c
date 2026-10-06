@@ -579,6 +579,20 @@ void ksr_channel_set_chorus(Kasaria *ksr, u_char channel, u_char level)
     play_midi(ksr, &ev);
 }
 
+void ksr_set_chorus_depth(Kasaria *ksr, int percent)
+{
+    if(!ksr)
+        return;
+    
+    if(percent > 100)
+        percent = 100;
+    else if(percent < 0)
+        percent = 0;
+    
+    ksr->chorus_depth = (f64)(percent) / 100.0L;
+    apply_chorus_depth(ksr);
+}
+
 void ksr_channel_set_pitch_wheel(Kasaria *ksr, u_char channel, u_short pitch)
 {
     MidiEvent ev;
@@ -1078,6 +1092,9 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
                     break;
                     case 91:
                         control = ME_REVERB;
+                    break;
+                    case 93:
+                        control = ME_CHORUS;
                     break;
                     case 100:
                         s->nrpn[t] = 0;

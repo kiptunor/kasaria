@@ -82,6 +82,7 @@ void apply_chorus_depth(Kasaria *ksr)
 
 void process_chorus(Kasaria *ksr, f32 *buf, long *send_buf, long count)
 {
+    
     //long scale;
     long i;
     
@@ -91,8 +92,8 @@ void process_chorus(Kasaria *ksr, f32 *buf, long *send_buf, long count)
     
     //scale = 1 << (31 - GUARD_BITS);
     
-    //if(count > AUDIO_BUFFER_SIZE)
-    //    count = AUDIO_BUFFER_SIZE;
+    if(count > AUDIO_BUFFER_SIZE)
+        count = AUDIO_BUFFER_SIZE;
     
     for(i=0; i<count; i++)
     {
