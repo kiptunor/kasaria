@@ -110,7 +110,8 @@ f32 sk_chorus_tick(sk_chorus *c, f32 in)
 	    p2 += c->sz;
 	
 	frac = t - (int)floor(t);
-	out = c->buf[p2] + c->buf[p1]*(1 - frac) - (1 - frac)*c->z1;
+	//out = c->buf[p2] + c->buf[p1]*(1 - frac) - (1 - frac)*c->z1;
+	out = c->buf[p2]*frac + c->buf[p1]*(1 - frac);
 	c->z1 = out;
 	c->ym1 = (1 - c->a) * out + c->a*c->ym1;
 	out = c->ym1;

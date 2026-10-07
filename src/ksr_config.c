@@ -66,7 +66,7 @@ void set_default_config(Kasaria *ksr)
     ksr->adjust_panning_immediately    = 1;
     // ksr->preload_soundfont_instruments = 1; // Unused
     ksr->buffer_period_size            = 488;
-    ksr->skip_initial_midi_silence     = false;
+    ksr->skip_initial_midi_silence     = true;
     ksr->overlapping_notes             = true;
     ksr->audio_compressor              = true;
     ksr->midi_chunk_limit_enabled      = false;
@@ -92,7 +92,7 @@ void set_default_config(Kasaria *ksr)
     ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_LIBRARY;
     //ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_ABANDONED;
     //ksr->reverb_preset                 = KSR_REVERB_PRESET_DUSTYROOM;
-    ksr->reverb_enabled                = true;
+    ksr->reverb_enabled                = false;
 
     ksr->chorus_enabled                = false;
     ksr->chorus_depth                  = 0.25;

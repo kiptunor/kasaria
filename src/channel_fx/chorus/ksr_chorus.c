@@ -31,7 +31,7 @@ chorus.c -- SKChorus integration
 #include "ksr_sk_chorus.h"
 
 #define CHORUS_LEN 0.01
-#define CHORUS_RATE 0.5
+#define CHORUS_RATE 0.20
 
 void init_chorus(Kasaria *ksr)
 {
@@ -48,9 +48,9 @@ void init_chorus(Kasaria *ksr)
         return;
     }
     sk_chorus_rate(ksr->chorus_l, CHORUS_RATE);
-    sk_chorus_mix(ksr->chorus_l, 1.0);
+    sk_chorus_mix(ksr->chorus_l, 0.5);
     sk_chorus_rate(ksr->chorus_r, CHORUS_RATE * -1);
-    sk_chorus_mix(ksr->chorus_r, 1.0);
+    sk_chorus_mix(ksr->chorus_r, 0.5);
     apply_chorus_depth(ksr);
 }
 

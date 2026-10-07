@@ -915,7 +915,8 @@ void do_compute_data(Kasaria *ksr, long count)
         memset(ksr->reverb_send_buffer, 0, count * sizeof(ksr->reverb_send_buffer[0]));
 
     if(ksr->chorus_enabled)
-        memset(ksr->chorus_send_buffer, 0, count * 4);
+        //memset(ksr->chorus_send_buffer, 0, count * 4);
+        memset(ksr->reverb_send_buffer, 0, count * sizeof(ksr->reverb_send_buffer[0]));
     
     
 
