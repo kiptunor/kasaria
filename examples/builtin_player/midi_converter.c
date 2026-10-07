@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     // Skip notes with velocities in between the low and high specified threasholds
     // And also enable the filter
     ksr_config_set_note_skipping(converter, 0, 20, false);
-    ksr_config_set_midi_chunk_limit(converter, 800, true);
+    ksr_config_set_midi_chunk_limit(converter, 800, false);
 
     // Load 2 soundfont files
     // but first set the options for both soundfonts
