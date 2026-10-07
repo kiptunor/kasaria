@@ -198,51 +198,60 @@ void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count)
     f32 mono_in[REVERB_BUFFERSIZE];
     f32 stereo_out[REVERB_BUFFERSIZE * 2];
     long scale;
-    long i;
-        
+    long offset, i;
+            
     if(!ksr->reverb_enabled || ksr->reverb_level <= 0.0 || count <= 0)
         return;
-        
-    scale = 1 << (31 - GUARD_BITS);
-
-    long n;
-    for(i = 0; i < count; i += REVERB_BUFFERSIZE)
-        n = (count - i) < (long)REVERB_BUFFERSIZE ? (count - i) : (long)REVERB_BUFFERSIZE;
     
-        
-    for(i=0; i<count; i++)
-        mono_in[i] = (f32)send_buf[i] / (f32)scale;
-        
-    memset(stereo_out, 0, count * 2 * sizeof(f32));
-    ReverbEffectProcess(&ksr->reverb, (u32)count, mono_in, stereo_out);
-        
-    for(i=0; i<count; i++)
+    if(count > AUDIO_BUFFER_SIZE)
+        count = AUDIO_BUFFER_SIZE;
+            
+    scale = 1 << (31 - GUARD_BITS);
+    
+    // Process in blocks of at most REVERB_BUFFERSIZE frames: the stack scratch
+    // buffers above and ReverbEffect's internal EarlySamples/ReverbSamples
+    // arrays are both sized to REVERB_BUFFERSIZE, so passing a larger count
+    // would overflow them (stack smashing / struct corruption).
+    for(offset = 0; offset < count; offset += (long)REVERB_BUFFERSIZE)
     {
-        // f32 wl = stereo_out[i*2+0] * (f32)scale * (f32)ksr->reverb_level;
-        // f32 wr = stereo_out[i*2+1] * (f32)scale * (f32)ksr->reverb_level;
-        
-        f32 wl = stereo_out[i*2+0] * (f32)scale * (f32)ksr->reverb_level;
-        f32 wr = stereo_out[i*2+1] * (f32)scale * (f32)ksr->reverb_level;
-        
-        if(ksr->reverb_only)
+        long n = count - offset;
+
+        if(n > (long)REVERB_BUFFERSIZE)
+            n = (long)REVERB_BUFFERSIZE;
+
+        for(i = 0; i < n; i++)
+            mono_in[i] = (f32)send_buf[offset + i] / (f32)scale;
+
+        memset(stereo_out, 0, n * 2 * sizeof(f32));
+        ReverbEffectProcess(&ksr->reverb, (u32)n, mono_in, stereo_out);
+
+        for(i = 0; i < n; i++)
         {
-            if(!(ksr->play_mode.encoding & PE_MONO))
+            long k = offset + i;
+
+            f32 wl = stereo_out[i*2+0] * (f32)scale * (f32)ksr->reverb_level;
+            f32 wr = stereo_out[i*2+1] * (f32)scale * (f32)ksr->reverb_level;
+
+            if(ksr->reverb_only)
             {
-                buf[i*2+0] = wl;
-                buf[i*2+1] = wr;
+                if(!(ksr->play_mode.encoding & PE_MONO))
+                {
+                    buf[k*2+0] = wl;
+                    buf[k*2+1] = wr;
+                }
+                else
+                    buf[k] = (wl + wr) / 2.0f;
             }
             else
-                buf[i] = (wl + wr) / 2.0f;
-        }
-        else
-        {
-            if(!(ksr->play_mode.encoding & PE_MONO))
             {
-                buf[i*2+0] += wl;
-                buf[i*2+1] += wr;
+                if(!(ksr->play_mode.encoding & PE_MONO))
+                {
+                    buf[k*2+0] += wl;
+                    buf[k*2+1] += wr;
+                }
+                else
+                    buf[k] += (wl + wr) / 2.0f;
             }
-            else
-                buf[i] += (wl + wr) / 2.0f;
         }
     }
 }
