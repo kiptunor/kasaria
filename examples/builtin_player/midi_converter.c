@@ -16,12 +16,15 @@ int main(int argc, char *argv[])
     ksr_config_set_fast_decay(converter, true);
     ksr_config_set_antialiasing(converter, true);
     ksr_config_set_sample_rate(converter, 48000); // Optional
-    ksr_config_set_max_voices(converter, 5000);
+    ksr_config_set_max_voices(converter, 8000);
     
     // Skip notes with velocities in between the low and high specified threasholds
     // And also enable the filter
-    ksr_config_set_note_skipping(converter, 0, 20, false);
-    ksr_config_set_midi_chunk_limit(converter, 800, false);
+    ksr_config_set_note_skipping(converter, 0, 32, true);
+
+    // Preferably set both midi chunk size and audio chuck size with the same value
+    long midi_audio_chunk = 800;
+    ksr_config_set_midi_chunk_limit(converter, midi_audio_chunk, true);
 
     // Load 2 soundfont files
     // but first set the options for both soundfonts
@@ -88,8 +91,7 @@ int main(int argc, char *argv[])
 
     // Count all samples required for the synthesis process
     long total = ksr_get_sample_count(converter) + ksr_millis2samples(converter, 1000); // +1s tail
-    long chunk = 4096;
-    float *buf = malloc(chunk * channels * sizeof(float));
+    float *buf = malloc(midi_audio_chunk * channels * sizeof(float));
 
     // Initialize a timer for conversion time measurement
     ma_timer timer;
@@ -101,7 +103,7 @@ int main(int argc, char *argv[])
     */
     while(total > 0)
     {
-        long frames = total < chunk ? total : chunk;
+        long frames = total < midi_audio_chunk ? total : midi_audio_chunk;
 
         // Advance to the next MIDI event and generate the synthesized audio frames
         if(!ksr_player_get_stream(converter, AUDIO_FLOAT, (unsigned char*)buf, frames))
