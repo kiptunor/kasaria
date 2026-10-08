@@ -619,6 +619,7 @@ typedef struct
     uint8_t  active;
     int      voice;   /* primary */
     int      voice2;  /* stereo partner, -1 if none */
+    int      layer[MAX_NOTE_PRESSES];
 }NotePress;
 
 typedef struct _MBlockNode

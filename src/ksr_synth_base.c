@@ -672,17 +672,32 @@ void note_on(Kasaria *ksr, MidiEvent *e)
             
             if(ring[slot].voice2 >= 0)
                 kill_note(ksr, ring[slot].voice2);
+
+            for(int s = 0; s < MAX_NOTE_PRESSES; s++)
+                if(ring[slot].layer[s] >= 0)
+                    kill_note(ksr, ring[slot].layer[s]);
         }
     
         ring[slot].active = 1;
         ring[slot].gen    = ++ksr->note_gen;
         ring[slot].voice  = v;
         ring[slot].voice2 = -1;
+
+        for(int s = 0; s < MAX_NOTE_PRESSES; s++)
+            ring[slot].layer[s] = -1;
         
         Voice *pv = ksr->voice_by_channel_note[e->channel][e->key][1]; // partner filled by start_note
         
         if(pv && pv->channel == e->channel && pv->note == e->key)
             ring[slot].voice2 = (int)(pv - ksr->voice);
+
+        int n = 0;
+        for(int s = 2; s < 8 && n < MAX_NOTE_PRESSES; s++)
+        {
+            Voice *lv = ksr->voice_by_channel_note[e->channel][e->key][s];
+            if(lv && lv->channel == e->channel && lv->note == e->key)
+                ring[slot].layer[n++] = (int)(lv - ksr->voice);
+        }
     }
     else
     {
@@ -794,6 +809,26 @@ void note_off(Kasaria *ksr, MidiEvent *e)
                     finish_note(ksr, p->voice2);
             }
         }
+
+        for(int s = 0; s < MAX_NOTE_PRESSES; s++)
+        {
+            int idx = p->layer[s];
+            p->layer[s] = -1;
+            if(idx < 0)
+                continue;
+         
+            Voice *v = &ksr->voice[idx];
+            if(v->channel != e->channel || v->note != e->key)
+                continue;
+            
+            if(v->status == VOICE_ON)
+            {
+                if(ksr->channel[e->channel].sustain)
+                    v->status = VOICE_SUSTAINED;
+                else
+                    finish_note(ksr, idx);
+            }
+        }
     
         p->active = 0;
         p->voice  = -1;
@@ -828,6 +863,7 @@ void all_notes_off(Kasaria *ksr, int c)
         {
             for(int s = 0; s < MAX_NOTE_PRESSES; s++)
             {
+                ksr->note_press[c][n][s].layer[s] = -1;
                 ksr->note_press[c][n][s].active = 0;
                 ksr->note_press[c][n][s].voice  = -1;
                 ksr->note_press[c][n][s].voice2 = -1;
