@@ -437,6 +437,80 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         }
 
         // Super broken when using Project CF-162.sf2
+        for(int li = 0; li < ip->samples; li++)
+        {
+            Sample *layer = &ip->sample[li];
+            
+            if(layer == ksr->voice[i].sample)
+                continue;
+            if(layer == stereo_partner)
+                continue;
+            
+            if(e->key < layer->low_key || e->key > layer->high_key)
+                continue;
+            
+            if(e->vel < layer->low_vel || e->vel > layer->high_vel)
+                continue;
+            
+            if(ksr->free_voice_count > 0)
+            {
+                int layer_v = ksr->free_voice_stack[--ksr->free_voice_count];
+                
+                for(int s = 0; s < 8; s++)
+                {
+                    if(ksr->voice_by_channel_note[e->channel][e->key][s] == NULL)
+                    {
+                        ksr->voice_by_channel_note[e->channel][e->key][s] = &ksr->voice[layer_v];
+                        break;
+                    }
+                }
+                
+                channel_voice_add(ksr, e->channel, layer_v);
+                ksr->voice[layer_v].status          = VOICE_ON;
+                ksr->voice[layer_v].channel         = e->channel;
+                ksr->voice[layer_v].note            = e->key;
+                ksr->voice[layer_v].velocity        = e->vel;
+                ksr->voice[layer_v].sample          = layer;
+                ksr->voice[layer_v].sample_offset   = 0;
+                ksr->voice[layer_v].sample_increment = 0;
+                ksr->voice[layer_v].orig_frequency  = ksr->voice[i].orig_frequency;
+                
+                ksr->voice[layer_v].tremolo_phase              = 0;
+                ksr->voice[layer_v].tremolo_phase_increment    = layer->tremolo_phase_increment;
+                ksr->voice[layer_v].tremolo_sweep              = layer->tremolo_sweep_increment;
+                ksr->voice[layer_v].tremolo_sweep_position     = 0;
+                
+                ksr->voice[layer_v].vibrato_sweep              = layer->vibrato_sweep_increment;
+                ksr->voice[layer_v].vibrato_sweep_position     = 0;
+                ksr->voice[layer_v].vibrato_control_ratio      = layer->vibrato_control_ratio;
+                ksr->voice[layer_v].vibrato_control_counter    = 0;
+                ksr->voice[layer_v].vibrato_phase              = 0;
+                for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
+                    ksr->voice[layer_v].vibrato_sample_increment[j] = 0;
+                
+                if(ksr->channel[e->channel].panning != NO_PANNING)
+                    ksr->voice[layer_v].panning = ksr->channel[e->channel].panning;
+                else
+                    ksr->voice[layer_v].panning = layer->panning;
+                
+                recompute_freq(ksr, layer_v);
+                recompute_amp(ksr, layer_v);
+                
+                if(layer->modes & MODES_ENVELOPE)
+                {
+                    ksr->voice[layer_v].envelope_stage  = 0;
+                    ksr->voice[layer_v].envelope_volume = 0;
+                    ksr->voice[layer_v].control_counter = 0;
+                    recompute_envelope(ksr, layer_v);
+                    apply_envelope_to_amp(ksr, layer_v);
+                }
+                else
+                {
+                    ksr->voice[layer_v].envelope_increment = 0;
+                    apply_envelope_to_amp(ksr, layer_v);
+                }
+            }
+        }
         // Not anymore
     }
 }

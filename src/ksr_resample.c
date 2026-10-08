@@ -245,6 +245,11 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
         while(ofs >= le)
             ofs -= ll;
 
+        if(ll > 0 && ofs >= le)
+            ofs = vp->sample->loop_start + ((ofs - le) % ll);
+        else if(ofs >= le)
+            ofs = vp->sample->loop_start;
+
         // Precalc how many times we should go through the loop
         i = (le - ofs) / incr + 1;
         if(i > count)
@@ -276,7 +281,13 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
         RESAMPLATION;
         ofs += incr;
         if(ofs >= le)
-            ofs -= ll; // Hopefully the loop is longer than an increment.
+        {
+            //ofs -= ll; // Hopefully the loop is longer than an increment.
+            if(ll > 0)
+                ofs = vp->sample->loop_start + ((ofs - le) % ll);
+            else
+                ofs = vp->sample->loop_start;
+        }
     }
 #endif
 

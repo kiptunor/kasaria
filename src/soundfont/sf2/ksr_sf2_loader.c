@@ -209,7 +209,12 @@ enum EnumOverWriteMode
 	EOWM_ENABLE_ENV = 32, 
 };
 
-LayerItem layer_items[SF_EOF];
+//LayerItem layer_items[SF_EOF];
+LayerItem layer_items[SF_EOF] =
+{
+    [SF_keyRange] = { .copy = L_RANGE },
+    [SF_velRange] = { .copy = L_RANGE },
+};
 
 
 i8 sf_attenuation_neg  = 0;
