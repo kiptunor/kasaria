@@ -72,8 +72,29 @@ void KSR_Init()
     ksr_config_set_antialiasing(ksr_inst, 0);
     ksr_config_set_note_skipping(ksr_inst, 0, 32, true);
     ksr_print_config(ksr_inst);
-    ksr_load_soundfont_file(ksr_inst, "Full Grand Piano V2.sf2", true);
-    ksr_load_soundfont_file(ksr_inst, "Arachno SoundFont Version 1.0.sf2", true);
+
+    KsrSoundfontOpts s1;
+    KsrSoundfontOpts s2;
+
+    s1 = (KsrSoundfontOpts)
+    {
+        .active_presets = 10,         // How many presets to load (Lazy soundfont loading)
+        .bank = 0,                    // Set current midi bank
+        .preset = 0,                  // Set current preset
+        .load_percussion_bank = true, // Load the percussion bank
+    };
+
+    // Same options for the second soundfont
+    s2 = (KsrSoundfontOpts)
+    {
+        .active_presets = 10,
+        .bank = 0,
+        .preset = 0,
+        .load_percussion_bank = true,
+    };
+    
+    ksr_load_soundfont_file(ksr_inst, "Arachno SoundFont Version 1.0.sf2", s1);
+    ksr_load_soundfont_file(ksr_inst, "Full Grand Piano V2.sf2", s2);
 
     ksr_init_audio(ksr_inst, RAW_MIDI_EVENTS);
     ksr_start_audio(ksr_inst);

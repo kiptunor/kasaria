@@ -823,13 +823,8 @@ void        audio_compressor(CompressorSettings *compr_settings, void *buffer, u
 
 
 // ------------- SoundFont Instrument functions (ksr_instruments.c) -------------
-int         load_missing_instruments(Kasaria *tm);
 void        free_instruments(Instrument *ip);
-// int set_default_instrument(Kasaria *tm, char *name);
-void        free_default_instrument(Kasaria *tm);
-//Instrument *load_soundfont_instrument(Kasaria *tm, SFInfo *sf, const char *filename, int bank, int program);
-int         preload_soundfont_instruments(Kasaria *ksr);
-int         preload_soundfont_presets(Kasaria *ksr, int active_presets, bool perc_bank);
+int         load_soundfont_presets(Kasaria *ksr, int active_presets, bool perc_bank);
 void        alloc_instrument_bank(int dr, int bk);
 void        squash_sample_16to8(Sample *sp);
 

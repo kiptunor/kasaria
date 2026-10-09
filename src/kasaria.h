@@ -91,7 +91,6 @@ typedef struct
     int active_presets;          // Set how many presets to store
     int bank;                    // Set the current MIDI bank (Currently unused)
     int preset;                  // Set the current preset
-    //bool preload_instruments;    // Preload instruments into tone banks (Required for synthesis)
     bool load_percussion_bank; // When enabled the soundfont loader also loads the percusion bank used in MIDI Channel 10
 }KsrSoundfontOpts;
 
@@ -397,16 +396,13 @@ KSR_API int ksr_get_song_copyright(Kasaria *ksr, char *buffer, long count);
 
 
 /*
-@brief                     Load a soundfont file from disk
-@param ksr                 Kasaria instance
-@param filename             The file path + filename of the soundfont file to load
-@param preload_instruments When set to true all soundfont instruments will be preloaded into the tone banks
-                           so the synth can actually produce sound
+@brief                Load a soundfont file from disk
+@param ksr            Kasaria instance
+@param filename        The file path + filename of the soundfont file to load
+@param soundfont_opts Set custom options for each soundfont. See KsrSoundfontOpts struct
 */
-KSR_API int  ksr_load_soundfont_file(Kasaria *ksr, const char *filename, bool preload_instruments);
-
 // Partially implelented !!!
-KSR_API int  ksr_load_soundfont_file_new(Kasaria *ksr, const char *filename, KsrSoundfontOpts soundfont_opts);
+KSR_API int  ksr_load_soundfont_file(Kasaria *ksr, const char *filename, KsrSoundfontOpts soundfont_opts);
 
 // Not yet implemented
 KSR_API void ksr_load_soundfont_from_mem(Kasaria *ksr, void *mem, long size, bool preload_instruments);

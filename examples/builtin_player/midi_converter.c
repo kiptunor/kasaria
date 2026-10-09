@@ -53,12 +53,12 @@ int main(int argc, char *argv[])
     // ==============[Load the soundfonts in this exact order]==============
     
     // The first soundfont to load has 128 presets
-    ksr_load_soundfont_file_new(converter, "Arachno SoundFont Version 1.0.sf2", s1);
+    ksr_load_soundfont_file(converter, "Arachno SoundFont Version 1.0.sf2", s1);
 
     // And the second has only 5 presets available which means that the first 5 presets of the first soundfont
     // will be overridden by the presets of the second soundfont
-    //ksr_load_soundfont_file_new(converter, "Full Grand Piano V2.sf2", s2);
-    ksr_load_soundfont_file_new(converter, "/home/andre/disks/1_TB_1/bm/soundfonts/Amr's Steinway Dream Piano.sf2", s2);
+    //ksr_load_soundfont_file(converter, "Full Grand Piano V2.sf2", s2);
+    ksr_load_soundfont_file(converter, "/home/andre/disks/1_TB_1/bm/soundfonts/Amr's Steinway Dream Piano.sf2", s2);
 
     // ==============[Load MIDI file]==============
     // For this approach file mapping is set which does not store any midi data in RAM
