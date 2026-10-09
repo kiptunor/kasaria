@@ -89,9 +89,7 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
     if(!async_midi_player ||
        !async_midi_player->is_midi_loaded ||
        (!async_midi_player->stream &&
-        !async_midi_player->current_event) ||
-       async_midi_player->is_midi_ended ||
-       async_midi_player->is_midi_player_paused)
+        !async_midi_player->current_event) || async_midi_player->is_midi_player_paused)
     {
         memset(pOutput, 0, frameCount * 2 * sizeof(f32));
         return;

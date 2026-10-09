@@ -65,8 +65,8 @@ void set_default_config(Kasaria *ksr)
     ksr->quietchannels                 = 0;
     ksr->adjust_panning_immediately    = 1;
     // ksr->preload_soundfont_instruments = 1; // Unused
-    ksr->buffer_period_size            = 488;
-    ksr->skip_initial_midi_silence     = true;
+    ksr->buffer_period_size            = 800;
+    ksr->skip_initial_midi_silence     = false;
     ksr->overlapping_notes             = true;
     ksr->audio_compressor              = true;
     ksr->midi_chunk_limit_enabled      = false;
