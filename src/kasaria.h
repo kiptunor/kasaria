@@ -319,6 +319,9 @@ KSR_API void ksr_restore_defaults(Kasaria *ksr); // Restore default settings
 */
 
 
+KSR_API void ksr_lock_config(Kasaria *ksr);
+KSR_API void ksr_unlock_config(Kasaria *ksr);
+KSR_API bool ksr_is_config_locked(Kasaria *ksr);
 KSR_API void ksr_config_set_overlapping_notes(Kasaria *ksr, bool value);
 KSR_API void ksr_config_set_amplification(Kasaria *ksr, int amplification); // Amplification is represented in percent
 KSR_API void ksr_config_set_max_voices(Kasaria *ksr, int voices);           // The number of voices is clamped between 1 and MAX_VOICES

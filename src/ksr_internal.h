@@ -772,6 +772,7 @@ struct Kasaria
     bool is_midi_player_paused;
     bool is_midi_player_active;
     bool is_soundfont_loaded; // Works for at least one soundfont
+    bool is_config_locked;
     int  midi_loading_mode;
     int  sf_loaded;
     

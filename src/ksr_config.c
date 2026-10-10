@@ -27,6 +27,39 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 
 
+
+
+
+
+
+void ksr_lock_config(Kasaria *ksr)
+{
+    if(!ksr)
+        return;
+
+    log_info("\033[24mConfig Locked\033[0m");
+
+    ksr->is_config_locked = true;
+}
+
+void ksr_unlock_config(Kasaria *ksr)
+{
+    if(!ksr)
+        return;
+
+    log_info("\033[24mConfig Unlocked\033[0m");
+
+    ksr->is_config_locked = false;
+}
+
+bool ksr_is_config_locked(Kasaria *ksr)
+{
+    if(!ksr)
+        return 0;
+
+    return ksr->is_config_locked;
+}
+
 void default_compressor_settings(Kasaria *ksr)
 {
     ksr->compressor_settings.envelope      = 0.0f;
@@ -108,7 +141,7 @@ void set_default_config(Kasaria *ksr)
 
 void ksr_config_set_overlapping_notes(Kasaria *ksr, bool value)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     // This MUST be enforced if the user wants to use Kasaria for raw MIDI events
@@ -129,7 +162,7 @@ void ksr_config_set_overlapping_notes(Kasaria *ksr, bool value)
 
 void ksr_config_set_midi_chunk_limit(Kasaria *ksr, int size, bool enabled)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     ksr->midi_chunk_size = size;
@@ -138,7 +171,7 @@ void ksr_config_set_midi_chunk_limit(Kasaria *ksr, int size, bool enabled)
 
 void ksr_config_set_audio_frame_size(Kasaria *ksr, int size)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     if(size < 10)
@@ -149,7 +182,7 @@ void ksr_config_set_audio_frame_size(Kasaria *ksr, int size)
 
 void ksr_config_set_amplification(Kasaria *ksr, int amplification)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     reset_voices(ksr);
@@ -163,7 +196,7 @@ void ksr_config_set_amplification(Kasaria *ksr, int amplification)
 
 void ksr_config_set_max_voices(Kasaria *ksr, int voices)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     reset_voices(ksr);
@@ -177,7 +210,7 @@ void ksr_config_set_max_voices(Kasaria *ksr, int voices)
 
 void ksr_config_set_immediate_panning(Kasaria *ksr, bool value)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     reset_voices(ksr);
@@ -186,7 +219,7 @@ void ksr_config_set_immediate_panning(Kasaria *ksr, bool value)
 
 void ksr_config_set_mono(Kasaria *ksr, bool value)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     reset_voices(ksr);
@@ -198,7 +231,7 @@ void ksr_config_set_mono(Kasaria *ksr, bool value)
 
 void ksr_config_enable_reverb(Kasaria *ksr, bool value)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
     
     ksr->reverb_enabled = value;
@@ -207,7 +240,7 @@ void ksr_config_enable_reverb(Kasaria *ksr, bool value)
 
 void ksr_config_set_reverb_only(Kasaria *ksr, bool value)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
     
     ksr->reverb_only = value;
@@ -215,7 +248,7 @@ void ksr_config_set_reverb_only(Kasaria *ksr, bool value)
 
 void ksr_config_set_reverb_preset(Kasaria *ksr, int preset)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
     
     ksr->reverb_preset = preset;
@@ -223,7 +256,7 @@ void ksr_config_set_reverb_preset(Kasaria *ksr, int preset)
 
 void ksr_config_set_fast_decay(Kasaria *ksr, bool value)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     reset_voices(ksr);
@@ -232,7 +265,7 @@ void ksr_config_set_fast_decay(Kasaria *ksr, bool value)
 
 void ksr_config_set_antialiasing(Kasaria *ksr, bool value)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     reset_voices(ksr);
@@ -241,7 +274,7 @@ void ksr_config_set_antialiasing(Kasaria *ksr, bool value)
 
 void ksr_config_set_pre_resample(Kasaria *ksr, bool value)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     reset_voices(ksr);
@@ -250,7 +283,7 @@ void ksr_config_set_pre_resample(Kasaria *ksr, bool value)
 
 void ksr_config_set_sample_rate(Kasaria *ksr, int rate)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     reset_voices(ksr);
@@ -278,7 +311,7 @@ void ksr_config_set_sample_rate(Kasaria *ksr, int rate)
 
 void ksr_config_set_control_rate(Kasaria *ksr, int rate)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     reset_voices(ksr);
@@ -299,7 +332,7 @@ void ksr_config_set_control_rate(Kasaria *ksr, int rate)
 
 void ksr_config_set_default_program(Kasaria *ksr, int program)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     ksr->default_program = program & 0x7f;
@@ -307,7 +340,7 @@ void ksr_config_set_default_program(Kasaria *ksr, int program)
 
 void ksr_config_set_drum_channel(Kasaria *ksr, int channel, bool enable)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     channel = channel & 0x0f;
@@ -320,7 +353,7 @@ void ksr_config_set_drum_channel(Kasaria *ksr, int channel, bool enable)
 
 void ksr_config_set_quiet_channel(Kasaria *ksr, int channel, bool enable)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     channel = channel & 0x0f;
@@ -338,7 +371,7 @@ void ksr_config_set_quiet_channel(Kasaria *ksr, int channel, bool enable)
 
 void ksr_config_set_note_skipping(Kasaria *ksr, uint8_t low_vel, uint8_t high_vel, bool enabled)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     ksr->note_vel_skipping = enabled;
@@ -348,7 +381,7 @@ void ksr_config_set_note_skipping(Kasaria *ksr, uint8_t low_vel, uint8_t high_ve
 
 int ksr_config_get_amplification(Kasaria *ksr)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return 0;
 
     return (int)(ksr->master_volume * 100.0L);
@@ -356,7 +389,7 @@ int ksr_config_get_amplification(Kasaria *ksr)
 
 int ksr_config_get_max_voices(Kasaria *ksr)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return 0;
 
     return ksr->voices;
@@ -364,7 +397,7 @@ int ksr_config_get_max_voices(Kasaria *ksr)
 
 int ksr_config_get_immediate_panning(Kasaria *ksr)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return 0;
 
     return ksr->adjust_panning_immediately;
@@ -372,7 +405,7 @@ int ksr_config_get_immediate_panning(Kasaria *ksr)
 
 int ksr_config_get_mono(Kasaria *ksr)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return 0;
 
     if(ksr->play_mode.encoding & PE_MONO)
@@ -384,7 +417,7 @@ int ksr_config_get_mono(Kasaria *ksr)
 
 int ksr_config_get_fast_decay(Kasaria *ksr)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return 0;
 
     return ksr->fast_decay;
@@ -392,7 +425,7 @@ int ksr_config_get_fast_decay(Kasaria *ksr)
 
 int ksr_config_get_antialiasing(Kasaria *ksr)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return 0;
 
     return ksr->antialiasing_allowed;
@@ -400,7 +433,7 @@ int ksr_config_get_antialiasing(Kasaria *ksr)
 
 int ksr_config_get_pre_resample(Kasaria *ksr)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return 0;
 
     return ksr->pre_resampling_allowed;
@@ -408,7 +441,7 @@ int ksr_config_get_pre_resample(Kasaria *ksr)
 
 int ksr_config_get_sample_rate(Kasaria *ksr)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return 0;
 
     return ksr->play_mode.rate;
@@ -416,7 +449,7 @@ int ksr_config_get_sample_rate(Kasaria *ksr)
 
 int ksr_config_get_control_rate(Kasaria *ksr)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return 0;
 
     return ksr->control_rate;
@@ -424,7 +457,7 @@ int ksr_config_get_control_rate(Kasaria *ksr)
 
 int ksr_config_get_default_program(Kasaria *ksr)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return 0;
 
     return ksr->default_program;
@@ -432,7 +465,7 @@ int ksr_config_get_default_program(Kasaria *ksr)
 
 void ksr_config_set_audio_compressor(Kasaria *ksr, bool enabled)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     ksr->audio_compressor = enabled;
@@ -468,7 +501,7 @@ KasariaConfig ksr_get_config(Kasaria *ksr)
 
 void ksr_set_config(Kasaria *ksr, KasariaConfig config)
 {
-    if(!ksr)
+    if(!ksr || ksr->is_config_locked)
         return;
 
     ksr->master_volume              = config.amplification / 100.0L;

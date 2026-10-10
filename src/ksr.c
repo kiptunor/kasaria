@@ -107,6 +107,7 @@ void init_internal_state(Kasaria *ksr)
     ksr->is_soundfont_loaded   = false;
     ksr->wall_clock_last_ns    = 0;
     ksr->is_audio_init         = false;
+    ksr->is_config_locked      = false;
 }
 
 Kasaria *ksr_init(bool disable_logs)
