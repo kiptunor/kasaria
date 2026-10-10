@@ -712,6 +712,8 @@ struct Kasaria
     _Atomic u64 position_end_frame;
     _Atomic u64 position_start_ns;
     _Atomic u64 position_end_ns;
+    _Atomic int player_seek_gate;    // 1 while a control thread is rewriting the player
+    _Atomic int player_in_callback;
     u64         position_clock_end_ns;
 
     // Resample vars

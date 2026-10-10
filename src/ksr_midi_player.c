@@ -81,6 +81,20 @@ Kasaria *async_midi_player; // Required only for the async MIDI player
 
 
 
+
+static void player_seek_gate_enter(Kasaria *ksr)
+{
+    atomic_store_explicit(&ksr->player_seek_gate, 1, memory_order_seq_cst);
+
+    while(atomic_load_explicit(&ksr->player_in_callback, memory_order_seq_cst))
+        ma_sleep(1);
+}
+
+static void player_seek_gate_leave(Kasaria *ksr)
+{
+    atomic_store_explicit(&ksr->player_seek_gate, 0, memory_order_seq_cst);
+}
+
 void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
     (void)pDevice;
@@ -94,6 +108,17 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
         memset(pOutput, 0, frameCount * 2 * sizeof(f32));
         return;
     }
+
+    atomic_store_explicit(&async_midi_player->player_in_callback, 1, memory_order_seq_cst);
+    
+        if(atomic_load_explicit(&async_midi_player->player_seek_gate, memory_order_seq_cst) ||
+           !async_midi_player->is_midi_loaded ||
+           (!async_midi_player->stream && !async_midi_player->current_event) || async_midi_player->is_midi_player_paused)
+        {
+            atomic_store_explicit(&async_midi_player->player_in_callback, 0, memory_order_seq_cst);
+            memset(pOutput, 0, frameCount * 2 * sizeof(f32));
+            return;
+        }
 
     // Position update on the start of the audio frame
     ksr_player_pos_start_update(async_midi_player);
@@ -157,6 +182,8 @@ void ksr_player_pos_end_update(Kasaria *ksr, unsigned int frame_count)
     atomic_store_explicit(&ksr->position_start_ns,     ksr->start_ns,    memory_order_relaxed);
     atomic_store_explicit(&ksr->position_end_ns,       end_ns,           memory_order_relaxed);
     atomic_store_explicit(&ksr->position_seq,          seq + 2,          memory_order_release);
+
+    atomic_store_explicit(&ksr->player_in_callback, 0, memory_order_seq_cst);
 }
 
 static void reset_position_frame(Kasaria *ksr)
@@ -166,6 +193,17 @@ static void reset_position_frame(Kasaria *ksr)
     atomic_store_explicit(&ksr->position_seq, 0, memory_order_release);
     atomic_store_explicit(&ksr->position_start_frame, 0, memory_order_relaxed);
     atomic_store_explicit(&ksr->position_end_frame, 0, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_start_ns, 0, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_end_ns, 0, memory_order_relaxed);
+}
+
+static void publish_position_frame(Kasaria *ksr, u64 frame)
+{
+    ksr->position_clock_end_ns = 0;
+    
+    atomic_store_explicit(&ksr->position_seq, 0, memory_order_release);
+    atomic_store_explicit(&ksr->position_start_frame, frame, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_end_frame, frame, memory_order_relaxed);
     atomic_store_explicit(&ksr->position_start_ns, 0, memory_order_relaxed);
     atomic_store_explicit(&ksr->position_end_ns, 0, memory_order_relaxed);
 }
@@ -1908,11 +1946,13 @@ bool ksr_player_pause(Kasaria *ksr)
     
     if(!ksr->is_midi_player_paused)
     {
+        /*
         u64 byte_pos;
         ksr_player_get_byte_pos(ksr, &byte_pos);
         
         const f64 pos              = ksr_byte_pos2sec(ksr, byte_pos);
         ksr->current_sample        = (long)(pos * (f64)ksr->play_mode.rate);
+        */
         ksr->is_midi_player_paused = true;
         return 1;
     }
@@ -2212,6 +2252,8 @@ int ksr_player_seek(Kasaria *ksr, long time)
     else if(time < 0)
         time = 0;
 
+    player_seek_gate_enter(ksr);
+
     if(ksr->midi_loading_mode == MIDI_MEMORY)
     {
         skip_to(ksr, 0);
@@ -2222,8 +2264,15 @@ int ksr_player_seek(Kasaria *ksr, long time)
         stream_seek(ksr, ksr_millis2samples(ksr, time));
 
     reset_position_frame(ksr);
+
+    publish_position_frame(ksr, (u64)ksr->current_sample);
+    ksr->is_midi_ended = false;
+
+    int res = ksr_get_current_time(ksr);
+
+    player_seek_gate_leave(ksr);
     
-    return ksr_get_current_time(ksr);
+    return res;
 }
 
 int ksr_player_fast_forward(Kasaria *ksr, long time)
