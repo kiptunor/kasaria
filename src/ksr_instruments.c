@@ -339,7 +339,9 @@ int load_soundfont_presets(Kasaria *ksr, int active_presets, bool perc_bank)
         if(inst)
         {
             ksr->tonebank[bank]->tone[program].instrument = inst;
-            ksr->tonebank[bank]->tone[program].chorus_send = (i8)(inst->chorus_snd * 127 / 1000);
+            //ksr->tonebank[bank]->tone[program].chorus_send = (i8)(inst->chorus_snd * 127 / 1000);
+            if(inst->chorus_snd >= 0)
+                ksr->tonebank[bank]->tone[program].chorus_send = (i8)(inst->chorus_snd * 127 / 1000);
             loaded++;
         }
         else

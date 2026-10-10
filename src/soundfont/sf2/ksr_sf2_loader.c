@@ -282,7 +282,7 @@ typedef struct _SampleList
 	i16 resonance;
 	i16 root, tune;
 	char low, high;		// key note range
-	i8 reverb_send, chorus_send;
+	i16 reverb_send, chorus_send;
 
 	// Depend on play_mode->rate
 	i32 vibrato_freq;
@@ -1510,9 +1510,6 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 	inst->samples    = ip->samples;
 	inst->sample     = (Sample *)safe_malloc(sizeof(Sample) * ip->samples);
 	inst->chorus_snd = -1;
-
-	if(sp->chorus_send >= 0 && sp->chorus_send > inst->chorus_snd)
-        inst->chorus_snd = sp->chorus_send;
 	
 	memset(inst->sample, 0, sizeof(Sample) * ip->samples);
 	
@@ -1537,6 +1534,9 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 		play_rate   = ksr->play_mode.rate;
 
 		tf = sp->sfrom ? sfrom_sfrec->tf : rec->tf;
+
+		if(sp->chorus_send >= 0 && sp->chorus_send > inst->chorus_snd)
+            inst->chorus_snd = sp->chorus_send;
 
 		if(!ksr->pre_resampling_allowed || !sample->note_to_use || (sample->modes & MODES_LOOPING))
 		{

@@ -720,10 +720,11 @@ static void mix_chorus_send(Kasaria *ksr, sample_t *sp, long *lp, int v, int cou
     Voice *vp = ksr->voice + v;
     long channel_chorus = ksr->channel[vp->channel].chorus;
     long voice_chorus   = vp->chorus_send;
+    long send = channel_chorus > 0 ? channel_chorus : voice_chorus;
     final_volume_t gain;
     sample_t s;
     
-    if(channel_chorus <= 0 || count <= 0)
+    if(send <= 0 || count <= 0)
         return;
     
     
