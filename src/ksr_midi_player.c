@@ -95,68 +95,13 @@ static void player_seek_gate_leave(Kasaria *ksr)
     atomic_store_explicit(&ksr->player_seek_gate, 0, memory_order_seq_cst);
 }
 
-void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
-{
-    (void)pDevice;
-    (void)pInput;
-
-    if(!async_midi_player ||
-       !async_midi_player->is_midi_loaded ||
-       (!async_midi_player->stream &&
-        !async_midi_player->current_event) || async_midi_player->is_midi_player_paused)
-    {
-        memset(pOutput, 0, frameCount * 2 * sizeof(f32));
-        return;
-    }
-
-    atomic_store_explicit(&async_midi_player->player_in_callback, 1, memory_order_seq_cst);
-    
-        if(atomic_load_explicit(&async_midi_player->player_seek_gate, memory_order_seq_cst) ||
-           !async_midi_player->is_midi_loaded ||
-           (!async_midi_player->stream && !async_midi_player->current_event) || async_midi_player->is_midi_player_paused)
-        {
-            atomic_store_explicit(&async_midi_player->player_in_callback, 0, memory_order_seq_cst);
-            memset(pOutput, 0, frameCount * 2 * sizeof(f32));
-            return;
-        }
-
-    // Position update on the start of the audio frame
-    ksr_player_pos_start_update(async_midi_player);
-
-    // Then audio rendering
-    f32 raw_audio[async_midi_player->buffer_period_size * 2];
-    f32 *out = (f32 *)pOutput;
-    int remaining = (int)frameCount;
-
-    while(remaining > 0)
-    {
-        int chunk = remaining > async_midi_player->buffer_period_size ? async_midi_player->buffer_period_size : remaining;
-        
-        int rendered = ksr_player_get_stream(async_midi_player, AUDIO_FLOAT, (u8 *)raw_audio, chunk);
-
-        if(!rendered)
-        {
-            memset(out, 0, remaining * 2 * sizeof(f32));
-            return;
-        }
-
-        memcpy(out, raw_audio, chunk * 2 * sizeof(f32));
-
-        out += chunk * 2;
-        remaining -= chunk;
-    }
-
-    // Position update on the end of the audio frame
-    ksr_player_pos_end_update(async_midi_player, frameCount);
-}
-
-void ksr_player_pos_start_update(Kasaria *ksr)
+void player_pos_start_update(Kasaria *ksr)
 {
     //const u64 start_frame = (u64)ksr->current_sample;
     ksr->start_frame = (u64)ksr->current_sample;
 }
 
-void ksr_player_pos_end_update(Kasaria *ksr, unsigned int frame_count)
+void player_pos_end_update(Kasaria *ksr, unsigned int frame_count)
 {
     ksr->end_frame   = (u64)ksr->current_sample;
     ksr->duration_ns = ((u64)frame_count * 1000000000ULL) / (u64)ksr->play_mode.rate;
@@ -184,6 +129,59 @@ void ksr_player_pos_end_update(Kasaria *ksr, unsigned int frame_count)
     atomic_store_explicit(&ksr->position_seq,          seq + 2,          memory_order_release);
 
     atomic_store_explicit(&ksr->player_in_callback, 0, memory_order_seq_cst);
+}
+
+int ksr_player_render(Kasaria *ksr, f32 *out, unsigned int frames)
+{
+    if(!ksr || !out)
+        return 0;
+
+    atomic_store_explicit(&ksr->player_in_callback, 1, memory_order_seq_cst);
+
+    if(atomic_load_explicit(&ksr->player_seek_gate, memory_order_seq_cst) ||
+       !ksr->is_midi_loaded ||
+       (!ksr->stream && !ksr->current_event) ||
+       ksr->is_midi_player_paused)
+    {
+        atomic_store_explicit(&ksr->player_in_callback, 0, memory_order_seq_cst);
+        memset(out, 0, (size_t)frames * 2 * sizeof(f32));
+        return 0;
+    }
+
+    player_pos_start_update(ksr);
+
+    int remaining = (int)frames;
+    f32 *p = out;
+    while(remaining > 0)
+    {
+        int chunk = remaining > (int)ksr->buffer_period_size ? (int)ksr->buffer_period_size : remaining;
+
+        if(!ksr_player_get_stream(ksr, AUDIO_FLOAT, (u8 *)p, chunk))
+        {
+            memset(p, 0, (size_t)remaining * 2 * sizeof(f32));
+            atomic_store_explicit(&ksr->player_in_callback, 0, memory_order_seq_cst);
+            return 0;
+        }
+
+        p += chunk * 2;
+        remaining -= chunk;
+    }
+
+    player_pos_end_update(ksr, frames);
+
+    atomic_store_explicit(&ksr->player_in_callback, 0, memory_order_seq_cst);
+    return (int)frames;
+}
+
+void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
+{
+    (void)pDevice;
+    (void)pInput;
+
+    if(async_midi_player)
+        ksr_player_render(async_midi_player, (f32 *)pOutput, frameCount);
+    else
+        memset(pOutput, 0, (size_t)frameCount * 2 * sizeof(f32));
 }
 
 static void reset_position_frame(Kasaria *ksr)
