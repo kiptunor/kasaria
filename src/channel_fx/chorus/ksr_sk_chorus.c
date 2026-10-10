@@ -160,58 +160,6 @@ static f32 read_delay(const sk_chorus *c, f32 delay_samples)
     return c->buf[i0] * (1.0f - frac) + c->buf[i1] * frac;
 }
 
-f32 sk_chorus_tick_old(sk_chorus *c, f32 in)
-{
-    f32 phase;
-    f32 lfo;
-
-    f32 delay_samples;
-    f32 wet;
-    f32 out;
-
-    if(!c || !c->buf || c->sz < 2)
-        return in;
-
-    /*
-    c->lfo_phase += c->rate / (f32)c->sr;
-
-    if(c->lfo_phase >= 1.0f)
-        c->lfo_phase -= floorf(c->lfo_phase);
-
-    phase = c->lfo_phase + c->lfo_phase_offset;
-
-    if(phase >= 1.0f)
-        phase -= 1.0f;
-
-    
-    lfo = 0.5f * (1.0f + sinf(2.0f * (f32)M_PI * phase));
-
-    delay_samples = (0.5f + 0.4f * c->depth * lfo) * (f32)c->sz;
-    */
-
-    delay_samples = c->delay_ms * 0.001f * (f32)c->sr;
-    
-    /* Keep the delay inside the allocated buffer. */
-    if(delay_samples < 1.0f)
-        delay_samples = 1.0f;
-    
-    if(delay_samples >= (f32)c->sz)
-        delay_samples = (f32)c->sz - 1.0f;
-
-    wet = read_delay(c, delay_samples);
-
-   
-    c->buf[c->wpos] = in;
-    c->wpos++;
-
-    if(c->wpos >= c->sz)
-        c->wpos = 0;
-    
-    out = c->mix * wet + (1.0f - c->mix) * in;
-
-    return out;
-}
-
 f32 sk_chorus_tick(sk_chorus *c, f32 in)
 {
     f32 phase;
