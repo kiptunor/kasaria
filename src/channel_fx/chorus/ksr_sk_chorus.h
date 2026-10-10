@@ -6,6 +6,7 @@
 typedef struct
 {
 	f32 rate, prate;
+	f32 delay_ms;
 	f32 depth;
 	f32 mix;
 	f32 lfo_phase;

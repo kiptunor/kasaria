@@ -69,7 +69,8 @@ void sk_chorus_init(sk_chorus *c, int sr, f32 *buf, long sz)
     c->wpos = 10;
 
     c->rate = 0.5f;
-    c->depth = 7.0f;
+    c->depth = 0.0f;
+    c->delay_ms = 15.0f;
 
     /*
      * 1.0 means a fully wet output.
@@ -159,7 +160,7 @@ static f32 read_delay(const sk_chorus *c, f32 delay_samples)
     return c->buf[i0] * (1.0f - frac) + c->buf[i1] * frac;
 }
 
-f32 sk_chorus_tick(sk_chorus *c, f32 in)
+f32 sk_chorus_tick_old(sk_chorus *c, f32 in)
 {
     f32 phase;
     f32 lfo;
@@ -170,7 +171,8 @@ f32 sk_chorus_tick(sk_chorus *c, f32 in)
 
     if(!c || !c->buf || c->sz < 2)
         return in;
-    
+
+    /*
     c->lfo_phase += c->rate / (f32)c->sr;
 
     if(c->lfo_phase >= 1.0f)
@@ -185,6 +187,16 @@ f32 sk_chorus_tick(sk_chorus *c, f32 in)
     lfo = 0.5f * (1.0f + sinf(2.0f * (f32)M_PI * phase));
 
     delay_samples = (0.5f + 0.4f * c->depth * lfo) * (f32)c->sz;
+    */
+
+    delay_samples = c->delay_ms * 0.001f * (f32)c->sr;
+    
+    /* Keep the delay inside the allocated buffer. */
+    if(delay_samples < 1.0f)
+        delay_samples = 1.0f;
+    
+    if(delay_samples >= (f32)c->sz)
+        delay_samples = (f32)c->sz - 1.0f;
 
     wet = read_delay(c, delay_samples);
 
@@ -196,6 +208,50 @@ f32 sk_chorus_tick(sk_chorus *c, f32 in)
         c->wpos = 0;
     
     out = c->mix * wet + (1.0f - c->mix) * in;
+
+    return out;
+}
+
+f32 sk_chorus_tick(sk_chorus *c, f32 in)
+{
+    f32 phase;
+    f32 lfo;
+    f32 delay_samples;
+    f32 wet;
+    f32 out;
+
+    if(!c || !c->buf || c->sz < 2 || c->sr <= 0)
+        return in;
+
+    /* Slow modulation: one cycle every 4 seconds at 0.25 Hz */
+    c->lfo_phase += c->rate / (f32)c->sr;
+    if(c->lfo_phase >= 1.0f)
+        c->lfo_phase -= floorf(c->lfo_phase);
+
+    phase = c->lfo_phase + c->lfo_phase_offset;
+    phase -= floorf(phase);
+
+    lfo = 0.5f * (1.0f + sinf(2.0f * (f32)M_PI * phase));
+
+    /* 20–30 ms delay, with a small 10 ms modulation range */
+    delay_samples = (20.0f + 10.0f * c->depth * lfo)
+                    * 0.001f * (f32)c->sr;
+
+    if(delay_samples < 1.0f)
+        delay_samples = 1.0f;
+
+    if(delay_samples >= (f32)c->sz)
+        delay_samples = (f32)c->sz - 1.0f;
+
+    wet = read_delay(c, delay_samples);
+
+    c->buf[c->wpos] = in;
+    c->wpos++;
+    if(c->wpos >= c->sz)
+        c->wpos = 0;
+
+    /* Keep some dry signal and blend in the chorus */
+    out = 0.5f * in + 0.5f * wet;
 
     return out;
 }

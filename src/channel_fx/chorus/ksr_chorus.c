@@ -32,8 +32,8 @@ chorus.c -- SKChorus integration
 
 
 
-#define CHORUS_LEN  0.040f
-#define CHORUS_RATE 0.2f
+#define CHORUS_LEN  0.060f
+#define CHORUS_RATE 0.205f
 
 
 void init_chorus(Kasaria *ksr)
@@ -64,6 +64,10 @@ void init_chorus(Kasaria *ksr)
    
     sk_chorus_phase(ksr->chorus_l, 0.0f);
     sk_chorus_phase(ksr->chorus_r, 0.5f);
+
+
+    ksr->chorus_l->delay_ms = 15.0f;
+    ksr->chorus_r->delay_ms = 15.0f;
 
 
     sk_chorus_mix(ksr->chorus_l, 1.0f);
