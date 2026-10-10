@@ -238,6 +238,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     Instrument *ip;
     int         j;
     Sample     *stereo_partner = NULL;
+    ToneBankElement *te = NULL;
 
     if(ISDRUMCHANNEL(ksr, e->channel))
     {
@@ -271,6 +272,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         if(!best)
             return;
         ksr->voice[i].sample = best;
+        te = &db->tone[e->key];
             
         if(ksr->voice[i].sample->note_to_use)
             ksr->voice[i].orig_frequency = freq_table[(int)(ksr->voice[i].sample->note_to_use)];
@@ -306,6 +308,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                 if(!IS_VALID_INSTRUMENT(ip))
                     return;
             }
+            te = &tb->tone[ksr->channel[e->channel].program];
         }
 
         if(!ip)
@@ -328,6 +331,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     ksr->voice[i].channel                           = e->channel;
     ksr->voice[i].note                              = e->key;
     ksr->voice[i].velocity                          = e->vel;
+    ksr->voice[i].chorus_send                       = te ? te->chorus_send : DEFALT_CHORUS_SEND;
     ksr->voice_by_channel_note[e->channel][e->key][0] = &ksr->voice[i];
     ksr->voice[i].sample_offset                     = 0;
     ksr->voice[i].sample_increment                  = 0;
@@ -387,6 +391,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                     ksr->voice[stereo_v].status                     = VOICE_ON;
                     ksr->voice[stereo_v].channel                    = e->channel;
                     ksr->voice[stereo_v].note                       = e->key;
+                    ksr->voice[stereo_v].chorus_send                = ksr->voice[i].chorus_send;
                     ksr->voice[stereo_v].velocity                   = e->vel;
                     ksr->voice_by_channel_note[e->channel][e->key][1] = &ksr->voice[stereo_v];
                     ksr->voice[stereo_v].sample                     = candidate;
@@ -470,6 +475,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                 ksr->voice[layer_v].channel         = e->channel;
                 ksr->voice[layer_v].note            = e->key;
                 ksr->voice[layer_v].velocity        = e->vel;
+                ksr->voice[layer_v].chorus_send     = ksr->voice[i].chorus_send;
                 ksr->voice[layer_v].sample          = layer;
                 ksr->voice[layer_v].sample_offset   = 0;
                 ksr->voice[layer_v].sample_increment = 0;
@@ -982,6 +988,7 @@ void reset_controllers(Kasaria *ksr, int c)
     ksr->channel[c].pitchfactor = 0; // to be computed
     ksr->channel[c].reverb      = 40;
     ksr->channel[c].chorus      = 0;
+    ksr->voice[c].chorus_send = DEFALT_CHORUS_SEND;
 }
 
 void reset_midi(Kasaria *ksr)

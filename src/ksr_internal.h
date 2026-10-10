@@ -355,6 +355,7 @@ typedef struct
 typedef struct
 {
     int     samples;
+    i16     chorus_snd;
     int     type;
     Sample *sample;
     char *instname;
@@ -539,6 +540,7 @@ typedef struct
     int              vibrato_control_counter;
     int              envelope_stage;
     int              control_counter;
+    i8               chorus_send;
     int              panning;
     int              panned;
     // SoundFontEffects sf2_effects;

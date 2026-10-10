@@ -1504,11 +1504,15 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 	//	ulog_info("Loading SF Tonebank %d %d: %s", ip->pat.bank, ip->pat.preset + progbase, rec->inst_namebuf[ip->pr_idx]);
 	
 	
-	inst           = (Instrument *)safe_malloc(sizeof(Instrument));
-	inst->instname = rec->inst_namebuf[ip->pr_idx];
-	inst->type     = INST_SF2;
-	inst->samples  = ip->samples;
-	inst->sample   = (Sample *)safe_malloc(sizeof(Sample) * ip->samples);
+	inst             = (Instrument *)safe_malloc(sizeof(Instrument));
+	inst->instname   = rec->inst_namebuf[ip->pr_idx];
+	inst->type       = INST_SF2;
+	inst->samples    = ip->samples;
+	inst->sample     = (Sample *)safe_malloc(sizeof(Sample) * ip->samples);
+	inst->chorus_snd = -1;
+
+	if(sp->chorus_send >= 0 && sp->chorus_send > inst->chorus_snd)
+        inst->chorus_snd = sp->chorus_send;
 	
 	memset(inst->sample, 0, sizeof(Sample) * ip->samples);
 	
@@ -2426,7 +2430,12 @@ static void make_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *tbl)
 	}
 
 	vp->reverb_send = otd.reverb_send;
-	vp->chorus_send = otd.chorus_send;
+	//vp->chorus_send = otd.chorus_send;
+
+	vp->chorus_send = tbl->set[SF_chorusEffectsSend] ? tbl->val[SF_chorusEffectsSend] : -1;
+
+	if(otd.chorus_send)                     // only if an override is actually set
+        vp->chorus_send = otd.chorus_send;
 
 	if(otd.overwriteMode & EOWM_ENABLE_CUTOFF)
 	{
