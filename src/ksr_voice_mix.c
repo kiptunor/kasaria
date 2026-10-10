@@ -733,8 +733,7 @@ static void mix_chorus_send(Kasaria *ksr, sample_t *sp, long *lp, int v, int cou
     else
         gain = vp->left_mix;
     
-    gain = (gain * channel_chorus) / 127;
-    gain = (gain * voice_chorus)   / 127;
+    gain = (gain * send) / 127;
     
     if(!gain)
         return;
