@@ -224,6 +224,10 @@ static void seek_forward(Kasaria *ksr, long until_time)
                 ksr->channel[ksr->current_event->channel].pitchbend   = ksr->current_event->key + ksr->current_event->vel * 128;
                 ksr->channel[ksr->current_event->channel].pitchfactor = 0;
             break;
+
+            case ME_COARSE_TUNING:
+                ksr->channel[ksr->current_event->channel].coarse_tune = ksr->current_event->key;
+            break;
                 
             case ME_MAINVOLUME:
                 ksr->channel[ksr->current_event->channel].volume = ksr->current_event->key;
@@ -338,6 +342,12 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
                 ksr->channel[e->channel].pitchbend   = e->key + e->vel * 128;
                 ksr->channel[e->channel].pitchfactor = 0;
                 // Adjust pitch for notes already playing
+                adjust_pitchbend(ksr, e->channel);
+            break;
+
+            case ME_COARSE_TUNING:
+                ksr->channel[e->channel].coarse_tune = e->key;
+                // Retune notes already playing
                 adjust_pitchbend(ksr, e->channel);
             break;
                 
@@ -789,10 +799,10 @@ void ksr_channel_control_change(Kasaria *ksr, u_char channel, u_char controller,
             ksr->rpn_msb[channel] = 0xff;
         break;
         case 0x64:
-            ksr->rpn_msb[channel] = value;
+            ksr->rpn_lsb[channel] = value;
         break;
         case 0x65:
-            ksr->rpn_lsb[channel] = value;
+            ksr->rpn_msb[channel] = value;
         break;
         case 0x78:
             ksr_channel_all_sounds_off(ksr, channel);
@@ -1558,6 +1568,7 @@ static void stream_seek(Kasaria *ksr, long until_time)
         {
             case ME_PITCH_SENS:
             case ME_PITCHWHEEL:
+            case ME_COARSE_TUNING:
             case ME_MAINVOLUME:
             case ME_PAN:
             case ME_EXPRESSION:

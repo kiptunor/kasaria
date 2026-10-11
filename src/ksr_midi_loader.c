@@ -373,6 +373,9 @@ static MidiEventList *read_midi_event(Kasaria *ksr)
                         case 0x0000:
                             control = ME_PITCH_SENS;
                             break;
+                        case 0x0002:
+                            control = ME_COARSE_TUNING;
+                            break;
                         case 0x7F7F:
                             MIDIEVENT(ksr->at, ME_PITCH_SENS, midi_lastchan, 2, 0);
                             break;

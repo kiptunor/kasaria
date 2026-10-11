@@ -177,6 +177,16 @@ void recompute_freq(Kasaria *ksr, int v)
             ksr->voice[v].frequency = (long)((f64)(ksr->voice[v].orig_frequency) / ksr->channel[ksr->voice[v].channel].pitchfactor);
     }
 
+    int ct = ksr->channel[ksr->voice[v].channel].coarse_tune;
+    if(ct != 64)
+    {
+        int st = ct - 64; // semitone offset, -64..+63
+        if(st > 0)
+            ksr->voice[v].frequency = (long)((f64)(ksr->voice[v].frequency) * bend_coarse[st]);
+        else
+            ksr->voice[v].frequency = (long)((f64)(ksr->voice[v].frequency) / bend_coarse[-st]);
+    }
+
     a = FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
 
     if(sign)
@@ -986,6 +996,7 @@ void reset_controllers(Kasaria *ksr, int c)
     ksr->channel[c].mono        = 0;
     ksr->channel[c].pitchbend   = 0x2000;
     ksr->channel[c].pitchfactor = 0; // to be computed
+    ksr->channel[c].coarse_tune = 64;
     ksr->channel[c].reverb      = 40;
     ksr->channel[c].chorus      = 0;
     ksr->voice[c].chorus_send = DEFALT_CHORUS_SEND;

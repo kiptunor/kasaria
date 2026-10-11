@@ -448,6 +448,7 @@ typedef struct
     int expression;
     int mono; // one note only on this channel
     int pitchsens;
+    int coarse_tune;
     // chorus, reverb... Coming soon to a 300-MHz, eight-way superscalar processor near you
     f64 pitchfactor; // precomputed pitch bend factor to save some fdiv's
 } Channel;
