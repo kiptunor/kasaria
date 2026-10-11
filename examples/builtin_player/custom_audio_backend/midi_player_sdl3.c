@@ -29,10 +29,7 @@ void            audio_callback(void *userdata, SDL_AudioStream *stream, int addi
         int chunk = frames > BUFFER_FRAMES ? BUFFER_FRAMES : frames;
    
         if(synth)
-        {
-            printf("Rendering\n");
             ksr_player_render(synth, raw_audio, chunk);
-        }
         else
             memset(raw_audio, 0, (size_t)chunk * 2 * sizeof(float));
    
@@ -72,7 +69,7 @@ int main(int argc, char **argv)
     ksr_config_set_max_voices(synth, 2000);
     ksr_config_set_antialiasing(synth, 1);
     ksr_config_set_fast_decay(synth, true);
-    ksr_config_set_note_skipping(synth, 0, 20, true);
+    ksr_config_set_note_skipping(synth, 0, 32, true);
     
     // Load 2 soundfont files
     // but first set the options for both soundfonts
@@ -143,7 +140,10 @@ int main(int argc, char **argv)
 
     
     printf("Playing... Press Enter to stop.\n");
-    getchar();
+
+    
+    while(!ksr_player_is_ended(synth))
+        SDL_Delay(500);
 
     SDL_DestroyAudioStream(stream);
     ksr_shutdown(synth);
