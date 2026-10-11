@@ -11,19 +11,11 @@
 #define BUFFER_FRAMES 512
 
 static Kasaria *synth;
-//static int      song_finished = 0;
+
 
 void            data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
     (void)pInput;
-
-    /*
-    if(song_finished)
-    {
-        memset(pOutput, 0, frameCount * 2 * sizeof(float));
-        return;
-    }
-    */
 
     float  raw_audio[BUFFER_FRAMES * 2];
     float *out       = (float *)pOutput;
@@ -32,19 +24,6 @@ void            data_callback(ma_device *pDevice, void *pOutput, const void *pIn
     while(remaining > 0)
     {
         int chunk    = remaining > BUFFER_FRAMES ? BUFFER_FRAMES : remaining;
-
-        /*
-        // Advance to the next MIDI events and generate the raw PCM audio frames
-        int rendered = ksr_player_get_stream(synth, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play MIDI in realtime and get the generated audio (as Raw PCM)
-
-        // If no more audio is available send silence until the user exits
-        if(!rendered)
-        {
-            song_finished = 1;
-            memset(out, 0, remaining * 2 * sizeof(float));
-            return;
-        }
-        */
 
         if(synth)
             ksr_player_render(synth, raw_audio, chunk);
