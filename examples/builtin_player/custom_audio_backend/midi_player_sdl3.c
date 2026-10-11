@@ -139,7 +139,7 @@ int main(int argc, char **argv)
     SDL_ResumeAudioStreamDevice(stream);
 
     
-    printf("Playing... Press Enter to stop.\n");
+    printf("Playing...\n");
 
     
     while(!ksr_player_is_ended(synth))

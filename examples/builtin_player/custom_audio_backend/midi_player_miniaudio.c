@@ -11,17 +11,19 @@
 #define BUFFER_FRAMES 512
 
 static Kasaria *synth;
-static int      song_finished = 0;
+//static int      song_finished = 0;
 
 void            data_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
     (void)pInput;
 
+    /*
     if(song_finished)
     {
         memset(pOutput, 0, frameCount * 2 * sizeof(float));
         return;
     }
+    */
 
     float  raw_audio[BUFFER_FRAMES * 2];
     float *out       = (float *)pOutput;
@@ -31,6 +33,7 @@ void            data_callback(ma_device *pDevice, void *pOutput, const void *pIn
     {
         int chunk    = remaining > BUFFER_FRAMES ? BUFFER_FRAMES : remaining;
 
+        /*
         // Advance to the next MIDI events and generate the raw PCM audio frames
         int rendered = ksr_player_get_stream(synth, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk); // Play MIDI in realtime and get the generated audio (as Raw PCM)
 
@@ -41,6 +44,12 @@ void            data_callback(ma_device *pDevice, void *pOutput, const void *pIn
             memset(out, 0, remaining * 2 * sizeof(float));
             return;
         }
+        */
+
+        if(synth)
+            ksr_player_render(synth, raw_audio, chunk);
+        else
+            memset(raw_audio, 0, (size_t)chunk * 2 * sizeof(float));
 
         // Copy the raw PCM audio frames to the output buffer (Manually copied for Left and Right channels)
         for(int i = 0; i < chunk; i++)
@@ -72,7 +81,7 @@ int main(int argc, char **argv)
 
     // Override few default settings
     ksr_config_set_sample_rate(synth, SAMPLE_RATE);
-    ksr_config_set_max_voices(synth, 5000);
+    ksr_config_set_max_voices(synth, 2000);
     ksr_config_set_antialiasing(synth, 1);
     
     // Load 2 soundfont files
@@ -112,7 +121,7 @@ int main(int argc, char **argv)
 
     printf("Loading midi\n");
     // In this example the MIDI file data is stored in RAM
-    if(!ksr_load_midi_file(synth, MIDI_MEMORY, argv[1]))
+    if(!ksr_load_midi_file(synth, MIDI_MAP, argv[1]))
     {
         printf("Failed to load MIDI file: %s\n", argv[1]);
         ksr_shutdown(synth);
@@ -144,8 +153,11 @@ int main(int argc, char **argv)
     ma_device_start(&device);
 
     
-    printf("Playing... Press Enter to stop.\n");
-    getchar();
+    printf("Playing...\n");
+    //getchar();
+
+    while(!ksr_player_is_ended(synth))
+        ma_sleep(1000);
 
     ma_device_uninit(&device);
     ksr_shutdown(synth);
