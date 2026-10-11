@@ -1142,11 +1142,11 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
                     break;
                     case 100:
                         s->nrpn[t] = 0;
-                        s->rpn_msb[t][chan] = b;
+                        s->rpn_lsb[t][chan] = b;
                     break;
                     case 101:
                         s->nrpn[t] = 0;
-                        s->rpn_lsb[t][chan] = b;
+                        s->rpn_msb[t][chan] = b;
                     break;
                     case 99:
                         s->nrpn[t] = 1;
@@ -1164,6 +1164,9 @@ static int stream_track_event(MidiStream *s, int t, MidiEvent *ev)
                         {
                             case 0x0000:
                                 control = ME_PITCH_SENS;
+                            break;
+                            case 0x0002:
+                                control = ME_COARSE_TUNING;
                             break;
                             case 0x7F7F:
                                 ev->time    = at;
@@ -1293,16 +1296,25 @@ static u32 be32(const u_char *p)
     return ((u32)p[0] << 24) | ((u32)p[1] << 16) | ((u32)p[2] << 8) | p[3];
 }
 
+static int heap_less(MidiStream *s, unsigned i, unsigned j)
+{
+    long ti = s->pending[s->heap[i]].time;   // event time of heap slot i's track
+    long tj = s->pending[s->heap[j]].time;   // event time of heap slot j's track
+    if(ti != tj)
+        return ti < tj;
+    return s->heap[i] < s->heap[j];          // tie -> lower track number wins
+}
+
 static void heap_sift_down(MidiStream *s, unsigned pos)
 {
     unsigned n = s->heap_size;
     for(;;)
     {
         unsigned l = 2 * pos + 1, r = l + 1, m = pos;
-        if(l < n && s->pending[s->heap[l]].time < s->pending[s->heap[m]].time)
+
+        if(l < n && heap_less(s, l, m))   // :1285  pick smaller left child
             m = l;
-        
-        if(r < n && s->pending[s->heap[r]].time < s->pending[s->heap[m]].time)
+        if(r < n && heap_less(s, r, m))   // :1288  pick smaller right child
             m = r;
         
         if(m == pos)
@@ -1318,8 +1330,8 @@ static void heap_sift_up(MidiStream *s, unsigned pos)
     while(pos > 0)
     {
         unsigned par = (pos - 1) / 2;
-        
-        if(s->pending[s->heap[par]].time <= s->pending[s->heap[pos]].time)
+
+        if(!heap_less(s, pos, par))   // :1305  already >= parent -> stop
             break;
         
         unsigned tmp = s->heap[par]; s->heap[par] = s->heap[pos]; s->heap[pos] = tmp;
