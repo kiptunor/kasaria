@@ -137,7 +137,7 @@ int ksr_player_render(Kasaria *ksr, f32 *out, unsigned int frames)
         return 0;
 
     atomic_store_explicit(&ksr->player_in_callback, 1, memory_order_seq_cst);
-
+    
     if(atomic_load_explicit(&ksr->player_seek_gate, memory_order_seq_cst) ||
        !ksr->is_midi_loaded ||
        (!ksr->stream && !ksr->current_event) ||
@@ -1634,6 +1634,8 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
         strncpy(ksr->last_smf, filename, 1023);
         ksr->last_smf[1023] = '\0';
         ksr->is_midi_loaded = true;
+        ksr->is_midi_player_paused = false;
+           
         log_info("Loaded MIDI: %s", ksr->last_smf);
         return 1;
     }
@@ -1727,6 +1729,9 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
         ksr->last_smf[1023] = '\0';
         ksr->is_midi_loaded = true;
         log_info("Loaded MIDI (mapped stream): %s", ksr->last_smf);
+
+        // Unpause the player if it was already paused
+        ksr->is_midi_player_paused = false;
 #endif
 
 #ifdef _WIN32
@@ -1846,6 +1851,10 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
         ksr->is_midi_loaded = true;
         
         log_info("Loaded MIDI (mapped stream): %s", ksr->last_smf);
+
+        // Unpause the player if it was already paused
+        ksr->is_midi_player_paused = false;
+        
 #endif
         return 1;
     }

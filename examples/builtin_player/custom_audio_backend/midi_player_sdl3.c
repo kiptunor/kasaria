@@ -21,36 +21,23 @@ void            audio_callback(void *userdata, SDL_AudioStream *stream, int addi
     if(additional_amount == 0)
         return;
 
-    int   frames_needed = additional_amount / (2 * sizeof(float));
+    int frames = additional_amount / (int)(sizeof(float) * 2);   // stereo float
     float raw_audio[BUFFER_FRAMES * 2];
-    int   remaining = frames_needed;
 
-    while(remaining > 0)
+    while(frames > 0)
     {
-        int chunk = remaining > BUFFER_FRAMES ? BUFFER_FRAMES : remaining;
-
-        if(song_finished)
+        int chunk = frames > BUFFER_FRAMES ? BUFFER_FRAMES : frames;
+   
+        if(synth)
         {
-            memset(raw_audio, 0, chunk * 2 * sizeof(float));
-            SDL_PutAudioStreamData(stream, raw_audio, chunk * 2 * sizeof(float));
-            return;
+            printf("Rendering\n");
+            ksr_player_render(synth, raw_audio, chunk);
         }
-
-        // Play the midi in realtime and get the generated audio frames to feed into the audio device (as raw PCM)
-        int rendered = ksr_player_get_stream(synth, AUDIO_FLOAT, (uint8_t *)raw_audio, chunk);
-
-        // Send out silence if no audio from the player is available
-        if(!rendered)
-        {
-            song_finished = 1;
-            memset(raw_audio, 0, chunk * 2 * sizeof(float));
-            SDL_PutAudioStreamData(stream, raw_audio, chunk * 2 * sizeof(float));
-            return;
-        }
-
-        // If not feed the generated audio frames from the midi player to the SDL audio stream as raw PCM in float format
+        else
+            memset(raw_audio, 0, (size_t)chunk * 2 * sizeof(float));
+   
         SDL_PutAudioStreamData(stream, raw_audio, chunk * 2 * sizeof(float));
-        remaining -= chunk;
+        frames -= chunk;
     }
 }
 
@@ -82,7 +69,7 @@ int main(int argc, char **argv)
 
     // Override few default settings
     ksr_config_set_sample_rate(synth, SAMPLE_RATE);
-    ksr_config_set_max_voices(synth, 5000);
+    ksr_config_set_max_voices(synth, 2000);
     ksr_config_set_antialiasing(synth, 1);
     ksr_config_set_fast_decay(synth, true);
     ksr_config_set_note_skipping(synth, 0, 20, true);
@@ -123,7 +110,7 @@ int main(int argc, char **argv)
     printf("Loading midi\n");
 
     // As in the previous examples the MIDI file data is stored in RAM
-    if(!ksr_load_midi_file(synth, MIDI_MEMORY, argv[1]))
+    if(!ksr_load_midi_file(synth, MIDI_MAP, argv[1]))
     {
         printf("Failed to load MIDI file: %s\n", argv[1]);
         ksr_shutdown(synth);
