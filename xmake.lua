@@ -54,6 +54,11 @@ option("static-lib")
     set_showmenu(true)
     set_description("Build kasaria as a static library")
 
+option("internal-audio-handler")
+    set_default(true)
+    set_showmenu(true)
+    set_description("Enable / Disable internal audio handler (Requires miniaudio)")
+
 
 function copy_soundfonts(target)
     local destdir = target:targetdir()

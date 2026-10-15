@@ -113,25 +113,223 @@
 #define ISDRUMCHANNEL(tm, c)  ((tm->drumchannels & (1 << (c))))
 #define ISQUIETCHANNEL(tm, c) ((tm->quietchannels & (1 << (c))))
 #define MAGIC_LOAD_INSTRUMENT ((Instrument *)(-1))
-#define DIV_200  (f64)(0.005) // 1/200
-#define DIV_1000 (f64)(0.001) // 1/1000
-#define DIV_1200 (f64)(8.3333333333333333333333333333333e-4) // 1/1200
-#define DIV_1024 (f64)(0.0009765625)
-#define DIV_100  (f64)(0.01) // 1/100
-#define DIV_127  (f64)(0.007874015748031496062992125984252) // 1/127
 
-#define divi_2(i) ((i) / 2)
-#define divi_4(i) ((i) / 4)
-#define divi_8(i) ((i) / 8)
-#define divi_16(i) ((i) / 16)
-#define divi_32(i) ((i) / 32)
-#define divi_64(i) ((i) / 64)
-#define divi_128(i) ((i) / 128)
-#define divi_256(i) ((i) / 256)
-#define divi_512(i) ((i) / 512)
-#define divi_1024(i) ((i) / 1024)
-#define divi_2048(i) ((i) / 2048)
-#define divi_4096(i) ((i) / 4096)
+
+#define DIV_2       ((f64)0.5)
+#define DIV_3       ((f64)0.33333333333333333333333333333333)
+#define DIV_4       ((f64)0.25)
+#define DIV_5       ((f64)0.2)
+#define DIV_6       ((f64)0.16666666666666666666666666666667)
+#define DIV_7       ((f64)0.14285714285714285714285714285714)
+#define DIV_8       ((f64)0.125)
+#define DIV_9       ((f64)0.11111111111111111111111111111111)
+#define DIV_10      ((f64)0.1)
+#define DIV_11      ((f64)0.090909090909090909090909090909091)
+#define DIV_12      ((f64)0.083333333333333333333333333333333)
+#define DIV_13      ((f64)0.076923076923076923076923076923077)
+#define DIV_14      ((f64)0.071428571428571428571428571428571)
+#define DIV_15      ((f64)0.066666666666666666666666666666667)  // 1 / 15
+#define DIV_16      ((f64)0.0625)                               // 1 / 16
+#define DIV_19      ((f64)0.052631578947368421052631578947368)  // 1 / 19
+#define DIV_20      ((f64)0.05)
+#define DIV_24      ((f64)0.041666666666666666666666666666667)  // 1 / 24
+#define DIV_30      ((f64)0.033333333333333333333333333333333)  // 1 / 30
+#define DIV_31      ((f64)0.032258064516129032258064516129032)  // 1 / 31
+#define DIV_32      ((f64)0.03125)                              // 1 / 32
+#define DIV_36      ((f64)0.027777777777777777777777777777778)  // 1 / 36
+#define DIV_40      ((f64)0.025)                                // 1 / 40
+#define DIV_48      ((f64)0.020833333333333333333333333333333)  // 1 / 48
+#define DIV_50      ((f64)0.02)                                 // 1 / 50
+#define DIV_60      ((f64)0.016666666666666666666666666666667)  // 1 / 60
+#define DIV_63      ((f64)0.015873015873015873015873015873016)  // 1 / 63
+#define DIV_64      ((f64)0.015625)                             // 1 / 64
+#define DIV_65      ((f64)0.015384615384615384615384615384615)  // 1 / 65
+#define DIV_80      ((f64)0.0125)                               // 1 / 80
+#define DIV_96      ((f64)0.010416666666666666666666666666)     // 1 / 96
+#define DIV_100     (f64)(0.01)                                 // 1 / 100
+#define DIV_120     ((f64)0.0083333333333333333333333333333333) // 1 / 120
+#define DIV_127     (f64)(0.007874015748031496062992125984252)  // 1 / 127
+#define DIV_128     (f64)(0.0078125)                            // 1 / 128
+#define DIV_140     ((f64)0.0071428571428571428571428571428571) // 1 / 140
+#define DIV_150     ((f64)0.0066666666666666666666666666666667) // 1 / 150
+#define DIV_160     ((f64)0.00625)                              // 1 / 160
+#define DIV_180     (f64)(0.0055555555555555555555555555555556)
+#define DIV_200     (f64)(0.005)                                // 1 / 200
+#define DIV_255     (f64)(0.003921568627450980392156862745098)
+#define DIV_256     (f64)(0.00390625)                           // 1 / 256
+#define DIV_360     (f64)(0.0027777777777777777777777777777778)
+#define DIV_440     (f64)(0.0022727272727272727272727272727273)
+#define DIV_600     (f64)(0.0016666666666666666666666666666667) // 1 / 600
+#define DIV_1000    (f64)(0.001)                                // 1 / 1000
+#define DIV_1023    (f64)(9.7751710654936461388074291300098e-4) // 1 / 1023
+#define DIV_1024    (f64)(0.0009765625)
+#define DIV_1200    (f64)(8.3333333333333333333333333333333e-4) // 1 / 1200
+#define DIV_1600    (f64)(0.000625)                             // 1 / 1600
+#define DIV_2400    (f64)(4.1666666666666666666666666666667e-4) // 1 / 2400
+#define DIV_4800    (f64)(2.0833333333333333333333333333333e-4) // 1 / 4800
+#define DIV_9600    (f64)(1.0416666666666666666666666666667e-4) // 1 / 9600
+#define DIV_10000   (f64)(0.0001)                               // 1 / 10000
+#define DIV_12288   (f64)(8.1380208333333333333333333333333e-5) // 1 / 12288
+#define DIV_22000   (f64)(4.5454545454545454545454545454545e-5) // 1 / 22000
+#define DIV_44100   (f64)(2.2675736961451247165532879818594e-5) // 1 / 44100
+#define DIV_1000000 (f64)(0.000001)                             // 1 / 1000000
+
+#define DIV_3_2 ((f64)0.6666666666666666666666666666666) // 1/(3/2)
+#define DIV_32_6 ((f64)0.1875)                           // 1/(32/6)
+
+#define DIV_1BIT ((f64)0.5)                                      // 1 / (1 << 1)
+#define DIV_2BIT ((f64)0.25)                                     // 1 / (1 << 2)
+#define DIV_3BIT ((f64)0.125)                                    // 1 / (1 << 3)
+#define DIV_4BIT ((f64)0.0625)                                   // 1 / (1 << 4)
+#define DIV_5BIT ((f64)0.03125)                                  // 1 / (1 << 5)
+#define DIV_6BIT ((f64)0.015625)                                 // 1 / (1 << 6)
+#define DIV_7BIT ((f64)0.0078125)                                // 1 / (1 << 7)
+#define DIV_8BIT ((f64)0.00390625)                               // 1 / (1 << 8)
+#define DIV_9BIT ((f64)0.001953125)                              // 1 / (1 << 9)
+#define DIV_10BIT ((f64)0.0009765625)                            // 1 / (1 << 10)
+#define DIV_11BIT ((f64)0.00048828125)                           // 1 / (1 << 11)
+#define DIV_12BIT ((f64)0.000244140625)                          // 1 / (1 << 12)
+#define DIV_13BIT ((f64)0.0001220703125)                         // 1 / (1 << 13)
+#define DIV_14BIT ((f64)0.00006103515625)                        // 1 / (1 << 14)
+#define DIV_15BIT ((f64)0.000030517578125)                       // 1 / (1 << 15)
+#define DIV_16BIT ((f64)0.0000152587890625)                      // 1 / (1 << 16)
+#define DIV_17BIT ((f64)0.00000762939453125)                     // 1 / (1 << 17)
+#define DIV_18BIT ((f64)0.000003814697265625)                    // 1 / (1 << 18)
+#define DIV_19BIT ((f64)0.0000019073486328125)                   // 1 / (1 << 19)
+#define DIV_20BIT ((f64)0.00000095367431640625)                  // 1 / (1 << 20)
+#define DIV_21BIT ((f64)0.000000476837158203125)                 // 1 / (1 << 21)
+#define DIV_22BIT ((f64)0.0000002384185791015625)                // 1 / (1 << 22)
+#define DIV_23BIT ((f64)0.00000011920928955078125)               // 1 / (1 << 23)
+#define DIV_24BIT ((f64)0.000000059604644775390625)              // 1 / (1 << 24)
+#define DIV_25BIT ((f64)0.0000000298023223876953125)             // 1 / (1 << 25)
+#define DIV_26BIT ((f64)0.00000001490116119384765625)            // 1 / (1 << 26)
+#define DIV_27BIT ((f64)0.000000007450580596923828125)           // 1 / (1 << 27)
+#define DIV_28BIT ((f64)0.0000000037252902984619140625)          // 1 / (1 << 28)
+#define DIV_29BIT ((f64)0.00000000186264514923095703125)         // 1 / (1 << 29)
+#define DIV_30BIT ((f64)0.000000000931322574615478515625)        // 1 / (1 << 30)
+#define DIV_31BIT ((f64)0.0000000004656612873077392578125)       // 1 / (1 << 31)
+#define DIV_32BIT ((f64)0.00000000023283064365386962890625)      // 1 / (1 << 32)
+#define DIV_33BIT ((f64)0.000000000116415321826934814453125)     // 1 / (1 << 33)
+#define DIV_34BIT ((f64)0.0000000000582076609134674072265625)    // 1 / (1 << 34)
+#define DIV_35BIT ((f64)(2.910383045673370361328125e-11))        // 1 / (1 << 35)
+#define DIV_36BIT ((f64)(1.4551915228366851806640625e-11))       // 1 / (1 << 36)
+#define DIV_37BIT ((f64)(7.2759576141834259033203125e-12))       // 1 / (1 << 37)
+#define DIV_38BIT ((f64)(3.63797880709171295166015625e-12))      // 1 / (1 << 38)
+#define DIV_39BIT ((f64)(1.818989403545856475830078125e-12))     // 1 / (1 << 39)
+#define DIV_40BIT ((f64)(9.094947017729282379150390625e-13))     // 1 / (1 << 40)
+#define DIV_48BIT ((f64)(3.5527136788005009293556213378906e-15)) // 1 / (1 << 48)
+#define DIV_50BIT ((f64)(8.8817841970012523233890533447266e-16)) // 1 / (1 << 50)
+#define DIV_52BIT ((f64)(2.2204460492503130808472633361816e-16)) // 1 / (1 << 52)
+#define DIV_63BIT ((f64)(1.0842021724855044340074528008699e-19)) // 1 / (1 << 63)
+#define DIV_64BIT ((f64)(5.4210108624275221700372640043497e-20)) // 1 / (1 << 64)
+
+#define DIV_PI ((f64)0.31830988618379067153776752674503)    // 1 / pi
+#define DIV_PI2 ((f64)0.15915494309189533576888376337251)   // 1 / (pi*2)
+#define DIV_LN2 ((f64)1.4426950408889634073599246810019)    // 1 / log(2)
+#define DIV_LN10 ((f64)0.43429448190325182765112891891661)  // 1 / log(10)
+#define DIV_LOG2 ((f64)3.3219280948873623478703194294894)   // 1 / log10(2)
+#define DIV_SQRT2 ((f64)0.70710678118654752440084436210485) // 1 / sqrt(2)
+
+#ifdef KSR_SHIFTDIV
+    #define divi_2(i)    ((i) >> 1)
+    #define divi_4(i)    ((i) >> 2)
+    #define divi_8(i)    ((i) >> 3)
+    #define divi_16(i)   ((i) >> 4)
+    #define divi_32(i)   ((i) >> 5)
+    #define divi_64(i)   ((i) >> 6)
+    #define divi_128(i)  ((i) >> 7)
+    #define divi_256(i)  ((i) >> 8)
+    #define divi_512(i)  ((i) >> 9)
+    #define divi_1024(i) ((i) >> 10)
+    #define divi_2048(i) ((i) >> 11)
+    #define divi_4096(i) ((i) >> 12)
+#else
+    #define divi_2(i)    ((i) / 2)
+    #define divi_4(i)    ((i) / 4)
+    #define divi_8(i)    ((i) / 8)
+    #define divi_16(i)   ((i) / 16)
+    #define divi_32(i)   ((i) / 32)
+    #define divi_64(i)   ((i) / 64)
+    #define divi_128(i)  ((i) / 128)
+    #define divi_256(i)  ((i) / 256)
+    #define divi_512(i)  ((i) / 512)
+    #define divi_1024(i) ((i) / 1024)
+    #define divi_2048(i) ((i) / 2048)
+    #define divi_4096(i) ((i) / 4096)
+#endif
+
+#ifdef USE_RECIPDIV
+    #define divf_2(f)    ((f) * DIV_2)
+    #define divf_4(f)    ((f) * DIV_4)
+    #define divf_8(f)    ((f) * DIV_8)
+    #define divf_16(f)   ((f) * DIV_16)
+    #define divf_32(f)   ((f) * DIV_32)
+    #define divf_64(f)   ((f) * DIV_64)
+    #define divf_128(f)  ((f) * DIV_128)
+    #define divf_256(f)  ((f) * DIV_256)
+    #define divf_512(f)  ((f) * DIV_9BIT)
+    #define divf_1024(f) ((f) * DIV_10BIT)
+    #define divf_2048(f) ((f) * DIV_11BIT)
+    #define divf_4096(f) ((f) * DIV_12BIT)
+#else
+    #define divf_2(flt)    ((flt) / 2.0f)
+    #define divf_4(flt)    ((flt) / 4.0f)
+    #define divf_8(flt)    ((flt) / 8.0f)
+    #define divf_16(flt)   ((flt) / 16.0f)
+    #define divf_32(flt)   ((flt) / 32.0f)
+    #define divf_64(flt)   ((flt) / 64.0f)
+    #define divf_128(flt)  ((flt) / 128.0f)
+    #define divf_256(flt)  ((flt) / 256.0f)
+    #define divf_512(flt)  ((flt) / 512.0f)
+    #define divf_1024(flt) ((flt) / 1024.0f)
+    #define divf_2048(flt) ((flt) / 2048.0f)
+    #define divf_4096(flt) ((flt) / 4096.0f)
+#endif
+
+#if defined(DATA_T_INT32) && defined(USE_ARITHMETIC_SHIHT)
+    #define divt_2(t)    divi_2(t)
+    #define divt_4(t)    divi_4(t)
+    #define divt_8(t)    divi_8(t)
+    #define divt_16(t)   divi_16(t)
+    #define divt_32(t)   divi_32(t)
+    #define divt_64(t)   divi_64(t)
+    #define divt_128(t)  divi_128(t)
+    #define divt_256(t)  divi_256(t)
+    #define divt_512(t)  divi_512(t)
+    #define divt_1024(t) divi_1024(t)
+    #define divt_2048(t) divi_2048(t)
+    #define divt_4096(t) divi_4096(t)
+#elif defined(DATA_T_INT32)
+    #define divt_2(i)    ((i) / 2)
+    #define divt_4(i)    ((i) / 4)
+    #define divt_8(i)    ((i) / 8)
+    #define divt_16(i)   ((i) / 16)
+    #define divt_32(i)   ((i) / 32)
+    #define divt_64(i)   ((i) / 64)
+    #define divt_128(i)  ((i) / 128)
+    #define divt_256(i)  ((i) / 256)
+    #define divt_512(i)  ((i) / 512)
+    #define divt_1024(i) ((i) / 1024)
+    #define divt_2048(i) ((i) / 2048)
+    #define divt_4096(i) ((i) / 4096)
+#else
+    #define divt_2(t)    divf_2(t)
+    #define divt_4(t)    divf_4(t)
+    #define divt_8(t)    divf_8(t)
+    #define divt_16(t)   divf_16(t)
+    #define divt_32(t)   divf_32(t)
+    #define divt_64(t)   divf_64(t)
+    #define divt_128(t)  divf_128(t)
+    #define divt_256(t)  divf_256(t)
+    #define divt_512(t)  divf_512(t)
+    #define divt_1024(t) divf_1024(t)
+    #define divt_2048(t) divf_2048(t)
+    #define divt_4096(t) divf_4096(t)
+#endif
+
+#define LPF_FIR_ORDER (20)
+#define LPF_FIR_ORDER2 (10) // LPF_FIR_ORDER/2
+#define LPF_FIR_ANTIALIASING_ATT (40.0)
 
 #define IS_VALID_INSTRUMENT(ip) ((ip) != NULL && (ip) != (Instrument *)-1)
 
@@ -824,7 +1022,10 @@ const char *url_unexpand_home_dir(const char *fname);
 
 
 // ------------- Filter functions (ksr_filter.c) -------------
-void        antialiasing(Sample *sp, long output_rate);
+// void        antialiasing(Sample *sp, long output_rate);
+void        antialiasing(i16 *data, i32 data_length, i32 sample_rate, i32 output_rate);
+void        antialiasing_i32(i32 *data, i32 data_length, i32 sample_rate, i32 output_rate);
+void        antialiasing_f32(f32 *data, i32 data_length, i32 sample_rate, i32 output_rate);
 void        audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
 
 

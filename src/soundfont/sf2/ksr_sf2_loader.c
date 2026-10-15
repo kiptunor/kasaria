@@ -1663,8 +1663,9 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 		{
 		*/
 
-#if defined(SF2_24BIT) && (defined(DATA_T_DOUBLE) || defined(DATA_T_FLOAT))
-#if 1 // SF2_24BIT_SAMPLE_TYPE_FLOAT
+//#if defined(SF2_24BIT) && (defined(DATA_T_DOUBLE) || defined(DATA_T_FLOAT))
+#ifdef SF2_24BIT
+//#if 1 // SF2_24BIT_SAMPLE_TYPE_FLOAT
 		if(sp->lowbit > 0 )
 		{
 		    // 24 bit
@@ -1703,8 +1704,8 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 			// set a small blank loop at the tail for avoiding abnormal loop.	
 			memset(&tmp_data[frames], 0, sizeof(f32) * 128);
 			
-			if(antialiasing_allowed)
-			    antialiasing_float((f32 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, play_mode->rate);
+			if(ksr->antialiasing_allowed)
+			    antialiasing_f32((f32 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, ksr->play_mode.rate);
 		}
 		else
 #else // SF2_24BIT_SAMPLE_TYPE_INT32
@@ -1717,12 +1718,12 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 			u32 *tmp_data;
 
 			frames = divi_2(sp->len);
-			sample->data = (i64*)safe_large_malloc(sizeof(int32) * (frames + 128));
+			sample->data = (sample_t*)safe_large_malloc(sizeof(i32) * (frames + 128));
 			sample->data_alloced = 1;
 			sample->data_type = SAMPLE_TYPE_INT32;
 
-			highbit = (u16 *)safe_large_malloc(sizeof(int16) * frames); // 16bit
-			lowbit = (u8 *)safe_large_malloc(sizeof(int8) * frames); // 8bit
+			highbit = (u16 *)safe_large_malloc(sizeof(i16) * frames); // 16bit
+			lowbit = (u8 *)safe_large_malloc(sizeof(i8) * frames); // 8bit
 
 			fseek(tf, sp->start, SEEK_SET);
 			fread(highbit, sp->len, 1, tf);
@@ -1746,14 +1747,13 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 
 			// set a small blank loop at the tail for avoiding abnormal loop. */
 			//	tmp_data[frames] = tmp_data[frames + 1] = tmp_data[frames + 2] = 0;			
-			memset(&tmp_data[frames], 0, sizeof(int32) * 128);
+			memset(&tmp_data[frames], 0, sizeof(i32) * 128);
 
-			if(antialiasing_allowed)
-				antialiasing_int32((i32 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, play_mode->rate);
+			if(ksr->antialiasing_allowed)
+				antialiasing_i32((i32 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, ksr->play_mode.rate);
 
 		}
 		else
-#endif
 #endif
 		{
 			// 16 bit
@@ -1800,8 +1800,7 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 			// memset(&sample->data[frames], 0, sizeof(sample_t) * 128);
 
 			if(ksr->antialiasing_allowed)
-				//antialiasing((i16 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, ksr->play_mode.rate);
-				antialiasing(sample, ksr->play_mode.rate);
+				antialiasing((i16 *)sample->data, sample->data_length >> FRACTION_BITS, sample->sample_rate, ksr->play_mode.rate);
 		}
 	//}
 

@@ -44,6 +44,7 @@ April 95
 
 
 #include "ksr_internal.h"
+#include "ext_deps/log_c/log.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,29 +87,27 @@ static void kaiser(f64 *w, int n, f64 beta)
 /*
  * fir coef in g, cuttoff frequency in fc
  */
-static void designfir(f64 *g, f64 fc)
+static void designfir(f64 *g , f64 fc, f64 att)
 {
+	/* attenuation  in  db */
     int i;
-    f64 xi;
-    f64 omega;
-    f64 att;
-    f64 beta;
-    f64 w[ORDER2];
+    f64 xi, omega, beta ;
+    f64 w[LPF_FIR_ORDER2];
 
-    for(i = 0; i < ORDER2; i++)
-    {
-        xi    = (f64)i + 0.5;
-        omega = PI * xi;
-        g[i]  = sin((f64)omega * fc) / omega;
-    }
+    for (i =0; i < LPF_FIR_ORDER2 ;i++)
+	{
+	    xi = (f64) i + 0.5;
+	    omega = M_PI * xi;
+	    g[i] = sin( (f64) omega * fc) / omega;
+	}
 
-    att  = 40.; // attenuation  in  db
-    beta = (f64)exp(log((f64)0.58417 * (att - 20.96)) * 0.4) + 0.07886 * (att - 20.96);
-    kaiser(w, ORDER2, beta);
+    beta = (f64) exp(log((f64)0.58417 * (att - 20.96)) * 0.4) + 0.07886
+	* (att - 20.96);
+    kaiser( w, LPF_FIR_ORDER2, beta);
 
-    // Matrix product
-    for(i = 0; i < ORDER2; i++)
-        g[i] = g[i] * w[i];
+    /* Matrix product */
+    for (i =0; i < LPF_FIR_ORDER2 ; i++)
+	g[i] = g[i] * w[i];
 }
 
 /*
@@ -197,42 +196,247 @@ static void filter(sample_t *result, sample_t *data, long length, f64 coef[])
     }
 }
 
+static void filter_int32(i32 *result, i32 *data, i32 length, f64 coef[])
+{
+    i32 sample,i,sample_window;
+    i16 peak = 0;
+    f64 sum;
+
+    // Simulate leading 0 at the begining of the buffer
+    for(sample = 0; sample < LPF_FIR_ORDER2 ; sample++ )
+	{
+	    sum = 0.0;
+	    sample_window= sample - LPF_FIR_ORDER2;
+
+	    for(i = 0; i < LPF_FIR_ORDER ;i++)
+		    sum += coef[i] * ((sample_window<0)? 0.0 : data[sample_window++]) ;
+
+	    // Saturation ???
+	    if(sum> 2147483647.)
+		{
+		    sum=2147483647.;
+			peak++;
+		}
+	    if(sum< -2147483648.)
+		{
+		    sum=-2147483648.;
+			peak++;
+		}
+	    result[sample] = (i32) sum;
+	}
+
+    // The core of the buffer
+    for(sample = LPF_FIR_ORDER2; sample < length - LPF_FIR_ORDER + LPF_FIR_ORDER2 ; sample++ )
+	{
+	    sum = 0.0;
+	    sample_window= sample - LPF_FIR_ORDER2;
+
+	    for(i = 0; i < LPF_FIR_ORDER ;i++)
+		    sum += data[sample_window++] * coef[i];
+
+	    // Saturation ???
+	    if(sum> 2147483647.)
+		{
+		    sum=2147483647.;
+			peak++;
+		}
+	    if(sum< -2147483648.)
+		{
+		    sum=-2147483648.;
+		    peak++;
+		}
+	    result[sample] = (i32) sum;
+	}
+
+    // Simulate 0 at the end of the buffer
+    for(sample = length - LPF_FIR_ORDER + LPF_FIR_ORDER2; sample < length ; sample++ )
+	{
+	    sum = 0.0;
+	    sample_window= sample - LPF_FIR_ORDER2;
+
+	    for(i = 0; i < LPF_FIR_ORDER ;i++)
+		    sum += coef[i] * ((sample_window>=length)? 0.0 : data[sample_window++]);
+
+	    // Saturation ???
+	    if(sum> 2147483647.)
+		{
+		    sum=2147483647.;
+		    peak++;
+		}
+	    if(sum< -2147483648.)
+		{
+		    sum=-2147483648.;
+		    peak++;
+		}
+	    result[sample] = (i32) sum;
+	}
+
+    //if (peak)
+	//ctl->cmsg(CMSG_INFO, VERB_NOISY, "Saturation %2.3f %%.", 100.0*peak/ (FLOAT_T) length);
+}
+
+static void filter_float(f32 *result, f32 *data, i32 length, f64 coef[])
+{
+    i32 sample,i,sample_window;
+    f64 sum;
+
+    // Simulate leading 0 at the begining of the buffer
+    for(sample = 0; sample < LPF_FIR_ORDER2 ; sample++ )
+	{
+	    sum = 0.0;
+	    sample_window= sample - LPF_FIR_ORDER2;
+
+	    for(i = 0; i < LPF_FIR_ORDER ;i++)
+			sum += coef[i] * ((sample_window<0)? 0.0 : data[sample_window++]);
+		
+		result[sample] = (f32)sum;
+	}
+
+    // The core of the buffer
+    for(sample = LPF_FIR_ORDER2; sample < length - LPF_FIR_ORDER + LPF_FIR_ORDER2 ; sample++ )
+	{
+	    sum = 0.0;
+	    sample_window= sample - LPF_FIR_ORDER2;
+
+	    for(i = 0; i < LPF_FIR_ORDER ;i++)
+			sum += data[sample_window++] * coef[i];
+		
+		result[sample] = (f32)sum;	
+	}
+
+    // Simulate 0 at the end of the buffer
+    for(sample = length - LPF_FIR_ORDER + LPF_FIR_ORDER2; sample < length ; sample++ )
+	{
+	    sum = 0.0;
+	    sample_window= sample - LPF_FIR_ORDER2;
+
+	    for(i = 0; i < LPF_FIR_ORDER ;i++)
+			sum += coef[i] * ((sample_window>=length)? 0.0 : data[sample_window++]);
+		
+		result[sample] = (f32)sum;
+	}
+}
+
 /***********************************************************************/
 /* Prevent aliasing by filtering any freq above the output_rate        */
 /*                                                                     */
 /* I don't worry about looping point -> they will remain soft if they  */
 /* were already                                                        */
 /***********************************************************************/
-void antialiasing(Sample *sp, long output_rate)
+void antialiasing(i16 *data, i32 data_length, i32 sample_rate, i32 output_rate)
 {
-    sample_t *temp;
-    int       i;
-    f64       fir_symetric[ORDER];
-    f64       fir_coef[ORDER2];
-    f64       freq_cut; // cutoff frequency [0..1.0] FREQ_CUT/SAMP_FREQ
-    long      length;
+    int i;
+	i32 bytes;
+	i16 *temp;
+    f64 fir_symetric[LPF_FIR_ORDER];
+    f64 fir_coef[LPF_FIR_ORDER2];
+    f64 freq_cut;  // cutoff frequency [0..1.0] FREQ_CUT/SAMP_FREQ
+
+
+    // ctl->cmsg(CMSG_INFO, VERB_NOISY, "Antialiasing: Fsample=%iKHz",
+	//       sample_rate);
 
     // No oversampling
-    if(output_rate >= sp->sample_rate)
-        return;
+    if(output_rate>=sample_rate)
+	    return;
 
-    freq_cut = (f64)output_rate / (f64)sp->sample_rate;
+    freq_cut = (f64)output_rate / (f64)sample_rate;
+    // ctl->cmsg(CMSG_INFO, VERB_NOISY, "Antialiasing: cutoff=%f%%",
+	//       freq_cut*100.);
 
-    designfir(fir_coef, freq_cut);
+    designfir(fir_coef,freq_cut, LPF_FIR_ANTIALIASING_ATT);
 
     // Make the filter symetric
-    for(i = 0; i < ORDER2; i++)
-        fir_symetric[ORDER - 1 - i] = fir_symetric[i] = fir_coef[ORDER2 - 1 - i];
-
-    length = sp->data_length >> FRACTION_BITS;
+    for(i = 0 ; i<LPF_FIR_ORDER2 ;i++)
+	    fir_symetric[LPF_FIR_ORDER-1 - i] = fir_symetric[i] = fir_coef[LPF_FIR_ORDER2-1 - i];
 
     // We apply the filter we have designed on a copy of the patch
-    temp = (sample_t *)safe_malloc(length * sizeof(sample_t));
-    memcpy(temp, sp->data, length * sizeof(sample_t));
+	if(!data)
+		return;
 
-    filter((short *)sp->data, temp, length, fir_symetric);
+	bytes = sizeof(i16) * data_length;
+	temp = (i16 *)safe_malloc(bytes);
+	memcpy(temp, data, bytes);
+	filter(data, temp, data_length, fir_symetric);
+	free(temp);
+}
 
-    free(temp);
+void antialiasing_i32(i32 *data, i32 data_length, i32 sample_rate, i32 output_rate)
+{
+    int i;
+	i32 bytes;
+	i32 *temp;
+    f64 fir_symetric[LPF_FIR_ORDER];
+    f64 fir_coef[LPF_FIR_ORDER2];
+    f64 freq_cut;  /* cutoff frequency [0..1.0] FREQ_CUT/SAMP_FREQ*/
+
+
+    // ctl->cmsg(CMSG_INFO, VERB_NOISY, "Antialiasing: Fsample=%iKHz",
+	//       sample_rate);
+	log_debug("Antialiasing: Fsample=%iKHz", sample_rate);
+
+    /* No oversampling  */
+    if(output_rate>=sample_rate)
+	    return;
+
+    freq_cut = (f64)output_rate / (f64)sample_rate;
+    //ctl->cmsg(CMSG_INFO, VERB_NOISY, "Antialiasing: cutoff=%f%%",
+	//      freq_cut*100.);
+	log_debug("Antialiasing: cutoff=%f%%", freq_cut*100.);
+
+    designfir(fir_coef,freq_cut, LPF_FIR_ANTIALIASING_ATT);
+
+    // Make the filter symetric
+    for(i = 0 ; i<LPF_FIR_ORDER2 ;i++)
+	    fir_symetric[LPF_FIR_ORDER-1 - i] = fir_symetric[i] = fir_coef[LPF_FIR_ORDER2-1 - i];
+
+    // We apply the filter we have designed on a copy of the patch
+	if(!data)
+		return;
+
+	bytes = sizeof(i32) * data_length;
+	temp  = (i32 *)safe_malloc(bytes);
+	memcpy(temp, data, bytes);
+	filter_int32(data, temp, data_length, fir_symetric);
+	free(temp);
+}
+
+void antialiasing_f32(f32 *data, i32 data_length, i32 sample_rate, i32 output_rate)
+{
+    int i;
+	i32 bytes;
+	f32 *temp;
+    f64 fir_symetric[LPF_FIR_ORDER];
+    f64 fir_coef[LPF_FIR_ORDER2];
+    f64 freq_cut;  /* cutoff frequency [0..1.0] FREQ_CUT/SAMP_FREQ*/
+
+
+    // ctl->cmsg(CMSG_INFO, VERB_NOISY, "Antialiasing: Fsample=%iKHz",
+	//       sample_rate);
+
+    // No oversampling
+    if(output_rate>=sample_rate)
+	    return;
+
+    freq_cut= (f64)output_rate / (f64)sample_rate;
+    // ctl->cmsg(CMSG_INFO, VERB_NOISY, "Antialiasing: cutoff=%f%%",
+	//       freq_cut*100.);
+
+    designfir(fir_coef,freq_cut, LPF_FIR_ANTIALIASING_ATT);
+
+    // Make the filter symetric
+    for(i = 0 ; i<LPF_FIR_ORDER2 ;i++)
+	    fir_symetric[LPF_FIR_ORDER-1 - i] = fir_symetric[i] = fir_coef[LPF_FIR_ORDER2-1 - i];
+
+    // We apply the filter we have designed on a copy of the patch
+	if(!data)
+		return;
+
+	bytes = sizeof(float) * data_length;
+	temp  = (float *)safe_malloc(bytes);
+	memcpy(temp, data, bytes);
+	filter_float(data, temp, data_length, fir_symetric);
+	free(temp);
 }
 
 void audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length)
