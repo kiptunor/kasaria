@@ -524,8 +524,10 @@ void ksr_set_config(Kasaria *ksr, KasariaConfig config)
     ksr->midi_chunk_size            = config.midi_chunk_size;
 
     // Again don't let the user disable overlapping notes if the synth is initialized for raw MIDI events
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
     if(ksr->audio_init_scope == RAW_MIDI_EVENTS)
         ksr->overlapping_notes = true;
     else
         ksr->overlapping_notes          = config.allow_overlapping_notes;
+#endif
 }

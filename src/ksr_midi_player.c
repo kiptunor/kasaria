@@ -57,8 +57,10 @@ playmidi.c -- random stuff in need of rearrangement
 
 #include "ext_deps/log_c/log.h"
 
-#define MINIAUDIO_IMPLEMENTATION
-#include "ext_deps/miniaudio/miniaudio.h"
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
+    #define MINIAUDIO_IMPLEMENTATION
+    #include "ext_deps/miniaudio/miniaudio.h"
+#endif
 
 #include "ksr_internal.h"
 #include "soundfont/sf2/ksr_sf2.h"
@@ -69,7 +71,17 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
-
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
+    #define SLEEP_MILIS(ms) ma_sleep(ms)
+#else
+#define SLEEP_MILIS(ms) do { \
+        struct timespec ts = { \
+            .tv_sec = (ms) / 1000, \
+            .tv_nsec = ((ms) % 1000) * 1000000L \
+        }; \
+        nanosleep(&ts, NULL); \
+    }while(0)
+#endif
 
 
 
@@ -87,7 +99,7 @@ static void player_seek_gate_enter(Kasaria *ksr)
     atomic_store_explicit(&ksr->player_seek_gate, 1, memory_order_seq_cst);
 
     while(atomic_load_explicit(&ksr->player_in_callback, memory_order_seq_cst))
-        ma_sleep(1);
+        SLEEP_MILIS(1);
 }
 
 static void player_seek_gate_leave(Kasaria *ksr)
@@ -173,6 +185,7 @@ int ksr_player_render(Kasaria *ksr, f32 *out, unsigned int frames)
     return (int)frames;
 }
 
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
 void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
     (void)pDevice;
@@ -183,6 +196,7 @@ void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pIn
     else
         memset(pOutput, 0, (size_t)frameCount * 2 * sizeof(f32));
 }
+#endif
 
 static void reset_position_frame(Kasaria *ksr)
 {
@@ -1878,8 +1892,10 @@ void ksr_unload_midi(Kasaria *ksr)
 
     stream_free(ksr);
 
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
     if(ksr->is_audio_started)
         ma_device_stop(&ksr->audio_device);
+#endif
     
     if(ksr->event_list)
     {
@@ -2219,6 +2235,7 @@ u64 monotonic_ns(void)
 
 int ksr_player_begin(Kasaria *ksr, bool wait_midi_ending)
 {
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
     if(!ksr)
         return 0;
 
@@ -2254,6 +2271,10 @@ int ksr_player_begin(Kasaria *ksr, bool wait_midi_ending)
         ma_device_stop(&ksr->audio_device);
     
     return 1;
+#else
+    log_error("Internal audio is disabled! define KSR_INTERNAL_AUDIO_HANDLER and rebuild library");
+    return 0;
+#endif
 }
 
 bool ksr_player_is_active(Kasaria *ksr)

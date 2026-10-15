@@ -778,15 +778,18 @@ int ksr_samples2millis(Kasaria *ksr, long samples)
     return (int)((f64)samples * 1000 / ksr->play_mode.rate);
 }
 
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
 void audio_callback(ma_device *dev, void *out, const void *in, ma_uint32 frames)
 {
     // Sooo simple
     // XD
     ksr_render_float(raw_midi_event_ctx, out, frames);
 }
+#endif
 
 int ksr_init_audio(Kasaria *ksr, int init_scope)
 {
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
     if(!ksr)
         return 1;
 
@@ -828,10 +831,15 @@ int ksr_init_audio(Kasaria *ksr, int init_scope)
     log_info("Audio device initialized");
 
     return 0;
+#else
+    log_error("Internal audio handler could not be initialized! define KSR_INTERNAL_AUDIO_HANDLER and rebuild");
+    return 0;
+#endif
 }
 
 int ksr_start_audio(Kasaria *ksr)
 {
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
     if(!ksr)
         return 1;
 
@@ -857,10 +865,15 @@ int ksr_start_audio(Kasaria *ksr)
     //ksr->is_audio_started = true;
 
     return 0;
+#else
+    log_error("Could not start audio thread, internal audio handler is disabled! define KSR_INTERNAL_AUDIO_HANDLER and rebuild");
+    return 0;
+#endif
 }
 
 int ksr_stop_audio(Kasaria *ksr)
 {
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
     if(!ksr)
         return 1;
 
@@ -884,6 +897,10 @@ int ksr_stop_audio(Kasaria *ksr)
     //ksr->is_audio_started = true;
 
     return 0;
+#else
+    log_error("Could not stop audio thread, internal audio handler is disabled! define KSR_INTERNAL_AUDIO_HANDLER and rebuild");
+    return 0;
+#endif
 }
 
 void ksr_shutdown(Kasaria *ksr)
@@ -902,8 +919,10 @@ void ksr_shutdown(Kasaria *ksr)
 
     free_sf2_sample_cache();
 
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
     if(ksr->is_audio_init)
         ma_device_uninit(&ksr->audio_device);
+#endif
 
     reset_midi(ksr);
     ksr_unload_midi(ksr); // This also calls reset_midi()

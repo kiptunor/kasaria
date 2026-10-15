@@ -55,8 +55,9 @@
 
 
 
-
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
 #include "ext_deps/miniaudio/miniaudio.h"
+#endif
 
 
 #include "internal_types.h"
@@ -951,10 +952,12 @@ struct Kasaria
     long      lost_notes;
     long      cut_notes;
 
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
     // Internal Audio Handler
     ma_device_config dev_config;
     ma_device        audio_device;
     int              audio_init_scope;
+#endif
 
 /*
     ==========================================================================
@@ -1059,7 +1062,9 @@ void        free_tables(Kasaria *tm);
 
 
 // ------------- Audio callback functions (ksr_midi_player.c) -------------
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
 void        _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
+#endif
 
 
 // ------------- Synth Base functions (ksr_synth_base.c) -------------

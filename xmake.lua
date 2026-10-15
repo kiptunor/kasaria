@@ -75,6 +75,10 @@ target("kasaria_shared")
     set_basename("kasaria")
     set_kind("shared")
    -- set_toolset("sh", "clang")
+
+   if has_config("internal-audio-handler") then
+       add_defines("KSR_INTERNAL_AUDIO_HANDLER")
+   end
     
     if is_plat("linux") then
         add_ldflags("-Wl,--as-needed")
@@ -90,6 +94,7 @@ target("kasaria_shared")
 
 target("kasaria_static")
     set_basename("kasaria")
+    -- Build config
     if has_config("static-lib") then
         set_default(true)
     else
