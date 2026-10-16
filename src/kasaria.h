@@ -94,6 +94,13 @@ typedef struct
     bool load_percussion_bank; // When enabled the soundfont loader also loads the percusion bank used in MIDI Channel 10
 }KsrSoundfontOpts;
 
+typedef struct
+{
+    bool internal_audio;
+    bool internal_midi_player;
+    // And prob others idk;
+}KsrFeatures;
+
 /*
     General API notes: Unless otherwise indicated, functions that return a value will return non-0 on success,
     and 0 on failure. Time and duration is represented in milliseconds. API functions for getting strings return
@@ -250,6 +257,9 @@ enum
   KSR_REVERB_PRESET_SMALLWATERROOM,
   NUM_TIMID_REVERB_PRESETS
 };
+
+
+KsrFeatures ksr_get_available_features();
 
 
 /*
