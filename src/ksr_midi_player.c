@@ -836,6 +836,95 @@ void ksr_channel_control_change(Kasaria *ksr, u_char channel, u_char controller,
     }
 }
 
+int ksr_channel_get_volume(Kasaria *ksr, int channel)
+{
+    if(!ksr)
+        return 0;
+
+    channel = channel & 0x0f;
+    return ksr->channel[channel].volume;
+}
+
+int ksr_channel_get_pan(Kasaria *ksr, int channel)
+{
+    if(!ksr)
+        return 0;
+
+    channel = channel & 0x0f;
+    return ksr->channel[channel].panning;
+}
+
+int ksr_channel_get_expression(Kasaria *ksr, int channel)
+{
+    if(!ksr)
+        return 0;
+
+    channel = channel & 0x0f;
+    return ksr->channel[channel].expression;
+}
+
+int ksr_channel_get_sustain(Kasaria *ksr, int channel)
+{
+    if(!ksr)
+        return 0;
+
+    channel = channel & 0x0f;
+    return ksr->channel[channel].sustain;
+}
+
+int ksr_channel_get_pitch_wheel(Kasaria *ksr, int channel)
+{
+    if(!ksr)
+        return 0;
+
+    channel = channel & 0x0f;
+    return ksr->channel[channel].pitchbend;
+}
+
+int ksr_channel_get_pitch_range(Kasaria *ksr, int channel)
+{
+    if(!ksr)
+        return 0;
+
+    channel = channel & 0x0f;
+    return ksr->channel[channel].pitchsens;
+}
+
+int ksr_channel_get_program(Kasaria *ksr, int channel)
+{
+    if(!ksr)
+        return 0;
+
+    channel = channel & 0x0f;
+    if(ISDRUMCHANNEL(ksr, channel))
+        return ksr->channel[channel].bank;
+
+    else
+        return ksr->channel[channel].program;
+}
+
+int ksr_channel_get_bank(Kasaria *ksr, int channel)
+{
+    if(!ksr)
+        return 0;
+
+    channel = channel & 0x0f;
+    if(!ISDRUMCHANNEL(ksr, channel))
+        return ksr->channel[channel].bank;
+
+    else
+        return -1;
+}
+
+int ksr_channel_get_mono(Kasaria *ksr, int channel)
+{
+    if(!ksr)
+        return 0;
+
+    channel = channel & 0x0f;
+    return ksr->channel[channel].mono;
+}
+
 void ksr_write_midi_ev(Kasaria *ksr, u_char byte1, u_char byte2, u_char byte3)
 {
     u_char type    = byte1 & 0xf0;
