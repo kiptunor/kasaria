@@ -105,14 +105,14 @@ static inline long rs_block8(long ofs, long incr, const sample_t *__restrict src
 
 #ifdef LINEAR_INTERPOLATION
     #if defined(LOOKUP_HACK) && defined(LOOKUP_INTERPOLATION)
-        #define RESAMPLATION                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
-            v1      = src[ofs >> FRACTION_BITS];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-            v2      = src[(ofs >> FRACTION_BITS) + 1];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+        #define RESAMPLATION \
+            v1      = src[ofs >> FRACTION_BITS]; \
+            v2      = src[(ofs >> FRACTION_BITS) + 1]; \
             *dest++ = v1 + (ksr->iplookup[(((v2 - v1) << 5) & 0x03FE0) | ((ofs & FRACTION_MASK) >> (FRACTION_BITS - 5))]);
     #else
-        #define RESAMPLATION                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
-            v1      = src[ofs >> FRACTION_BITS];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-            v2      = src[(ofs >> FRACTION_BITS) + 1];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+        #define RESAMPLATION \
+            v1      = src[ofs >> FRACTION_BITS]; \
+            v2      = src[(ofs >> FRACTION_BITS) + 1]; \
             *dest++ = v1 + (((v2 - v1) * (ofs & FRACTION_MASK)) >> FRACTION_BITS);
     #endif
     #define INTERPVARS sample_t v1, v2
@@ -122,8 +122,8 @@ static inline long rs_block8(long ofs, long incr, const sample_t *__restrict src
     #define INTERPVARS
 #endif
 
-#define FINALINTERP                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
-    if(ofs == le)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
+#define FINALINTERP \
+    if(ofs == le) \
         *dest++ = src[(ofs >> FRACTION_BITS) - 1] / 2;
 // So it isn't interpolation. At least it's final.
 
