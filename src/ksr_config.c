@@ -91,7 +91,7 @@ void set_default_config(Kasaria *ksr)
 
     ksr->voices                        = DEFAULT_VOICES;
     ksr->play_mode.rate                = DEFAULT_RATE;
-    ksr->play_mode.encoding            = 0;
+    ksr->play_mode.encoding           &= ~PE_MONO;
     ksr->control_rate                  = CONTROLS_PER_SECOND;
     ksr->control_ratio                 = ksr->play_mode.rate / ksr->control_rate;
     ksr->drumchannels                  = DEFAULT_DRUMCHANNELS;

@@ -382,18 +382,38 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     // SF2 stereo support: start partner voice for stereo samples
     if(!ISDRUMCHANNEL(ksr, e->channel) && ip && ip->samples > 1)
     {
-        Sample *primary = ksr->voice[i].sample;
-        int     si;
-        for(si = 0; si < ip->samples; si++)
+
+        Sample *primary      = ksr->voice[i].sample;
+        u16     primary_type = primary->sample_type;
+        u16     partner_type = 0;
+        
+        if(primary_type == SF_SAMPLETYPE_LEFT)
+            partner_type = SF_SAMPLETYPE_RIGHT;
+        else if(primary_type == SF_SAMPLETYPE_RIGHT)
+            partner_type = SF_SAMPLETYPE_LEFT;
+        
+        if(partner_type)
         {
-            Sample *candidate = &ip->sample[si];
-            if(candidate == primary)
-                continue;
-    
-            if(candidate->sample_type == SF_SAMPLETYPE_RIGHT && candidate->sf_sample_index == primary->sf_sample_link)
+            int si;
+            for(si = 0; si < ip->samples; si++)
             {
+                Sample *candidate = &ip->sample[si];
+                bool    linked;
+
+                if(candidate == primary || candidate->sample_type != partner_type)
+                    continue;
+
+                // Accept the link in either direction: some fonts only fill in
+                // one side of the pair. 0 means "no link".
+                linked = (primary->sf_sample_link != 0 && candidate->sf_sample_index == primary->sf_sample_link) ||
+                         (candidate->sf_sample_link != 0 &&
+                          candidate->sf_sample_link == primary->sf_sample_index);
+
+                if(!linked)
+                    continue;
+
                 int stereo_v;
-                
+
                 if(ksr->free_voice_count > 0)
                 {
                     stereo_v = ksr->free_voice_stack[--ksr->free_voice_count];
@@ -401,7 +421,6 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                     ksr->voice[stereo_v].status                     = VOICE_ON;
                     ksr->voice[stereo_v].channel                    = e->channel;
                     ksr->voice[stereo_v].note                       = e->key;
-                    ksr->voice[stereo_v].chorus_send                = ksr->voice[i].chorus_send;
                     ksr->voice[stereo_v].velocity                   = e->vel;
                     ksr->voice_by_channel_note[e->channel][e->key][1] = &ksr->voice[stereo_v];
                     ksr->voice[stereo_v].sample                     = candidate;
@@ -413,7 +432,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                     ksr->voice[stereo_v].tremolo_phase_increment    = candidate->tremolo_phase_increment;
                     ksr->voice[stereo_v].tremolo_sweep              = candidate->tremolo_sweep_increment;
                     ksr->voice[stereo_v].tremolo_sweep_position     = 0;
-                    
+
                     ksr->voice[stereo_v].vibrato_sweep              = candidate->vibrato_sweep_increment;
                     ksr->voice[stereo_v].vibrato_sweep_position     = 0;
                     ksr->voice[stereo_v].vibrato_control_ratio      = candidate->vibrato_control_ratio;
@@ -422,10 +441,9 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                     for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
                         ksr->voice[stereo_v].vibrato_sample_increment[j] = 0;
 
-                    if(ksr->channel[e->channel].panning != NO_PANNING)
-                        ksr->voice[stereo_v].panning = ksr->channel[e->channel].panning;
-                    else
-                        ksr->voice[stereo_v].panning = candidate->panning;
+                    // Hard-pan each half: LEFT sample -> 0, RIGHT sample -> 127.
+                    ksr->voice[stereo_v].panning =
+                        (partner_type == SF_SAMPLETYPE_LEFT) ? 0 : 127;
 
                     recompute_freq(ksr, stereo_v);
                     recompute_amp(ksr, stereo_v);
@@ -444,12 +462,22 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                         apply_envelope_to_amp(ksr, stereo_v);
                     }
 
+                    // The primary was panned from the channel/sample during
+                    // startup. Now that it is known to be half of a stereo
+                    // pair, hard-pan it too. Only done when a partner was
+                    // found, so fonts with broken links keep their old pan.
+                    ksr->voice[i].panning =
+                        (primary_type == SF_SAMPLETYPE_LEFT) ? 0 : 127;
+                    recompute_amp(ksr, i);
+                    apply_envelope_to_amp(ksr, i);
+
                     // FIX 4: Track the stereo partner so layering code can skip it
                     stereo_partner = candidate;
                     break;
                 }
             }
         }
+
 
         // Super broken when using Project CF-162.sf2
         for(int li = 0; li < ip->samples; li++)
@@ -958,6 +986,13 @@ void adjust_panning(Kasaria *ksr, int c)
     while(i--)
         if((ksr->voice[i].channel == c) && (ksr->voice[i].status == VOICE_ON || ksr->voice[i].status == VOICE_SUSTAINED))
         {
+            u16 st = ksr->voice[i].sample ? ksr->voice[i].sample->sample_type : 0;
+            
+            // Keep stereo-pair halves hard-panned; applying the channel pan
+            // to them would collapse the pair back to mono.
+            if(st == SF_SAMPLETYPE_LEFT || st == SF_SAMPLETYPE_RIGHT)
+                continue;
+                        
             ksr->voice[i].panning = ksr->channel[c].panning;
             recompute_amp(ksr, i);
             apply_envelope_to_amp(ksr, i);
