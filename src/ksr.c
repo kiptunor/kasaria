@@ -728,6 +728,7 @@ int ksr_init_audio(Kasaria *ksr, int init_scope)
         ksr->dev_config.dataCallback = audio_callback;
         ksr->is_init_raw_midi_events = true;
         ksr->overlapping_notes       = true; // This MUST NOT be changed at all
+        ksr->reverb_enabled          = false; // Temporary thing
         log_info("!!!\033[38;5;201mIMPORTANT\033[0m!!! Overlapping notes enabled to prevent audio cutouts. \033[4mThis cannot be disabled!\033[0m");
     }
 
