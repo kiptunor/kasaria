@@ -1561,6 +1561,38 @@ sample_t *resample_voice_right(Kasaria *ksr, int v, long *countptr)
     }
 }
 
+sample_t *resample_voice_stereo(Kasaria *ksr, int v, long *countptr)
+{
+    Voice *vp = &ksr->voice[v];
+    if(!vp->sample_right)
+        return resample_voice(ksr, v, countptr);
+
+    if(vp->vibrato_control_ratio)
+    {
+        int cc_save = vp->vibrato_control_counter;
+        long c = *countptr;
+        sample_t *sp = resample_voice(ksr, v, &c);
+        vp->vibrato_control_counter = cc_save;
+        long c2 = c;
+        resample_voice_right(ksr, v, &c2);
+        if(c2 < c)
+            c = c2;
+        *countptr = c;
+        return sp;
+    }
+    else
+    {
+        long c = *countptr;
+        sample_t *sp = resample_voice(ksr, v, &c);
+        long c2 = c;
+        resample_voice_right(ksr, v, &c2);
+        if(c2 < c)
+            c = c2;
+        *countptr = c;
+        return sp;
+    }
+}
+
 void pre_resample(Kasaria *ksr, Sample *sp)
 {
     f64               a;

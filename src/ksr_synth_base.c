@@ -205,6 +205,10 @@ void recompute_freq(Kasaria *ksr, int v)
         f64 ar = FSCALE(((f64)(ksr->voice[v].sample_right->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample_right->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
         if(signr)
             ar = -ar;
+        else if(ksr->voice[v].sample_increment < 0 && ar > 0)
+            ar = -ar;
+        else if(ksr->voice[v].sample_increment > 0 && ar < 0)
+            ar = -ar;
         ksr->voice[v].sample_increment_right = (long)(ar);
     }
 }
@@ -224,22 +228,25 @@ void recompute_amp(Kasaria *ksr, int v)
 
     if(!(ksr->play_mode.encoding & PE_MONO))
     {
-        if(ksr->voice[v].panning > 60 && ksr->voice[v].panning < 68)
+        if(ksr->voice[v].sample_right)
+        {
+            ksr->voice[v].panned     = PANNED_MYSTERY;
+            ksr->voice[v].left_amp   = base / (f64)(1 << 18);
+            ksr->voice[v].right_amp  = base / (f64)(1 << 18);
+        }
+        else if(ksr->voice[v].panning > 60 && ksr->voice[v].panning < 68)
         {
             ksr->voice[v].panned   = PANNED_CENTER;
-            //ksr->voice[v].left_amp = base / (f64)(1 << 19);
             ksr->voice[v].left_amp = base / (f64)(1 << 20);
         }
         else if(ksr->voice[v].panning < 5)
         {
             ksr->voice[v].panned   = PANNED_LEFT;
-            //ksr->voice[v].left_amp = base / (f64)(1 << 18);
             ksr->voice[v].left_amp = base / (f64)(1 << 19);
         }
         else if(ksr->voice[v].panning > 123)
         {
             ksr->voice[v].panned   = PANNED_RIGHT;
-            //ksr->voice[v].left_amp = base / (f64)(1 << 18);
             ksr->voice[v].left_amp = base / (f64)(1 << 19);
         }
         else
@@ -402,20 +409,32 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             Sample *candidate = &ip->sample[si];
             if(candidate == primary)
                 continue;
-    
-            if(candidate->sample_type == SF_SAMPLETYPE_RIGHT && primary->sf_sample_link && candidate->sf_sample_index == primary->sf_sample_link)
+
+            if(primary->sample_type == SF_SAMPLETYPE_LEFT && candidate->sample_type == SF_SAMPLETYPE_RIGHT &&
+               primary->sf_sample_link == candidate->sf_sample_index)
             {
                 ksr->voice[i].sample_right = candidate;
                 ksr->voice[i].sample_offset_right = 0;
                 ksr->voice[i].sample_increment_right = 0;
-                // Copy same modulation/envelope timing setup will be handled by recompute_freq/recompute_amp;
-                // ensure freq/increments match by recomputing
                 recompute_freq(ksr, i);
                 recompute_amp(ksr, i);
                 stereo_partner = candidate;
                 break;
             }
-            else if(primary->sample_type == SF_SAMPLETYPE_LEFT && candidate->sample_type == SF_SAMPLETYPE_RIGHT && primary->sf_sample_link == candidate->sf_sample_index)
+            else if(candidate->sample_type == SF_SAMPLETYPE_LEFT && primary->sample_type == SF_SAMPLETYPE_RIGHT &&
+                    candidate->sf_sample_index == primary->sf_sample_link)
+            {
+                /* put left as right buffer and keep primary as left? easier to swap conceptually by just attaching */
+                ksr->voice[i].sample_right = candidate;
+                ksr->voice[i].sample_offset_right = 0;
+                ksr->voice[i].sample_increment_right = 0;
+                recompute_freq(ksr, i);
+                recompute_amp(ksr, i);
+                stereo_partner = candidate;
+                break;
+            }
+            else if(candidate->sample_type == SF_SAMPLETYPE_RIGHT && primary->sample_type == SF_SAMPLETYPE_LEFT &&
+                    candidate->sf_sample_index == primary->sf_sample_link)
             {
                 ksr->voice[i].sample_right = candidate;
                 ksr->voice[i].sample_offset_right = 0;
@@ -424,6 +443,24 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                 recompute_amp(ksr, i);
                 stereo_partner = candidate;
                 break;
+            }
+        }
+        if(!ksr->voice[i].sample_right)
+        {
+            for(si = 0; si < ip->samples; si++)
+            {
+                Sample *candidate = &ip->sample[si];
+                if(candidate == primary) continue;
+                if(candidate->sf_sample_link == primary->sf_sample_index || primary->sf_sample_link == candidate->sf_sample_index)
+                {
+                    ksr->voice[i].sample_right = candidate;
+                    ksr->voice[i].sample_offset_right = 0;
+                    ksr->voice[i].sample_increment_right = 0;
+                    recompute_freq(ksr, i);
+                    recompute_amp(ksr, i);
+                    stereo_partner = candidate;
+                    break;
+                }
             }
         }
 

@@ -172,7 +172,7 @@ void apply_envelope_to_amp(Kasaria *ksr, int v)
     f64  lamp = ksr->voice[v].left_amp, ramp;
     long la, ra;
     
-    if(ksr->voice[v].panned == PANNED_MYSTERY)
+    if(ksr->voice[v].panned == PANNED_MYSTERY || ksr->voice[v].sample_right)
     {
         ramp = ksr->voice[v].right_amp;
         if(ksr->voice[v].tremolo_phase_increment)
@@ -182,9 +182,11 @@ void apply_envelope_to_amp(Kasaria *ksr, int v)
         }
         if(ksr->voice[v].sample->modes & MODES_ENVELOPE)
         {
-            //lamp *= vol_table[ksr->voice[v].envelope_volume >> 23];
             lamp *= (f64)(ksr->voice[v].envelope_volume >> 23) / 127.0;
-            ramp *= vol_table[ksr->voice[v].envelope_volume >> 23];
+            if(ksr->voice[v].sample_right)
+                ramp *= (f64)(ksr->voice[v].envelope_volume >> 23) / 127.0;
+            else
+                ramp *= vol_table[ksr->voice[v].envelope_volume >> 23];
         }
 
         la = FSCALE(lamp, AMP_BITS);
@@ -303,9 +305,7 @@ static void mix_mystery_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int c
 
     if(vp->sample_right)
     {
-        long n2 = n;
-        sp_r = resample_voice_right(ksr, v, &n2);
-        n = (int)n2;
+        sp_r = ksr->resample_buffer_right;
     }
     else
         sp_r = NULL;
@@ -349,16 +349,16 @@ static void mix_mystery_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int c
 #endif
             while(n--)
             {
-                sample_t s = *sp++;
-                sample_t sr = sp_r ? *sp_r++ : 0;
                 if(sp_r)
                 {
-                    MIXATION(left);
-                    lp++;
-                    MIXATION(right);
+                    sample_t sl = *sp++;
+                    sample_t sr = *sp_r++;
+                    *lp++ += (f32)((int)left * (int)sl);
+                    *lp++ += (f32)((int)right * (int)sr);
                 }
                 else
                 {
+                    sample_t s = *sp++;
                     MIXATION(left);
                     MIXATION(right);
                 }
@@ -394,16 +394,16 @@ static void mix_mystery_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int c
 #endif
             while(cc--)
             {
-                sample_t s = *sp++;
                 if(sp_r)
                 {
+                    sample_t sl = *sp++;
                     sample_t sr = *sp_r++;
-                    MIXATION(left);
-                    lp++;
-                    MIXATION(right);
+                    *lp++ += (f32)((int)left * (int)sl);
+                    *lp++ += (f32)((int)right * (int)sr);
                 }
                 else
                 {
+                    sample_t s = *sp++;
                     MIXATION(left);
                     MIXATION(right);
                 }
@@ -606,9 +606,8 @@ static void mix_mystery(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
     final_volume_t left  = vp->left_mix;
     final_volume_t right = vp->right_mix;
     sample_t *sp_r = NULL;
-    long c2 = count;
     if(vp->sample_right)
-        sp_r = resample_voice_right(ksr, v, &c2);
+        sp_r = ksr->resample_buffer_right;
     
 #if KSR_MIX_SIMD
     if(sp_r)
@@ -635,16 +634,16 @@ static void mix_mystery(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
 #endif
     while(count--)
     {
-        sample_t s = *sp++;
         if(sp_r)
         {
+            sample_t sl = *sp++;
             sample_t sr = *sp_r++;
-            MIXATION(left);
-            lp++;
-            MIXATION(right);
+            *lp++ += (f32)((int)left * (int)sl);
+            *lp++ += (f32)((int)right * (int)sr);
         }
         else
         {
+            sample_t s = *sp++;
             MIXATION(left);
             MIXATION(right);
         }
@@ -724,17 +723,23 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
     long     ri;
 
     sample_t s = 0; // silly warning about uninitialized s
+    Voice   *vp = ksr->voice + v;
+    sample_t *sp_r = NULL;
 
-    left       = ksr->voice[v].left_mix;
+    left       = vp->left_mix;
     li         = -(left / c);
     if(!li)
         li = -1;
 
     if(!(ksr->play_mode.encoding & PE_MONO))
     {
-        if(ksr->voice[v].panned == PANNED_MYSTERY)
+        if(vp->panned == PANNED_MYSTERY || vp->sample_right)
         {
-            right = ksr->voice[v].right_mix;
+            if(vp->sample_right)
+            {
+                sp_r = ksr->resample_buffer_right;
+            }
+            right = vp->right_mix;
             ri    = -(right / c);
             while(c--)
             {
@@ -746,10 +751,19 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
                 if(right < 0)
                     right = 0;
 
-                s = *sp++;
-
-                MIXATION(left);
-                MIXATION(right);
+                if(sp_r)
+                {
+                    sample_t sl = *sp++;
+                    sample_t sr = *sp_r++;
+                    *lp++ += (f32)((int)left * (int)sl);
+                    *lp++ += (f32)((int)right * (int)sr);
+                }
+                else
+                {
+                    sample_t s = *sp++;
+                    MIXATION(left);
+                    MIXATION(right);
+                }
             }
         }
         else if(ksr->voice[v].panned == PANNED_CENTER)
@@ -880,12 +894,7 @@ void mix_voice(Kasaria *ksr, f32 *buf, int v, long c)
         if(c >= MAX_DIE_TIME)
             c = MAX_DIE_TIME;
 
-        sp = resample_voice(ksr, v, &c);
-        if(vp->sample_right)
-        {
-            long c2 = c;
-            resample_voice_right(ksr, v, &c2);
-        }
+        sp = resample_voice_stereo(ksr, v, &c);
 
         if(c > 0)
             ramp_out(ksr, sp, buf, v, c);
@@ -894,7 +903,14 @@ void mix_voice(Kasaria *ksr, f32 *buf, int v, long c)
     }
     else
     {
-        sp = resample_voice(ksr, v, &c);
+        if(vp->sample_right)
+        {
+            long cst = c;
+            sp = resample_voice_stereo(ksr, v, &cst);
+            c = cst;
+        }
+        else
+            sp = resample_voice(ksr, v, &c);
 
         if(ksr->play_mode.encoding & PE_MONO)
         {

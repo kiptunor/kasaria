@@ -1066,6 +1066,7 @@ void compute_sample_increment(Kasaria *ksr, long tempo, long divisions);
 // ------------- Resampling functions (ksr_resample.c) -------------
 sample_t   *resample_voice(Kasaria *tm, int v, long *countptr);
 sample_t   *resample_voice_right(Kasaria *tm, int v, long *countptr);
+sample_t   *resample_voice_stereo(Kasaria *tm, int v, long *countptr);
 void        pre_resample(Kasaria *tm, Sample *sp);
 
 
