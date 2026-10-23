@@ -1287,7 +1287,7 @@ static sample_t *rs_vib_plain_right(Kasaria *ksr, int v, long *countptr)
         }
     }
 
-    vp->vibrato_control_counter = cc;
+    /* shared vibrato_control_counter handled by caller for stereo pairs */
     vp->sample_increment_right  = incr;
     vp->sample_offset_right     = ofs;
     return ksr->resample_buffer_right;
@@ -1362,7 +1362,7 @@ static sample_t *rs_vib_loop_right(Kasaria *ksr, Voice *vp, long count)
     }
 #endif
 
-    vp->vibrato_control_counter = cc;
+    /* shared vibrato_control_counter handled by caller for stereo pairs */
     vp->sample_increment_right  = incr;
     vp->sample_offset_right     = ofs;
     return ksr->resample_buffer_right;
@@ -1499,7 +1499,7 @@ static sample_t *rs_vib_bidir_right(Kasaria *ksr, Voice *vp, long count)
         }
 #endif
 
-    vp->vibrato_control_counter = cc;
+    /* shared vibrato_control_counter handled by caller for stereo pairs */
     vp->sample_increment_right  = incr;
     vp->sample_offset_right     = ofs;
     return ksr->resample_buffer_right;
@@ -1561,35 +1561,447 @@ sample_t *resample_voice_right(Kasaria *ksr, int v, long *countptr)
     }
 }
 
+static sample_t *rs_vib_loop_stereo_combined(Kasaria *ksr, Voice *vp, long count)
+{
+    sample_t v1l, v2l, v1r, v2r;
+    long      ofs_l  = vp->sample_offset;
+    long      ofs_r  = vp->sample_offset_right;
+    long      incr_l = vp->sample_increment;
+    long      incr_r = vp->sample_increment_right;
+    long      le_l   = vp->sample->loop_end;
+    long      ll_l   = le_l - vp->sample->loop_start;
+    long      le_r   = vp->sample_right->loop_end;
+    long      ll_r   = le_r - vp->sample_right->loop_start;
+    sample_t *dest_l = ksr->resample_buffer;
+    sample_t *dest_r = ksr->resample_buffer_right;
+    sample_t *src_l  = vp->sample->data;
+    sample_t *src_r  = vp->sample_right->data;
+    int       cc     = vp->vibrato_control_counter;
+
+    while(count--)
+    {
+        if(!cc--)
+        {
+            cc    = vp->vibrato_control_ratio;
+            incr_l = update_vibrato(ksr, vp, 0);
+            incr_r = incr_l;
+            if(vp->sample_increment_right < 0 && incr_r > 0) incr_r = -incr_r;
+            else if(vp->sample_increment_right > 0 && incr_r < 0) incr_r = -incr_r;
+            vp->sample_increment = incr_l;
+            vp->sample_increment_right = incr_r;
+        }
+        v1l = src_l[ofs_l >> FRACTION_BITS];
+        v2l = src_l[(ofs_l >> FRACTION_BITS) + 1];
+        *dest_l++ = v1l + (((v2l - v1l) * (ofs_l & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_l += incr_l;
+        if(ofs_l >= le_l)
+            ofs_l -= ll_l;
+
+        v1r = src_r[ofs_r >> FRACTION_BITS];
+        v2r = src_r[(ofs_r >> FRACTION_BITS) + 1];
+        *dest_r++ = v1r + (((v2r - v1r) * (ofs_r & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_r += incr_r;
+        if(ofs_r >= le_r)
+            ofs_r -= ll_r;
+    }
+
+    vp->vibrato_control_counter = cc;
+    vp->sample_offset = ofs_l;
+    vp->sample_increment = incr_l;
+    vp->sample_offset_right = ofs_r;
+    vp->sample_increment_right = incr_r;
+    return ksr->resample_buffer;
+}
+
+static sample_t *rs_vib_plain_stereo_combined(Kasaria *ksr, Voice *vp, long *countptr)
+{
+    sample_t v1l, v2l, v1r, v2r;
+    sample_t *dest_l = ksr->resample_buffer;
+    sample_t *dest_r = ksr->resample_buffer_right;
+    sample_t *src_l  = vp->sample->data;
+    sample_t *src_r  = vp->sample_right->data;
+    long      ofs_l   = vp->sample_offset;
+    long      ofs_r   = vp->sample_offset_right;
+    long      incr_l  = vp->sample_increment;
+    long      incr_r  = vp->sample_increment_right;
+    long      le_l    = vp->sample->data_length;
+    long      le_r    = vp->sample_right->data_length;
+    long      count   = *countptr;
+    long      produced = 0;
+    int       cc      = vp->vibrato_control_counter;
+
+    if(incr_l < 0) incr_l = -incr_l;
+
+    while(produced < count)
+    {
+        if(!cc--)
+        {
+            cc    = vp->vibrato_control_ratio;
+            incr_l = update_vibrato(ksr, vp, 0);
+            if(incr_l < 0) incr_l = -incr_l;
+            incr_r = incr_l;
+            vp->sample_increment = incr_l;
+            vp->sample_increment_right = incr_r;
+        }
+        if(ofs_l >= le_l || ofs_r >= le_r)
+            break;
+
+        v1l = src_l[ofs_l >> FRACTION_BITS];
+        v2l = src_l[(ofs_l >> FRACTION_BITS) + 1];
+        *dest_l++ = v1l + (((v2l - v1l) * (ofs_l & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_l += incr_l;
+
+        v1r = src_r[ofs_r >> FRACTION_BITS];
+        v2r = src_r[(ofs_r >> FRACTION_BITS) + 1];
+        *dest_r++ = v1r + (((v2r - v1r) * (ofs_r & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_r += incr_r;
+
+        produced++;
+    }
+
+    if(produced < count)
+    {
+        memset(dest_l, 0, (count - produced) * sizeof(sample_t));
+        memset(dest_r, 0, (count - produced) * sizeof(sample_t));
+        vp->status = VOICE_FREE;
+    }
+
+    *countptr = produced;
+    vp->vibrato_control_counter = cc;
+    vp->sample_offset = ofs_l;
+    vp->sample_increment = incr_l;
+    vp->sample_offset_right = ofs_r;
+    vp->sample_increment_right = incr_r;
+    return ksr->resample_buffer;
+}
+
+static sample_t *rs_loop_stereo_combined(Kasaria *ksr, Voice *vp, long count)
+{
+    sample_t v1l, v2l, v1r, v2r;
+    long      ofs_l  = vp->sample_offset;
+    long      ofs_r  = vp->sample_offset_right;
+    long      incr_l = vp->sample_increment;
+    long      incr_r = vp->sample_increment_right;
+    long      ls_l   = vp->sample->loop_start;
+    long      le_l   = vp->sample->loop_end;
+    long      ll_l   = le_l - ls_l;
+    long      ls_r   = vp->sample_right->loop_start;
+    long      le_r   = vp->sample_right->loop_end;
+    long      ll_r   = le_r - ls_r;
+    sample_t *dest_l = ksr->resample_buffer;
+    sample_t *dest_r = ksr->resample_buffer_right;
+    sample_t *src_l  = vp->sample->data;
+    sample_t *src_r  = vp->sample_right->data;
+
+    if(ll_l > 0)
+    {
+        if(ofs_l >= le_l) ofs_l = ls_l + ((ofs_l - le_l) % ll_l);
+        if(incr_l >= ll_l) { incr_l %= ll_l; if(incr_l == 0) incr_l = ll_l; }
+    }
+    else if(ofs_l >= le_l) ofs_l = ls_l;
+
+    if(ll_r > 0)
+    {
+        if(ofs_r >= le_r) ofs_r = ls_r + ((ofs_r - le_r) % ll_r);
+        if(incr_r >= ll_r) { incr_r %= ll_r; if(incr_r == 0) incr_r = ll_r; }
+    }
+    else if(ofs_r >= le_r) ofs_r = ls_r;
+
+    while(count--)
+    {
+        v1l = src_l[ofs_l >> FRACTION_BITS];
+        v2l = src_l[(ofs_l >> FRACTION_BITS) + 1];
+        *dest_l++ = v1l + (((v2l - v1l) * (ofs_l & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_l += incr_l;
+        if(ofs_l >= le_l)
+        {
+            if(ll_l > 0) ofs_l -= ll_l;
+            else ofs_l = ls_l;
+        }
+
+        v1r = src_r[ofs_r >> FRACTION_BITS];
+        v2r = src_r[(ofs_r >> FRACTION_BITS) + 1];
+        *dest_r++ = v1r + (((v2r - v1r) * (ofs_r & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_r += incr_r;
+        if(ofs_r >= le_r)
+        {
+            if(ll_r > 0) ofs_r -= ll_r;
+            else ofs_r = ls_r;
+        }
+    }
+
+    vp->sample_offset = ofs_l;
+    vp->sample_increment = incr_l;
+    vp->sample_offset_right = ofs_r;
+    vp->sample_increment_right = incr_r;
+    return ksr->resample_buffer;
+}
+
+static sample_t *rs_plain_stereo_combined(Kasaria *ksr, Voice *vp, long *countptr)
+{
+    sample_t v1l, v2l, v1r, v2r;
+    sample_t *dest_l = ksr->resample_buffer;
+    sample_t *dest_r = ksr->resample_buffer_right;
+    sample_t *src_l  = vp->sample->data;
+    sample_t *src_r  = vp->sample_right->data;
+    long      ofs_l   = vp->sample_offset;
+    long      ofs_r   = vp->sample_offset_right;
+    long      incr_l  = vp->sample_increment;
+    long      incr_r  = vp->sample_increment_right;
+    long      le_l    = vp->sample->data_length;
+    long      le_r    = vp->sample_right->data_length;
+    long      count   = *countptr;
+    long      produced = 0;
+
+    while(produced < count)
+    {
+        if(ofs_l >= le_l || ofs_r >= le_r)
+            break;
+
+        v1l = src_l[ofs_l >> FRACTION_BITS];
+        v2l = src_l[(ofs_l >> FRACTION_BITS) + 1];
+        *dest_l++ = v1l + (((v2l - v1l) * (ofs_l & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_l += incr_l;
+
+        v1r = src_r[ofs_r >> FRACTION_BITS];
+        v2r = src_r[(ofs_r >> FRACTION_BITS) + 1];
+        *dest_r++ = v1r + (((v2r - v1r) * (ofs_r & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_r += incr_r;
+
+        produced++;
+    }
+
+    if(produced < count)
+    {
+        memset(dest_l, 0, (count - produced) * sizeof(sample_t));
+        memset(dest_r, 0, (count - produced) * sizeof(sample_t));
+        vp->status = VOICE_FREE;
+    }
+
+    *countptr = produced;
+    vp->sample_offset = ofs_l;
+    vp->sample_increment = incr_l;
+    vp->sample_offset_right = ofs_r;
+    vp->sample_increment_right = incr_r;
+    return ksr->resample_buffer;
+}
+
+static sample_t *rs_bidir_stereo_combined(Kasaria *ksr, Voice *vp, long count)
+{
+    sample_t v1l, v2l, v1r, v2r;
+    long      ofs_l  = vp->sample_offset;
+    long      ofs_r  = vp->sample_offset_right;
+    long      incr_l = vp->sample_increment;
+    long      incr_r = vp->sample_increment_right;
+    long      le_l   = vp->sample->loop_end;
+    long      ls_l   = vp->sample->loop_start;
+    long      le_r   = vp->sample_right->loop_end;
+    long      ls_r   = vp->sample_right->loop_start;
+    long      le2_l  = le_l << 1;
+    long      ls2_l  = ls_l << 1;
+    long      le2_r  = le_r << 1;
+    long      ls2_r  = ls_r << 1;
+    sample_t *dest_l = ksr->resample_buffer;
+    sample_t *dest_r = ksr->resample_buffer_right;
+    sample_t *src_l  = vp->sample->data;
+    sample_t *src_r  = vp->sample_right->data;
+
+    if(ofs_l < ls_l && incr_l > 0)
+    {
+        while(count--)
+        {
+            v1l = src_l[ofs_l >> FRACTION_BITS];
+            v2l = src_l[(ofs_l >> FRACTION_BITS) + 1];
+            *dest_l++ = v1l + (((v2l - v1l) * (ofs_l & FRACTION_MASK)) >> FRACTION_BITS);
+            ofs_l += incr_l;
+            if(ofs_l >= ls_l) break;
+            v1r = src_r[ofs_r >> FRACTION_BITS];
+            v2r = src_r[(ofs_r >> FRACTION_BITS) + 1];
+            *dest_r++ = v1r + (((v2r - v1r) * (ofs_r & FRACTION_MASK)) >> FRACTION_BITS);
+            ofs_r += incr_r;
+            if(ofs_r >= ls_r) break;
+        }
+    }
+    if(ofs_r < ls_r && incr_r > 0 && count > 0)
+    {
+        /* try to catch up if needed - just continue */
+    }
+
+    while(count--)
+    {
+        v1l = src_l[ofs_l >> FRACTION_BITS];
+        v2l = src_l[(ofs_l >> FRACTION_BITS) + 1];
+        *dest_l++ = v1l + (((v2l - v1l) * (ofs_l & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_l += incr_l;
+        if(ofs_l >= le_l)
+        {
+            ofs_l  = le2_l - ofs_l;
+            incr_l = -incr_l;
+        }
+        else if(ofs_l <= ls_l)
+        {
+            ofs_l  = ls2_l - ofs_l;
+            incr_l = -incr_l;
+        }
+
+        v1r = src_r[ofs_r >> FRACTION_BITS];
+        v2r = src_r[(ofs_r >> FRACTION_BITS) + 1];
+        *dest_r++ = v1r + (((v2r - v1r) * (ofs_r & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_r += incr_r;
+        if(ofs_r >= le_r)
+        {
+            ofs_r  = le2_r - ofs_r;
+            incr_r = -incr_r;
+        }
+        else if(ofs_r <= ls_r)
+        {
+            ofs_r  = ls2_r - ofs_r;
+            incr_r = -incr_r;
+        }
+    }
+
+    vp->sample_offset = ofs_l;
+    vp->sample_increment = incr_l;
+    vp->sample_offset_right = ofs_r;
+    vp->sample_increment_right = incr_r;
+    return ksr->resample_buffer;
+}
+
+static sample_t *rs_vib_bidir_stereo_combined(Kasaria *ksr, Voice *vp, long count)
+{
+    sample_t v1l, v2l, v1r, v2r;
+    long      ofs_l  = vp->sample_offset;
+    long      ofs_r  = vp->sample_offset_right;
+    long      incr_l = vp->sample_increment;
+    long      incr_r = vp->sample_increment_right;
+    long      le_l   = vp->sample->loop_end;
+    long      ls_l   = vp->sample->loop_start;
+    long      le_r   = vp->sample_right->loop_end;
+    long      ls_r   = vp->sample_right->loop_start;
+    long      le2_l  = le_l << 1;
+    long      ls2_l  = ls_l << 1;
+    long      le2_r  = le_r << 1;
+    long      ls2_r  = ls_r << 1;
+    sample_t *dest_l = ksr->resample_buffer;
+    sample_t *dest_r = ksr->resample_buffer_right;
+    sample_t *src_l  = vp->sample->data;
+    sample_t *src_r  = vp->sample_right->data;
+    int       cc     = vp->vibrato_control_counter;
+
+    if(ofs_l < ls_l && incr_l > 0)
+    {
+        while(count && (ofs_l < ls_l))
+        {
+            if(!cc--)
+            {
+                cc    = vp->vibrato_control_ratio;
+                incr_l = update_vibrato(ksr, vp, 0);
+                if(incr_l < 0) incr_l = -incr_l;
+                incr_r = incr_l;
+                if(vp->sample_increment_right < 0 && incr_r > 0) incr_r = -incr_r;
+                else if(vp->sample_increment_right > 0 && incr_r < 0) incr_r = -incr_r;
+                vp->sample_increment = incr_l;
+                vp->sample_increment_right = incr_r;
+            }
+            v1l = src_l[ofs_l >> FRACTION_BITS];
+            v2l = src_l[(ofs_l >> FRACTION_BITS) + 1];
+            *dest_l++ = v1l + (((v2l - v1l) * (ofs_l & FRACTION_MASK)) >> FRACTION_BITS);
+            ofs_l += incr_l;
+
+            if(!cc)
+            {
+                /* will be handled next iteration */
+            }
+            v1r = src_r[ofs_r >> FRACTION_BITS];
+            v2r = src_r[(ofs_r >> FRACTION_BITS) + 1];
+            *dest_r++ = v1r + (((v2r - v1r) * (ofs_r & FRACTION_MASK)) >> FRACTION_BITS);
+            ofs_r += incr_r;
+            count--;
+        }
+    }
+
+    while(count--)
+    {
+        if(!cc--)
+        {
+            cc    = vp->vibrato_control_ratio;
+            incr_l = update_vibrato(ksr, vp, (incr_l < 0));
+            incr_r = incr_l;
+            if(vp->sample_increment_right < 0 && incr_r > 0) incr_r = -incr_r;
+            else if(vp->sample_increment_right > 0 && incr_r < 0) incr_r = -incr_r;
+            vp->sample_increment = incr_l;
+            vp->sample_increment_right = incr_r;
+        }
+        v1l = src_l[ofs_l >> FRACTION_BITS];
+        v2l = src_l[(ofs_l >> FRACTION_BITS) + 1];
+        *dest_l++ = v1l + (((v2l - v1l) * (ofs_l & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_l += incr_l;
+        if(ofs_l >= le_l)
+        {
+            ofs_l  = le2_l - ofs_l;
+            incr_l = -incr_l;
+        }
+        else if(ofs_l <= ls_l)
+        {
+            ofs_l  = ls2_l - ofs_l;
+            incr_l = -incr_l;
+        }
+
+        v1r = src_r[ofs_r >> FRACTION_BITS];
+        v2r = src_r[(ofs_r >> FRACTION_BITS) + 1];
+        *dest_r++ = v1r + (((v2r - v1r) * (ofs_r & FRACTION_MASK)) >> FRACTION_BITS);
+        ofs_r += incr_r;
+        if(ofs_r >= le_r)
+        {
+            ofs_r  = le2_r - ofs_r;
+            incr_r = -incr_r;
+        }
+        else if(ofs_r <= ls_r)
+        {
+            ofs_r  = ls2_r - ofs_r;
+            incr_r = -incr_r;
+        }
+    }
+
+    vp->vibrato_control_counter = cc;
+    vp->sample_offset = ofs_l;
+    vp->sample_increment = incr_l;
+    vp->sample_offset_right = ofs_r;
+    vp->sample_increment_right = incr_r;
+    return ksr->resample_buffer;
+}
+
 sample_t *resample_voice_stereo(Kasaria *ksr, int v, long *countptr)
 {
     Voice *vp = &ksr->voice[v];
     if(!vp->sample_right)
         return resample_voice(ksr, v, countptr);
 
+    u_char modes = vp->sample->modes | vp->sample_right->modes;
+
     if(vp->vibrato_control_ratio)
     {
-        int cc_save = vp->vibrato_control_counter;
-        long c = *countptr;
-        sample_t *sp = resample_voice(ksr, v, &c);
-        vp->vibrato_control_counter = cc_save;
-        long c2 = c;
-        resample_voice_right(ksr, v, &c2);
-        if(c2 < c)
-            c = c2;
-        *countptr = c;
-        return sp;
+        if((modes & MODES_LOOPING) && ((modes & MODES_ENVELOPE) || (vp->status == VOICE_ON || vp->status == VOICE_SUSTAINED)))
+        {
+            if(modes & MODES_PINGPONG)
+                return rs_vib_bidir_stereo_combined(ksr, vp, *countptr);
+            else
+                return rs_vib_loop_stereo_combined(ksr, vp, *countptr);
+        }
+        else
+            return rs_vib_plain_stereo_combined(ksr, vp, countptr);
     }
     else
     {
-        long c = *countptr;
-        sample_t *sp = resample_voice(ksr, v, &c);
-        long c2 = c;
-        resample_voice_right(ksr, v, &c2);
-        if(c2 < c)
-            c = c2;
-        *countptr = c;
-        return sp;
+        if((modes & MODES_LOOPING) && ((modes & MODES_ENVELOPE) || (vp->status == VOICE_ON || vp->status == VOICE_SUSTAINED)))
+        {
+            if(modes & MODES_PINGPONG)
+                return rs_bidir_stereo_combined(ksr, vp, *countptr);
+            else
+                return rs_loop_stereo_combined(ksr, vp, *countptr);
+        }
+        else
+            return rs_plain_stereo_combined(ksr, vp, countptr);
     }
 }
 

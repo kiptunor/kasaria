@@ -145,7 +145,7 @@ void recompute_freq(Kasaria *ksr, int v)
         pb   = ksr->channel[ksr->voice[v].channel].pitchbend;
     f64 a;
 
-    if(!ksr->voice[v].sample->sample_rate)
+    if(!ksr->voice[v].sample->sample_rate && !ksr->voice[v].sample_right)
         return;
 
     if(ksr->voice[v].vibrato_control_ratio)
@@ -192,15 +192,26 @@ void recompute_freq(Kasaria *ksr, int v)
         }
     }
 
-    a = FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
+    //a = FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
+
+    if(ksr->voice[v].sample->sample_rate)
+        a = FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
+    else
+        a = (1 << FRACTION_BITS); // pre-resampled data plays back one frame per output frame
 
     if(sign)
         a = -a; // need to preserve the loop direction
+
+    f64 base = ksr->voice[v].sample->sample_rate ? FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS) : (f64)(1 << FRACTION_BITS);
+    
+    a = sign ? -base : base; // need to preserve the loop direction
+
 
     ksr->voice[v].sample_increment = (long)(a);
 
     if(ksr->voice[v].sample_right)
     {
+        /*
         int signr = (ksr->voice[v].sample_increment_right < 0);
         f64 ar = FSCALE(((f64)(ksr->voice[v].sample_right->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample_right->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
         if(signr)
@@ -209,6 +220,27 @@ void recompute_freq(Kasaria *ksr, int v)
             ar = -ar;
         else if(ksr->voice[v].sample_increment > 0 && ar < 0)
             ar = -ar;
+        ksr->voice[v].sample_increment_right = (long)(ar);
+        */
+        int signr = (ksr->voice[v].sample_increment_right < 0);
+        f64 ar;
+        
+        if(ksr->voice[v].sample_right->sample_rate)
+        {
+            if(ksr->voice[v].sample->sample_rate)
+                ar = base * ((f64)(ksr->voice[v].sample_right->sample_rate) /
+                             (f64)(ksr->voice[v].sample->sample_rate));
+            else
+                ar = FSCALE(((f64)(ksr->voice[v].sample_right->sample_rate) * (f64)(ksr->voice[v].frequency)) /
+                            ((f64)(ksr->voice[v].sample_right->root_freq) * (f64)(ksr->play_mode.rate)),
+                            FRACTION_BITS);
+        }
+        else
+            ar = (f64)(1 << FRACTION_BITS); // pre-resampled
+
+        if(signr || sign)
+            ar = -ar;
+
         ksr->voice[v].sample_increment_right = (long)(ar);
     }
 }
@@ -219,7 +251,9 @@ void recompute_amp(Kasaria *ksr, int v)
     long expr = ksr->channel[ksr->voice[v].channel].expression;
     long vel = ksr->voice[v].velocity;
 
-    f64 vel_scaled = vel ? vol_table[vel] * 127.0 : 0.0;
+    //f64 vel_scaled = vel ? vol_table[vel] * 127.0 : 0.0;
+    //f64 vel_scaled = vel ? pow(vol_table[vel], 1.40) * 127.0 : 0.0;
+    f64 vel_scaled = vel ? pow(vol_table[vel] / vol_table[127], 1.15) * 127.0 : 0.0;
     f64 vol_scaled = vol ? vol_table[vol] * 127.0 : 0.0;
     f64 expr_scaled = expr ? vol_table[expr] * 127.0 : 0.0;
     f64 tempamp = vel_scaled * vol_scaled * expr_scaled;
@@ -402,6 +436,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     // SF2 stereo support: mix both samples into a single voice
     if(!ISDRUMCHANNEL(ksr, e->channel) && ip && ip->samples > 1)
     {
+        /*
         Sample *primary = ksr->voice[i].sample;
         int     si;
         for(si = 0; si < ip->samples; si++)
@@ -424,7 +459,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             else if(candidate->sample_type == SF_SAMPLETYPE_LEFT && primary->sample_type == SF_SAMPLETYPE_RIGHT &&
                     candidate->sf_sample_index == primary->sf_sample_link)
             {
-                /* put left as right buffer and keep primary as left? easier to swap conceptually by just attaching */
+                // put left as right buffer and keep primary as left? easier to swap conceptually by just attaching
                 ksr->voice[i].sample_right = candidate;
                 ksr->voice[i].sample_offset_right = 0;
                 ksr->voice[i].sample_increment_right = 0;
@@ -486,19 +521,87 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                 }
             }
         }
+        */
+
+        Sample *primary = ksr->voice[i].sample;
+                Sample *left    = NULL;
+                Sample *right   = NULL;
+                int     si;
+        
+                if(primary->sample_type & SF_SAMPLETYPE_LEFT)
+                    left = primary;
+                else if(primary->sample_type & SF_SAMPLETYPE_RIGHT)
+                    right = primary;
+        
+                if(left || right)
+                {
+                    Sample *best       = NULL;
+                    long    best_score = -1;
+        
+                    for(si = 0; si < ip->samples; si++)
+                    {
+                        Sample *candidate = &ip->sample[si];
+                        long    score;
+        
+                        if(candidate == primary)
+                            continue;
+        
+                        if(left && !(candidate->sample_type & SF_SAMPLETYPE_RIGHT))
+                            continue;
+                        if(right && !(candidate->sample_type & SF_SAMPLETYPE_LEFT))
+                            continue;
+        
+                        if(left && left->sf_sample_link == candidate->sf_sample_index)
+                            score = 0;
+                        else if(right && right->sf_sample_link == candidate->sf_sample_index)
+                            score = 0;
+                        else
+                        {
+                            score = 1000000;
+        
+                            if(candidate->low_key != primary->low_key || candidate->high_key != primary->high_key)
+                                score += 100000;
+                            if(candidate->low_vel != primary->low_vel || candidate->high_vel != primary->high_vel)
+                                score += 10000;
+        
+                            score += labs((long)candidate->data_length - (long)primary->data_length) >> 8;
+        
+                            if(candidate->root_key != primary->root_key)
+                                score += 1000;
+                        }
+        
+                        if(best == NULL || score < best_score)
+                        {
+                            best       = candidate;
+                            best_score = score;
+                        }
+                    }
+        
+                    // Require a plausible match.  A structural match with a wildly
+                    // different length is almost certainly a different layer.
+                    if(best && (best_score < 1000000 ||
+                                labs((long)best->data_length - (long)primary->data_length) < (primary->data_length / 2)))
+                    {
+                        if(left)
+                            right = best;
+                        else
+                            left = best;
+        
+                        ksr->voice[i].sample                  = left;
+                        ksr->voice[i].sample_right            = right;
+                        ksr->voice[i].sample_offset           = 0;
+                        ksr->voice[i].sample_increment        = 0;
+                        ksr->voice[i].sample_offset_right     = 0;
+                        ksr->voice[i].sample_increment_right  = 0;
+                        recompute_freq(ksr, i);
+                        recompute_amp(ksr, i);
+                        stereo_partner = right;
+                    }
+                }
     }
 
     // ==== REPORTED INSTRUMENT LAYER BLOCK (test) ====
-#ifdef KSR_LAYER_BLOCK
-    if(getenv("KSR_DEBUG_LAYERS"))
-    {
-        fprintf(stderr, "[primary] key=%d vel=%d ip=%p samples=%d idx=%d root=%ld sr=%ld root_key=%d orig_f=%ld inc=%ld\n",
-                e->key, e->vel, (void*)ip, ip ? ip->samples : -1,
-                (int)(ksr->voice[i].sample - ip->sample),
-                ksr->voice[i].sample->root_freq, ksr->voice[i].sample->sample_rate,
-                (int)ksr->voice[i].sample->root_key,
-                ksr->voice[i].orig_frequency, ksr->voice[i].sample_increment);
-    }
+//#ifdef KSR_LAYER_BLOCK
 
     for(int li = 0; li < ip->samples; li++)
     {
@@ -564,14 +667,6 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             recompute_freq(ksr, layer_v);
             recompute_amp(ksr, layer_v);
 
-            if(getenv("KSR_DEBUG_LAYERS"))
-            {
-                fprintf(stderr, "  [layer] li=%d keyrange=%d..%d velrange=%d..%d root=%ld sr=%ld root_key=%d orig_f=%ld inc=%ld\n",
-                        li, layer->low_key, layer->high_key, (int)layer->low_vel, (int)layer->high_vel,
-                        layer->root_freq, layer->sample_rate, (int)layer->root_key,
-                        ksr->voice[layer_v].orig_frequency, ksr->voice[layer_v].sample_increment);
-            }
-
             if(layer->modes & MODES_ENVELOPE)
             {
                 ksr->voice[layer_v].envelope_stage  = 0;
@@ -587,7 +682,6 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             }
         }
     }
-#endif
 }
 
 static void invalidate_press_for_voice(Kasaria *ksr, int vi)
