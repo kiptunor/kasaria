@@ -179,8 +179,11 @@ static bool remap_voice(Kasaria *ksr, int v)
     Voice *vp = &ksr->voice[v];
     int ch = vp->channel;
 
-    if(ksr->voice_by_channel_note[ch][vp->note][1] == vp)
-        return false; // stereo partner voice: let the primary drive it
+    // if(ksr->voice_by_channel_note[ch][vp->note][1] == vp)
+    //     return false; // stereo partner voice: let the primary drive it
+
+    if(ksr->voice_by_channel_note[ch][vp->note][1] == vp && !vp->sample_right)
+        return false;
 
     if(ISDRUMCHANNEL(ksr, ch))
     {

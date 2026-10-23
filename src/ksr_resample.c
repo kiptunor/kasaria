@@ -52,35 +52,50 @@ resample.c
 
 
 
-#define KSR_USE_RESAMPLE_SIMD 1 // Makes efficiency worse for some reason idk
-
-
-
+/* Vectorised resampling of the "play sample until it ends" / "play sample
+ * until the loop wraps" inner loops.
+ *
+ * The AVX2 kernel replaces eight scalar RESAMPLATION steps with a single
+ * gather + interpolation.  It is only used where it can produce bit-identical
+ * results (see rs_block_ok()), and it always falls back to the scalar code for
+ * the tail of a block, so the number of produced samples - and therefore the
+ * *countptr bookkeeping of resample_voice() - stays exactly the same.
+ *
+ * Define KSR_USE_RESAMPLE_SIMD to 0 to build the plain scalar version. */
+#ifndef KSR_USE_RESAMPLE_SIMD
+#define KSR_USE_RESAMPLE_SIMD 1
+#endif
 
 #if defined(__AVX2__) && defined(LINEAR_INTERPOLATION) && !defined(LOOKUP_HACK) && KSR_USE_RESAMPLE_SIMD
 #define KSR_RESAMPLE_SIMD 1
 #include <immintrin.h>
 #define RESAMPLE_BLOCK 8
 
-// True if the next 8-sample block stays fully below lim (fixed-point).
-#define KSR_RS_BLOCK_FITS_UP(ofs, incr, lim) \
-    (((((ofs) + (RESAMPLE_BLOCK - 1) * (incr)) >> FRACTION_BITS) + 1) < ((lim) >> FRACTION_BITS))
-
-// True if the next 8-sample block (incr < 0) stays inside [ls, le).
-#define KSR_RS_BLOCK_FITS_DOWN(ofs, incr, ls, le) \
-    (((((ofs) + (RESAMPLE_BLOCK - 1) * (incr)) >> FRACTION_BITS) >= ((ls) >> FRACTION_BITS)) && \
-     ((((ofs) >> FRACTION_BITS) + 1) < ((le) >> FRACTION_BITS)))
+/* The AVX2 kernel works on 32-bit lanes, so the fixed-point sample position is
+ * split into an integer sample index plus a FRACTION_BITS wide fraction.  The
+ * old formulation ("ofs + k*incr" truncated to int) silently wrapped for
+ * samples longer than 2^31 fixed-point units, which is only ~12 s of audio at
+ * 44.1 kHz - quite common in soundfonts. */
+#define KSR_RS_MAX_INCR  (1L << 27)  /* 7*incr has to stay inside an int32 lane  */
+#define KSR_RS_MAX_IDX   0x7F000000L /* sample index has to stay inside an int32   */
+#define KSR_RS_MIN_IDX   (-0x7F000000L)
 
     /* Linear-interpolate 8 samples at fixed-point ofs stepping by incr.
-       Gather reads src[idx], src[idx+1]; the caller's guard keeps it in-bounds. */
-static inline long rs_block8(long ofs, long incr, const sample_t *__restrict src, sample_t *__restrict dest)
+       The gather reads src[idx], src[idx+1]; rs_block_ok() keeps it in-bounds.
+       The result is bit-identical to the scalar RESAMPLATION macro. */
+static inline void rs_block8(long ofs, long incr, const sample_t *__restrict src, sample_t *__restrict dest)
 {
-    __m256i o = _mm256_setr_epi32((int)(ofs), (int)(ofs + incr), (int)(ofs + 2 * incr),
-                                  (int)(ofs + 3 * incr), (int)(ofs + 4 * incr),
-                                  (int)(ofs + 5 * incr), (int)(ofs + 6 * incr),
-                                  (int)(ofs + 7 * incr));
-    __m256i idx  = _mm256_srli_epi32(o, FRACTION_BITS);
-    __m256i frac = _mm256_and_si256(o, _mm256_set1_epi32((int)FRACTION_MASK));
+    long      base = ofs >> FRACTION_BITS;
+    int32_t   lo   = (int32_t)(ofs & FRACTION_MASK);
+    int32_t   inc  = (int32_t)incr;
+
+    __m256i   kv   = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
+    /* t = lo + k*incr; q = t / 4096 (floor), frac = t % 4096 */
+    __m256i   t    = _mm256_add_epi32(_mm256_set1_epi32(lo),
+                                      _mm256_mullo_epi32(kv, _mm256_set1_epi32(inc)));
+    __m256i   q    = _mm256_srai_epi32(t, FRACTION_BITS);
+    __m256i   frac = _mm256_and_si256(t, _mm256_set1_epi32((int)FRACTION_MASK));
+    __m256i   idx  = _mm256_add_epi32(_mm256_set1_epi32((int32_t)base), q);
 
     // 4-byte gather at src + idx*2 reads shorts [idx] and [idx+1]
     __m256i g  = _mm256_i32gather_epi32((const int *)src, idx, 2);
@@ -93,8 +108,43 @@ static inline long rs_block8(long ofs, long incr, const sample_t *__restrict src
     _mm_storeu_si128((__m128i *)dest,
                      _mm_packs_epi32(_mm256_castsi256_si128(d),
                                      _mm256_extracti128_si256(d, 1)));
+}
 
-    return ofs + 8 * incr;
+/* Can the next RESAMPLE_BLOCK output samples be produced by rs_block8()?
+ *
+ *   lim      - fixed-point position where the sample/loop ends; the block must
+ *              stay strictly before it, otherwise the voice would end (or the
+ *              loop would wrap) in the middle of the block and the scalar
+ *              tail below would no longer see a valid position.
+ *   data_len - fixed-point length of the whole sample data; the 32-bit gather
+ *              reads src[idx] *and* src[idx+1], so both shorts must be inside
+ *              the sample.
+ */
+static inline int rs_block_ok(long ofs, long incr, long lim, long data_len)
+{
+    if(incr <= 0 || incr > KSR_RS_MAX_INCR)
+        return 0;
+
+    if(ofs < 0)
+        return 0;
+
+    /* the voice must not end (or the loop must not wrap) inside the block */
+    if(ofs + (long)RESAMPLE_BLOCK * incr >= lim)
+        return 0;
+
+    /* 32-bit index arithmetic */
+    long base = ofs >> FRACTION_BITS;
+
+    if(base > KSR_RS_MAX_IDX || base < KSR_RS_MIN_IDX)
+        return 0;
+
+    /* keep the 32-bit word read by the gather inside the sample data */
+    long hi = (ofs + (long)(RESAMPLE_BLOCK - 1) * incr) >> FRACTION_BITS;
+
+    if(hi + 1 >= (data_len >> FRACTION_BITS))
+        return 0;
+
+    return 1;
 }
 #else
     #define KSR_RESAMPLE_SIMD 0
@@ -105,14 +155,14 @@ static inline long rs_block8(long ofs, long incr, const sample_t *__restrict src
 
 #ifdef LINEAR_INTERPOLATION
     #if defined(LOOKUP_HACK) && defined(LOOKUP_INTERPOLATION)
-        #define RESAMPLATION \
-            v1      = src[ofs >> FRACTION_BITS]; \
-            v2      = src[(ofs >> FRACTION_BITS) + 1]; \
+        #define RESAMPLATION                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
+            v1      = src[ofs >> FRACTION_BITS];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
+            v2      = src[(ofs >> FRACTION_BITS) + 1];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
             *dest++ = v1 + (ksr->iplookup[(((v2 - v1) << 5) & 0x03FE0) | ((ofs & FRACTION_MASK) >> (FRACTION_BITS - 5))]);
     #else
-        #define RESAMPLATION \
-            v1      = src[ofs >> FRACTION_BITS]; \
-            v2      = src[(ofs >> FRACTION_BITS) + 1]; \
+        #define RESAMPLATION                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \
+            v1      = src[ofs >> FRACTION_BITS];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       \
+            v2      = src[(ofs >> FRACTION_BITS) + 1];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
             *dest++ = v1 + (((v2 - v1) * (ofs & FRACTION_MASK)) >> FRACTION_BITS);
     #endif
     #define INTERPVARS sample_t v1, v2
@@ -122,8 +172,8 @@ static inline long rs_block8(long ofs, long incr, const sample_t *__restrict src
     #define INTERPVARS
 #endif
 
-#define FINALINTERP \
-    if(ofs == le) \
+#define FINALINTERP                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+    if(ofs == le)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
         *dest++ = src[(ofs >> FRACTION_BITS) - 1] / 2;
 // So it isn't interpolation. At least it's final.
 
@@ -178,9 +228,10 @@ static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
         count -= i;
 
 #if KSR_RESAMPLE_SIMD
-    while(i >= RESAMPLE_BLOCK && KSR_RS_BLOCK_FITS_UP(ofs, incr, le))
+    while(i >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, le, le))
     {
-        ofs  = rs_block8(ofs, incr, src, dest);
+        rs_block8(ofs, incr, src, dest);
+        ofs  += (long)RESAMPLE_BLOCK * incr;
         dest += RESAMPLE_BLOCK;
         i    -= RESAMPLE_BLOCK;
     }
@@ -200,6 +251,19 @@ static sample_t *rs_plain(Kasaria *ksr, int v, long *countptr)
     }
 
 #else  // PRECALC_LOOPS
+#if KSR_RESAMPLE_SIMD
+    /* Fast path: eight output samples per AVX2 iteration.  The block is only
+     * used while it stays completely inside the sample data, so the scalar
+     * tail below keeps the exact same *countptr semantics as before. */
+    while(count >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, le, le))
+    {
+        rs_block8(ofs, incr, src, dest);
+        dest  += RESAMPLE_BLOCK;
+        ofs   += (long)RESAMPLE_BLOCK * incr;
+        count -= RESAMPLE_BLOCK;
+    }
+#endif
+
     while(count--)
     {
         RESAMPLATION;
@@ -226,8 +290,9 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
     INTERPVARS;
     long      ofs  = vp->sample_offset;
     long      incr = vp->sample_increment;
+    long      ls   = vp->sample->loop_start;
     long      le   = vp->sample->loop_end;
-    long      ll   = le - vp->sample->loop_start;
+    long      ll   = le - ls;
     sample_t *dest = ksr->resample_buffer;
     sample_t *src  = vp->sample->data;
 
@@ -237,21 +302,46 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
         return dest;
     }
 
+    /* Fold the offset and increment modulo the loop length once, up front.
+     * Wrapped positions are taken modulo ll, so using incr % ll is exact,
+     * yet it lets the per-sample wrap below stay a single subtraction.
+     * (An integer division per sample is far too costly for short loops /
+     * heavily pitch-shifted voices, e.g. layered zones played far from their
+     * root key, and the old ofs -= ll could walk out of the buffer there.) */
+    if(ll > 0)
+    {
+        if(ofs >= le)
+            ofs = ls + ((ofs - le) % ll);
+
+        if(incr >= ll)
+        {
+            incr %= ll;
+            if(incr == 0)
+                incr = ll; /* exact multiple: position does not change */
+        }
+    }
+    else if(ofs >= le)
+    {
+        ofs = ls; /* degenerate/malformed loop guard */
+    }
+
 #ifdef PRECALC_LOOPS
     long i;
 
     while(count)
     {
-        while(ofs >= le)
-            ofs -= ll;
-
-        if(ll > 0 && ofs >= le)
-            ofs = vp->sample->loop_start + ((ofs - le) % ll);
-        else if(ofs >= le)
-            ofs = vp->sample->loop_start;
+        /* ofs is < le at loop top; keep it that way after the inner step. */
+        if(ofs >= le)
+        {
+            if(ll > 0)
+                ofs -= ll;
+            else
+                ofs = ls;
+        }
 
         // Precalc how many times we should go through the loop
         i = (le - ofs) / incr + 1;
+
         if(i > count)
         {
             i     = count;
@@ -261,9 +351,10 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
             count -= i;
 
 #if KSR_RESAMPLE_SIMD
-        while(i >= RESAMPLE_BLOCK && KSR_RS_BLOCK_FITS_UP(ofs, incr, le))
+        while(i >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, le, vp->sample->data_length))
         {
-            ofs  = rs_block8(ofs, incr, src, dest);
+            rs_block8(ofs, incr, src, dest);
+            ofs  += (long)RESAMPLE_BLOCK * incr;
             dest += RESAMPLE_BLOCK;
             i    -= RESAMPLE_BLOCK;
         }
@@ -276,17 +367,30 @@ static sample_t *rs_loop(Kasaria *ksr, Voice *vp, long count)
         }
     }
 #else
+#if KSR_RESAMPLE_SIMD
+    /* Fast path: eight output samples per AVX2 iteration.  The block is only
+     * used while it stays completely inside the loop region, so the scalar
+     * tail below keeps the exact same wrap-around behaviour as before. */
+    while(count >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, le, vp->sample->data_length))
+    {
+        rs_block8(ofs, incr, src, dest);
+        dest  += RESAMPLE_BLOCK;
+        ofs   += (long)RESAMPLE_BLOCK * incr;
+        count -= RESAMPLE_BLOCK;
+    }
+#endif
+
     while(count--)
     {
         RESAMPLATION;
         ofs += incr;
         if(ofs >= le)
         {
-            //ofs -= ll; // Hopefully the loop is longer than an increment.
+            /* incr < ll after the fold above, so one subtraction is enough. */
             if(ll > 0)
-                ofs = vp->sample->loop_start + ((ofs - le) % ll);
+                ofs -= ll;
             else
-                ofs = vp->sample->loop_start;
+                ofs = ls;
         }
     }
 #endif
@@ -326,9 +430,10 @@ static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
 
 #if KSR_RESAMPLE_SIMD
         if(incr > 0)
-            while(i >= RESAMPLE_BLOCK && KSR_RS_BLOCK_FITS_UP(ofs, incr, ls))
+            while(i >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, ls, vp->sample->data_length))
             {
-                ofs  = rs_block8(ofs, incr, src, dest);
+                rs_block8(ofs, incr, src, dest);
+                ofs  += (long)RESAMPLE_BLOCK * incr;
                 dest += RESAMPLE_BLOCK;
                 i    -= RESAMPLE_BLOCK;
             }
@@ -355,20 +460,15 @@ static sample_t *rs_bidir(Kasaria *ksr, Voice *vp, long count)
             count -= i;
 
 #if KSR_RESAMPLE_SIMD
+        /* Only the forward direction is vectorised; the ping-pong turnaround
+         * changes the increment in the middle of the loop, so the backwards
+         * half stays on the scalar path. */
         if(incr > 0)
         {
-            while(i >= RESAMPLE_BLOCK && KSR_RS_BLOCK_FITS_UP(ofs, incr, le))
+            while(i >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, le, vp->sample->data_length))
             {
-                ofs  = rs_block8(ofs, incr, src, dest);
-                dest += RESAMPLE_BLOCK;
-                i    -= RESAMPLE_BLOCK;
-            }
-        }
-        else
-        {
-            while(i >= RESAMPLE_BLOCK && KSR_RS_BLOCK_FITS_DOWN(ofs, incr, ls, le))
-            {
-                ofs  = rs_block8(ofs, incr, src, dest);
+                rs_block8(ofs, incr, src, dest);
+                ofs  += (long)RESAMPLE_BLOCK * incr;
                 dest += RESAMPLE_BLOCK;
                 i    -= RESAMPLE_BLOCK;
             }
@@ -818,6 +918,646 @@ sample_t *resample_voice(Kasaria *ksr, int v, long *countptr)
         }
         else
             return rs_plain(ksr, v, countptr);
+    }
+}
+
+static sample_t *rs_plain_right(Kasaria *ksr, int v, long *countptr)
+{
+    INTERPVARS;
+    Voice    *vp    = &ksr->voice[v];
+    sample_t *dest  = ksr->resample_buffer_right;
+    sample_t *src   = vp->sample_right->data;
+    long      ofs   = vp->sample_offset_right;
+    long      incr  = vp->sample_increment_right;
+    long      le    = vp->sample_right->data_length;
+    long      count = *countptr;
+
+    if(!vp->sample_right || !src)
+    {
+        memset(dest, 0, count * sizeof(sample_t));
+        *countptr = count;
+        return dest;
+    }
+
+    if(ofs < 0 || ofs >= le)
+    {
+        memset(dest, 0, count * sizeof(sample_t));
+        *countptr = count;
+        return dest;
+    }
+
+#ifdef PRECALC_LOOPS
+    long i;
+
+    if(incr < 0)
+        incr = -incr;
+
+    if(incr == 0)
+    {
+        memset(dest, 0, count * sizeof(sample_t));
+        *countptr = count;
+        return dest;
+    }
+
+    i = (le - ofs) / incr + 1;
+
+    if(i > count)
+    {
+        i     = count;
+        count = 0;
+    }
+    else
+        count -= i;
+
+#if KSR_RESAMPLE_SIMD
+    while(i >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, le, le))
+    {
+        rs_block8(ofs, incr, src, dest);
+        ofs  += (long)RESAMPLE_BLOCK * incr;
+        dest += RESAMPLE_BLOCK;
+        i    -= RESAMPLE_BLOCK;
+    }
+#endif
+
+    while(i--)
+    {
+        RESAMPLATION;
+        ofs += incr;
+    }
+
+    if(ofs >= le)
+    {
+        FINALINTERP;
+        *countptr  -= count + 1;
+    }
+
+#else
+#if KSR_RESAMPLE_SIMD
+    while(count >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, le, le))
+    {
+        rs_block8(ofs, incr, src, dest);
+        dest  += RESAMPLE_BLOCK;
+        ofs   += (long)RESAMPLE_BLOCK * incr;
+        count -= RESAMPLE_BLOCK;
+    }
+#endif
+
+    while(count--)
+    {
+        RESAMPLATION;
+        ofs += incr;
+        if(ofs >= le)
+        {
+            FINALINTERP;
+            *countptr  -= count + 1;
+            break;
+        }
+    }
+#endif
+
+    vp->sample_offset_right = ofs;
+    return ksr->resample_buffer_right;
+}
+
+static sample_t *rs_loop_right(Kasaria *ksr, Voice *vp, long count)
+{
+    INTERPVARS;
+    long      ofs  = vp->sample_offset_right;
+    long      incr = vp->sample_increment_right;
+    long      ls   = vp->sample_right->loop_start;
+    long      le   = vp->sample_right->loop_end;
+    long      ll   = le - ls;
+    sample_t *dest = ksr->resample_buffer_right;
+    sample_t *src  = vp->sample_right->data;
+
+    if(!vp->sample_right || !src)
+    {
+        memset(dest, 0, count * sizeof(sample_t));
+        return dest;
+    }
+
+    if(incr == 0)
+    {
+        memset(dest, 0, count * sizeof(sample_t));
+        return dest;
+    }
+
+    if(ll > 0)
+    {
+        if(ofs >= le)
+            ofs = ls + ((ofs - le) % ll);
+
+        if(incr >= ll)
+        {
+            incr %= ll;
+            if(incr == 0)
+                incr = ll;
+        }
+    }
+    else if(ofs >= le)
+    {
+        ofs = ls;
+    }
+
+#ifdef PRECALC_LOOPS
+    long i;
+
+    while(count)
+    {
+        if(ofs >= le)
+        {
+            if(ll > 0)
+                ofs -= ll;
+            else
+                ofs = ls;
+        }
+
+        i = (le - ofs) / incr + 1;
+
+        if(i > count)
+        {
+            i     = count;
+            count = 0;
+        }
+        else
+            count -= i;
+
+#if KSR_RESAMPLE_SIMD
+        while(i >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, le, vp->sample_right->data_length))
+        {
+            rs_block8(ofs, incr, src, dest);
+            ofs  += (long)RESAMPLE_BLOCK * incr;
+            dest += RESAMPLE_BLOCK;
+            i    -= RESAMPLE_BLOCK;
+        }
+#endif
+
+        while(i--)
+        {
+            RESAMPLATION;
+            ofs += incr;
+        }
+    }
+#else
+#if KSR_RESAMPLE_SIMD
+    while(count >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, le, vp->sample_right->data_length))
+    {
+        rs_block8(ofs, incr, src, dest);
+        dest  += RESAMPLE_BLOCK;
+        ofs   += (long)RESAMPLE_BLOCK * incr;
+        count -= RESAMPLE_BLOCK;
+    }
+#endif
+
+    while(count--)
+    {
+        RESAMPLATION;
+        ofs += incr;
+        if(ofs >= le)
+        {
+            if(ll > 0)
+                ofs -= ll;
+            else
+                ofs = ls;
+        }
+    }
+#endif
+
+    vp->sample_offset_right = ofs;
+    vp->sample_increment_right = incr;
+    return ksr->resample_buffer_right;
+}
+
+static sample_t *rs_bidir_right(Kasaria *ksr, Voice *vp, long count)
+{
+    INTERPVARS;
+    long      ofs  = vp->sample_offset_right;
+    long      incr = vp->sample_increment_right;
+    long      le   = vp->sample_right->loop_end;
+    long      ls   = vp->sample_right->loop_start;
+    sample_t *dest = ksr->resample_buffer_right, *src = vp->sample_right->data;
+
+    if(!vp->sample_right || !src)
+    {
+        memset(dest, 0, count * sizeof(sample_t));
+        return dest;
+    }
+
+#ifdef PRECALC_LOOPS
+    long le2 = le << 1, ls2 = ls << 1, i;
+
+    if(ofs <= ls)
+    {
+        i = (ls - ofs) / incr + 1;
+        if(i > count)
+        {
+            i     = count;
+            count = 0;
+        }
+        else
+            count -= i;
+
+#if KSR_RESAMPLE_SIMD
+        if(incr > 0)
+            while(i >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, ls, vp->sample_right->data_length))
+            {
+                rs_block8(ofs, incr, src, dest);
+                ofs  += (long)RESAMPLE_BLOCK * incr;
+                dest += RESAMPLE_BLOCK;
+                i    -= RESAMPLE_BLOCK;
+            }
+#endif
+        while(i--)
+        {
+            RESAMPLATION;
+            ofs += incr;
+        }
+    }
+
+    while(count)
+    {
+        i = ((incr > 0 ? le : ls) - ofs) / incr + 1;
+        if(i > count)
+        {
+            i     = count;
+            count = 0;
+        }
+        else
+            count -= i;
+
+#if KSR_RESAMPLE_SIMD
+        if(incr > 0)
+        {
+            while(i >= RESAMPLE_BLOCK && rs_block_ok(ofs, incr, le, vp->sample_right->data_length))
+            {
+                rs_block8(ofs, incr, src, dest);
+                ofs  += (long)RESAMPLE_BLOCK * incr;
+                dest += RESAMPLE_BLOCK;
+                i    -= RESAMPLE_BLOCK;
+            }
+        }
+#endif
+
+        while(i--)
+        {
+            RESAMPLATION;
+            ofs += incr;
+        }
+        if(ofs >= le)
+        {
+            ofs   = le2 - ofs;
+            incr *= -1;
+        }
+        else if(ofs <= ls)
+        {
+            ofs   = ls2 - ofs;
+            incr *= -1;
+        }
+    }
+#else
+    if(ofs < ls)
+    {
+        while(count--)
+        {
+            RESAMPLATION;
+            ofs += incr;
+            if(ofs >= ls)
+                break;
+        }
+    }
+
+    if(count > 0)
+        while(count--)
+        {
+            RESAMPLATION;
+            ofs += incr;
+            if(ofs >= le)
+            {
+                ofs  = le - (ofs - le);
+                incr = -incr;
+            }
+            else if(ofs <= ls)
+            {
+                ofs  = ls + (ls - ofs);
+                incr = -incr;
+            }
+        }
+#endif
+    vp->sample_increment_right = incr;
+    vp->sample_offset_right    = ofs;
+    return ksr->resample_buffer_right;
+}
+
+static sample_t *rs_vib_plain_right(Kasaria *ksr, int v, long *countptr)
+{
+    INTERPVARS;
+    Voice    *vp    = &ksr->voice[v];
+    sample_t *dest  = ksr->resample_buffer_right;
+    sample_t *src   = vp->sample_right->data;
+    long      le    = vp->sample_right->data_length;
+    long      ofs   = vp->sample_offset_right;
+    long      incr  = vp->sample_increment_right;
+    long      count = *countptr;
+    int       cc    = vp->vibrato_control_counter;
+
+    if(!vp->sample_right || !src)
+    {
+        memset(dest, 0, count * sizeof(sample_t));
+        *countptr = count;
+        return dest;
+    }
+
+    if(incr < 0)
+        incr = -incr;
+
+    while(count--)
+    {
+        if(!cc--)
+        {
+            cc   = vp->vibrato_control_ratio;
+            incr = update_vibrato(ksr, vp, 0);
+        }
+        RESAMPLATION;
+        ofs += incr;
+        if(ofs >= le)
+        {
+            FINALINTERP;
+            *countptr  -= count + 1;
+            break;
+        }
+    }
+
+    vp->vibrato_control_counter = cc;
+    vp->sample_increment_right  = incr;
+    vp->sample_offset_right     = ofs;
+    return ksr->resample_buffer_right;
+}
+
+static sample_t *rs_vib_loop_right(Kasaria *ksr, Voice *vp, long count)
+{
+    INTERPVARS;
+    long      ofs  = vp->sample_offset_right;
+    long      incr = vp->sample_increment_right;
+    long      le   = vp->sample_right->loop_end;
+    long      ll   = le - vp->sample_right->loop_start;
+    sample_t *dest = ksr->resample_buffer_right;
+    sample_t *src  = vp->sample_right->data;
+    int       cc   = vp->vibrato_control_counter;
+
+    if(!vp->sample_right || !src)
+    {
+        memset(dest, 0, count * sizeof(sample_t));
+        return dest;
+    }
+
+#ifdef PRECALC_LOOPS
+    long i;
+    int  vibflag = 0;
+
+    while(count)
+    {
+        while(ofs >= le)
+            ofs -= ll;
+
+        i = (le - ofs) / incr + 1;
+
+        if(i > count)
+            i = count;
+
+        if(i > cc)
+        {
+            i       = cc;
+            vibflag = 1;
+        }
+        else
+            cc -= i;
+
+        count -= i;
+
+        while(i--)
+        {
+            RESAMPLATION;
+            ofs += incr;
+        }
+        if(vibflag)
+        {
+            cc      = vp->vibrato_control_ratio;
+            incr    = update_vibrato(ksr, vp, 0);
+            vibflag = 0;
+        }
+    }
+#else
+    while(count--)
+    {
+        if(!cc--)
+        {
+            cc   = vp->vibrato_control_ratio;
+            incr = update_vibrato(ksr, vp, 0);
+        }
+        RESAMPLATION;
+        ofs += incr;
+
+        if(ofs >= le)
+            ofs -= ll;
+    }
+#endif
+
+    vp->vibrato_control_counter = cc;
+    vp->sample_increment_right  = incr;
+    vp->sample_offset_right     = ofs;
+    return ksr->resample_buffer_right;
+}
+
+static sample_t *rs_vib_bidir_right(Kasaria *ksr, Voice *vp, long count)
+{
+    INTERPVARS;
+    long      ofs  = vp->sample_offset_right;
+    long      incr = vp->sample_increment_right;
+    long      le   = vp->sample_right->loop_end;
+    long      ls   = vp->sample_right->loop_start;
+    sample_t *dest = ksr->resample_buffer_right;
+    sample_t *src  = vp->sample_right->data;
+    int       cc   = vp->vibrato_control_counter;
+
+    if(!vp->sample_right || !src)
+    {
+        memset(dest, 0, count * sizeof(sample_t));
+        return dest;
+    }
+
+#ifdef PRECALC_LOOPS
+    long le2 = le << 1;
+    long ls2 = ls << 1;
+    long i;
+    int  vibflag = 0;
+
+    while(count && (ofs <= ls))
+    {
+        i = (ls - ofs) / incr + 1;
+
+        if(i > count)
+            i = count;
+
+        if(i > cc)
+        {
+            i       = cc;
+            vibflag = 1;
+        }
+        else
+            cc -= i;
+
+        count -= i;
+
+        while(i--)
+        {
+            RESAMPLATION;
+            ofs += incr;
+        }
+        if(vibflag)
+        {
+            cc      = vp->vibrato_control_ratio;
+            incr    = update_vibrato(ksr, vp, 0);
+            vibflag = 0;
+        }
+    }
+
+    while(count)
+    {
+        i = ((incr > 0 ? le : ls) - ofs) / incr + 1;
+        if(i > count)
+            i = count;
+
+        if(i > cc)
+        {
+            i       = cc;
+            vibflag = 1;
+        }
+        else
+            cc -= i;
+
+        count -= i;
+
+        while(i--)
+        {
+            RESAMPLATION;
+            ofs += incr;
+        }
+        if(vibflag)
+        {
+            cc      = vp->vibrato_control_ratio;
+            incr    = update_vibrato(ksr, vp, (incr < 0));
+            vibflag = 0;
+        }
+        if(ofs >= le)
+        {
+            ofs   = le2 - ofs;
+            incr *= -1;
+        }
+        else if(ofs <= ls)
+        {
+            ofs   = ls2 - ofs;
+            incr *= -1;
+        }
+    }
+#else
+    if(ofs < ls)
+    {
+        while(count--)
+        {
+            if(!cc--)
+            {
+                cc   = vp->vibrato_control_ratio;
+                incr = update_vibrato(ksr, vp, 0);
+            }
+            RESAMPLATION;
+            ofs += incr;
+            if(ofs >= ls)
+                break;
+        }
+    }
+
+    if(count > 0)
+        while(count--)
+        {
+            if(!cc--)
+            {
+                cc   = vp->vibrato_control_ratio;
+                incr = update_vibrato(ksr, vp, (incr < 0));
+            }
+            RESAMPLATION;
+            ofs += incr;
+            if(ofs >= le)
+            {
+                ofs  = le - (ofs - le);
+                incr = -incr;
+            }
+            else if(ofs <= ls)
+            {
+                ofs  = ls + (ls - ofs);
+                incr = -incr;
+            }
+        }
+#endif
+
+    vp->vibrato_control_counter = cc;
+    vp->sample_increment_right  = incr;
+    vp->sample_offset_right     = ofs;
+    return ksr->resample_buffer_right;
+}
+
+sample_t *resample_voice_right(Kasaria *ksr, int v, long *countptr)
+{
+    long   ofs;
+    u_char modes;
+    Voice *vp = &ksr->voice[v];
+
+    if(!vp->sample_right)
+    {
+        memset(ksr->resample_buffer_right, 0, *countptr * sizeof(sample_t));
+        return ksr->resample_buffer_right;
+    }
+
+    if(!(vp->sample_right->sample_rate))
+    {
+        ofs = vp->sample_offset_right >> FRACTION_BITS;
+
+        if(*countptr >= (vp->sample_right->data_length >> FRACTION_BITS) - ofs)
+        {
+            *countptr  = (vp->sample_right->data_length >> FRACTION_BITS) - ofs;
+            if(*countptr < 0)
+                *countptr = 0;
+        }
+        else
+            vp->sample_offset_right += *countptr << FRACTION_BITS;
+
+        return vp->sample_right->data + ofs;
+    }
+
+    modes = vp->sample_right->modes;
+
+    if(vp->vibrato_control_ratio)
+    {
+        if((modes & MODES_LOOPING) && ((modes & MODES_ENVELOPE) || (vp->status == VOICE_ON || vp->status == VOICE_SUSTAINED)))
+        {
+            if(modes & MODES_PINGPONG)
+                return rs_vib_bidir_right(ksr, vp, *countptr);
+            else
+                return rs_vib_loop_right(ksr, vp, *countptr);
+        }
+        else
+            return rs_vib_plain_right(ksr, v, countptr);
+    }
+    else
+    {
+        if((modes & MODES_LOOPING) && ((modes & MODES_ENVELOPE) || (vp->status == VOICE_ON || vp->status == VOICE_SUSTAINED)))
+        {
+            if(modes & MODES_PINGPONG)
+                return rs_bidir_right(ksr, vp, *countptr);
+            else
+                return rs_loop_right(ksr, vp, *countptr);
+        }
+        else
+            return rs_plain_right(ksr, v, countptr);
     }
 }
 

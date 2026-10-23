@@ -25,6 +25,7 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 #include <string.h>
+#include <stdlib.h>
 
 #include <stdint.h>
 #include <time.h>
@@ -177,14 +178,18 @@ void recompute_freq(Kasaria *ksr, int v)
             ksr->voice[v].frequency = (long)((f64)(ksr->voice[v].orig_frequency) / ksr->channel[ksr->voice[v].channel].pitchfactor);
     }
 
-    int ct = ksr->channel[ksr->voice[v].channel].coarse_tune;
-    if(ct != 64)
+    // Apply channel coarse tuning (RPN 0x0002). bend_coarse[n] == 2^(n/12),
+    // so whole-semitone offsets don't even need a pow().
     {
-        int st = ct - 64; // semitone offset, -64..+63
-        if(st > 0)
-            ksr->voice[v].frequency = (long)((f64)(ksr->voice[v].frequency) * bend_coarse[st]);
-        else
-            ksr->voice[v].frequency = (long)((f64)(ksr->voice[v].frequency) / bend_coarse[-st]);
+        int ct = ksr->channel[ksr->voice[v].channel].coarse_tune;
+        if(ct != 64)
+        {
+            int st = ct - 64; // semitone offset, -64..+63
+            if(st > 0)
+                ksr->voice[v].frequency = (long)((f64)(ksr->voice[v].frequency) * bend_coarse[st]);
+            else
+                ksr->voice[v].frequency = (long)((f64)(ksr->voice[v].frequency) / bend_coarse[-st]);
+        }
     }
 
     a = FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
@@ -193,6 +198,15 @@ void recompute_freq(Kasaria *ksr, int v)
         a = -a; // need to preserve the loop direction
 
     ksr->voice[v].sample_increment = (long)(a);
+
+    if(ksr->voice[v].sample_right)
+    {
+        int signr = (ksr->voice[v].sample_increment_right < 0);
+        f64 ar = FSCALE(((f64)(ksr->voice[v].sample_right->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample_right->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
+        if(signr)
+            ar = -ar;
+        ksr->voice[v].sample_increment_right = (long)(ar);
+    }
 }
 
 void recompute_amp(Kasaria *ksr, int v)
@@ -248,7 +262,6 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     Instrument *ip;
     int         j;
     Sample     *stereo_partner = NULL;
-    ToneBankElement *te = NULL;
 
     if(ISDRUMCHANNEL(ksr, e->channel))
     {
@@ -282,7 +295,6 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         if(!best)
             return;
         ksr->voice[i].sample = best;
-        te = &db->tone[e->key];
             
         if(ksr->voice[i].sample->note_to_use)
             ksr->voice[i].orig_frequency = freq_table[(int)(ksr->voice[i].sample->note_to_use)];
@@ -318,7 +330,6 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                 if(!IS_VALID_INSTRUMENT(ip))
                     return;
             }
-            te = &tb->tone[ksr->channel[e->channel].program];
         }
 
         if(!ip)
@@ -341,10 +352,12 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     ksr->voice[i].channel                           = e->channel;
     ksr->voice[i].note                              = e->key;
     ksr->voice[i].velocity                          = e->vel;
-    ksr->voice[i].chorus_send                       = te ? te->chorus_send : DEFALT_CHORUS_SEND;
     ksr->voice_by_channel_note[e->channel][e->key][0] = &ksr->voice[i];
     ksr->voice[i].sample_offset                     = 0;
     ksr->voice[i].sample_increment                  = 0;
+    ksr->voice[i].sample_right                      = NULL;
+    ksr->voice[i].sample_offset_right               = 0;
+    ksr->voice[i].sample_increment_right            = 0;
 
     ksr->voice[i].tremolo_phase                     = 0;
     ksr->voice[i].tremolo_phase_increment           = ksr->voice[i].sample->tremolo_phase_increment;
@@ -379,184 +392,165 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         apply_envelope_to_amp(ksr, i);
     }
 
-    // SF2 stereo support: start partner voice for stereo samples
+    // SF2 stereo support: mix both samples into a single voice
     if(!ISDRUMCHANNEL(ksr, e->channel) && ip && ip->samples > 1)
     {
-
-        Sample *primary      = ksr->voice[i].sample;
-        u16     primary_type = primary->sample_type;
-        u16     partner_type = 0;
-        
-        if(primary_type == SF_SAMPLETYPE_LEFT)
-            partner_type = SF_SAMPLETYPE_RIGHT;
-        else if(primary_type == SF_SAMPLETYPE_RIGHT)
-            partner_type = SF_SAMPLETYPE_LEFT;
-        
-        if(partner_type)
+        Sample *primary = ksr->voice[i].sample;
+        int     si;
+        for(si = 0; si < ip->samples; si++)
         {
-            int si;
+            Sample *candidate = &ip->sample[si];
+            if(candidate == primary)
+                continue;
+    
+            if(candidate->sample_type == SF_SAMPLETYPE_RIGHT && primary->sf_sample_link && candidate->sf_sample_index == primary->sf_sample_link)
+            {
+                ksr->voice[i].sample_right = candidate;
+                ksr->voice[i].sample_offset_right = 0;
+                ksr->voice[i].sample_increment_right = 0;
+                // Copy same modulation/envelope timing setup will be handled by recompute_freq/recompute_amp;
+                // ensure freq/increments match by recomputing
+                recompute_freq(ksr, i);
+                recompute_amp(ksr, i);
+                stereo_partner = candidate;
+                break;
+            }
+            else if(primary->sample_type == SF_SAMPLETYPE_LEFT && candidate->sample_type == SF_SAMPLETYPE_RIGHT && primary->sf_sample_link == candidate->sf_sample_index)
+            {
+                ksr->voice[i].sample_right = candidate;
+                ksr->voice[i].sample_offset_right = 0;
+                ksr->voice[i].sample_increment_right = 0;
+                recompute_freq(ksr, i);
+                recompute_amp(ksr, i);
+                stereo_partner = candidate;
+                break;
+            }
+        }
+
+        // If primary is right and left is linked differently, try to find left
+        if(!ksr->voice[i].sample_right && primary->sample_type == SF_SAMPLETYPE_RIGHT && primary->sf_sample_link)
+        {
             for(si = 0; si < ip->samples; si++)
             {
                 Sample *candidate = &ip->sample[si];
-                bool    linked;
-
-                if(candidate == primary || candidate->sample_type != partner_type)
+                if(candidate == primary)
                     continue;
-
-                // Accept the link in either direction: some fonts only fill in
-                // one side of the pair. 0 means "no link".
-                linked = (primary->sf_sample_link != 0 && candidate->sf_sample_index == primary->sf_sample_link) ||
-                         (candidate->sf_sample_link != 0 &&
-                          candidate->sf_sample_link == primary->sf_sample_index);
-
-                if(!linked)
-                    continue;
-
-                int stereo_v;
-
-                if(ksr->free_voice_count > 0)
+                if(candidate->sample_type == SF_SAMPLETYPE_LEFT && candidate->sf_sample_index == primary->sf_sample_link)
                 {
-                    stereo_v = ksr->free_voice_stack[--ksr->free_voice_count];
-                    channel_voice_add(ksr, e->channel, stereo_v);
-                    ksr->voice[stereo_v].status                     = VOICE_ON;
-                    ksr->voice[stereo_v].channel                    = e->channel;
-                    ksr->voice[stereo_v].note                       = e->key;
-                    ksr->voice[stereo_v].velocity                   = e->vel;
-                    ksr->voice_by_channel_note[e->channel][e->key][1] = &ksr->voice[stereo_v];
-                    ksr->voice[stereo_v].sample                     = candidate;
-                    ksr->voice[stereo_v].sample_offset              = 0;
-                    ksr->voice[stereo_v].sample_increment           = 0;
-                    ksr->voice[stereo_v].orig_frequency             = ksr->voice[i].orig_frequency;
-
-                    ksr->voice[stereo_v].tremolo_phase              = 0;
-                    ksr->voice[stereo_v].tremolo_phase_increment    = candidate->tremolo_phase_increment;
-                    ksr->voice[stereo_v].tremolo_sweep              = candidate->tremolo_sweep_increment;
-                    ksr->voice[stereo_v].tremolo_sweep_position     = 0;
-
-                    ksr->voice[stereo_v].vibrato_sweep              = candidate->vibrato_sweep_increment;
-                    ksr->voice[stereo_v].vibrato_sweep_position     = 0;
-                    ksr->voice[stereo_v].vibrato_control_ratio      = candidate->vibrato_control_ratio;
-                    ksr->voice[stereo_v].vibrato_control_counter    = 0;
-                    ksr->voice[stereo_v].vibrato_phase              = 0;
-                    for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
-                        ksr->voice[stereo_v].vibrato_sample_increment[j] = 0;
-
-                    // Hard-pan each half: LEFT sample -> 0, RIGHT sample -> 127.
-                    ksr->voice[stereo_v].panning =
-                        (partner_type == SF_SAMPLETYPE_LEFT) ? 0 : 127;
-
-                    recompute_freq(ksr, stereo_v);
-                    recompute_amp(ksr, stereo_v);
-
-                    if(candidate->modes & MODES_ENVELOPE)
-                    {
-                        ksr->voice[stereo_v].envelope_stage  = 0;
-                        ksr->voice[stereo_v].envelope_volume = 0;
-                        ksr->voice[stereo_v].control_counter = 0;
-                        recompute_envelope(ksr, stereo_v);
-                        apply_envelope_to_amp(ksr, stereo_v);
-                    }
-                    else
-                    {
-                        ksr->voice[stereo_v].envelope_increment = 0;
-                        apply_envelope_to_amp(ksr, stereo_v);
-                    }
-
-                    // The primary was panned from the channel/sample during
-                    // startup. Now that it is known to be half of a stereo
-                    // pair, hard-pan it too. Only done when a partner was
-                    // found, so fonts with broken links keep their old pan.
-                    ksr->voice[i].panning =
-                        (primary_type == SF_SAMPLETYPE_LEFT) ? 0 : 127;
+                    // swap so primary is treated as left? keep as-is but store right in our new slot - easier: store candidate as right? no, better to find left and right
+                    // try to assign: put left in voice? but we already selected primary; alternatively just set sample_right to candidate and note order
+                    ksr->voice[i].sample_right = candidate;
+                    ksr->voice[i].sample_offset_right = 0;
+                    ksr->voice[i].sample_increment_right = 0;
+                    recompute_freq(ksr, i);
                     recompute_amp(ksr, i);
-                    apply_envelope_to_amp(ksr, i);
-
-                    // FIX 4: Track the stereo partner so layering code can skip it
                     stereo_partner = candidate;
                     break;
                 }
             }
         }
+    }
 
+    // ==== REPORTED INSTRUMENT LAYER BLOCK (test) ====
+#ifdef KSR_LAYER_BLOCK
+    if(getenv("KSR_DEBUG_LAYERS"))
+    {
+        fprintf(stderr, "[primary] key=%d vel=%d ip=%p samples=%d idx=%d root=%ld sr=%ld root_key=%d orig_f=%ld inc=%ld\n",
+                e->key, e->vel, (void*)ip, ip ? ip->samples : -1,
+                (int)(ksr->voice[i].sample - ip->sample),
+                ksr->voice[i].sample->root_freq, ksr->voice[i].sample->sample_rate,
+                (int)ksr->voice[i].sample->root_key,
+                ksr->voice[i].orig_frequency, ksr->voice[i].sample_increment);
+    }
 
-        // Super broken when using Project CF-162.sf2
-        for(int li = 0; li < ip->samples; li++)
+    for(int li = 0; li < ip->samples; li++)
+    {
+        Sample *layer = &ip->sample[li];
+
+        if(layer == ksr->voice[i].sample)
+            continue;
+        if(layer == stereo_partner)
+            continue;
+
+        if(e->key < layer->low_key || e->key > layer->high_key)
+            continue;
+
+        if(e->vel < layer->low_vel || e->vel > layer->high_vel)
+            continue;
+
+        /* Only start a layered voice if we can register it in a trackable
+         * slot (2..7); unregistered voices would never be released and would
+         * leak the voice pool. */
+        int layer_slot = -1;
+        for(int s = 2; s < 8; s++)
         {
-            Sample *layer = &ip->sample[li];
-            
-            if(layer == ksr->voice[i].sample)
-                continue;
-            if(layer == stereo_partner)
-                continue;
-            
-            if(e->key < layer->low_key || e->key > layer->high_key)
-                continue;
-            
-            if(e->vel < layer->low_vel || e->vel > layer->high_vel)
-                continue;
-            
-            if(ksr->free_voice_count > 0)
+            if(ksr->voice_by_channel_note[e->channel][e->key][s] == NULL)
             {
-                int layer_v = ksr->free_voice_stack[--ksr->free_voice_count];
-                
-                for(int s = 0; s < 8; s++)
-                {
-                    if(ksr->voice_by_channel_note[e->channel][e->key][s] == NULL)
-                    {
-                        ksr->voice_by_channel_note[e->channel][e->key][s] = &ksr->voice[layer_v];
-                        break;
-                    }
-                }
-                
-                channel_voice_add(ksr, e->channel, layer_v);
-                ksr->voice[layer_v].status          = VOICE_ON;
-                ksr->voice[layer_v].channel         = e->channel;
-                ksr->voice[layer_v].note            = e->key;
-                ksr->voice[layer_v].velocity        = e->vel;
-                ksr->voice[layer_v].chorus_send     = ksr->voice[i].chorus_send;
-                ksr->voice[layer_v].sample          = layer;
-                ksr->voice[layer_v].sample_offset   = 0;
-                ksr->voice[layer_v].sample_increment = 0;
-                ksr->voice[layer_v].orig_frequency  = ksr->voice[i].orig_frequency;
-                
-                ksr->voice[layer_v].tremolo_phase              = 0;
-                ksr->voice[layer_v].tremolo_phase_increment    = layer->tremolo_phase_increment;
-                ksr->voice[layer_v].tremolo_sweep              = layer->tremolo_sweep_increment;
-                ksr->voice[layer_v].tremolo_sweep_position     = 0;
-                
-                ksr->voice[layer_v].vibrato_sweep              = layer->vibrato_sweep_increment;
-                ksr->voice[layer_v].vibrato_sweep_position     = 0;
-                ksr->voice[layer_v].vibrato_control_ratio      = layer->vibrato_control_ratio;
-                ksr->voice[layer_v].vibrato_control_counter    = 0;
-                ksr->voice[layer_v].vibrato_phase              = 0;
-                for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
-                    ksr->voice[layer_v].vibrato_sample_increment[j] = 0;
-                
-                if(ksr->channel[e->channel].panning != NO_PANNING)
-                    ksr->voice[layer_v].panning = ksr->channel[e->channel].panning;
-                else
-                    ksr->voice[layer_v].panning = layer->panning;
-                
-                recompute_freq(ksr, layer_v);
-                recompute_amp(ksr, layer_v);
-                
-                if(layer->modes & MODES_ENVELOPE)
-                {
-                    ksr->voice[layer_v].envelope_stage  = 0;
-                    ksr->voice[layer_v].envelope_volume = 0;
-                    ksr->voice[layer_v].control_counter = 0;
-                    recompute_envelope(ksr, layer_v);
-                    apply_envelope_to_amp(ksr, layer_v);
-                }
-                else
-                {
-                    ksr->voice[layer_v].envelope_increment = 0;
-                    apply_envelope_to_amp(ksr, layer_v);
-                }
+                layer_slot = s;
+                break;
             }
         }
-        // Not anymore
+
+        if(layer_slot >= 0 && ksr->free_voice_count > 0)
+        {
+            int layer_v = ksr->free_voice_stack[--ksr->free_voice_count];
+            ksr->voice_by_channel_note[e->channel][e->key][layer_slot] = &ksr->voice[layer_v];
+
+            channel_voice_add(ksr, e->channel, layer_v);
+            ksr->voice[layer_v].status          = VOICE_ON;
+            ksr->voice[layer_v].channel         = e->channel;
+            ksr->voice[layer_v].note            = e->key;
+            ksr->voice[layer_v].velocity        = e->vel;
+            ksr->voice[layer_v].sample          = layer;
+            ksr->voice[layer_v].sample_offset   = 0;
+            ksr->voice[layer_v].sample_increment = 0;
+            ksr->voice[layer_v].orig_frequency  = ksr->voice[i].orig_frequency;
+
+            ksr->voice[layer_v].tremolo_phase              = 0;
+            ksr->voice[layer_v].tremolo_phase_increment    = layer->tremolo_phase_increment;
+            ksr->voice[layer_v].tremolo_sweep              = layer->tremolo_sweep_increment;
+            ksr->voice[layer_v].tremolo_sweep_position     = 0;
+
+            ksr->voice[layer_v].vibrato_sweep              = layer->vibrato_sweep_increment;
+            ksr->voice[layer_v].vibrato_sweep_position     = 0;
+            ksr->voice[layer_v].vibrato_control_ratio      = layer->vibrato_control_ratio;
+            ksr->voice[layer_v].vibrato_control_counter    = 0;
+            ksr->voice[layer_v].vibrato_phase              = 0;
+            for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
+                ksr->voice[layer_v].vibrato_sample_increment[j] = 0;
+
+            if(ksr->channel[e->channel].panning != NO_PANNING)
+                ksr->voice[layer_v].panning = ksr->channel[e->channel].panning;
+            else
+                ksr->voice[layer_v].panning = layer->panning;
+
+            recompute_freq(ksr, layer_v);
+            recompute_amp(ksr, layer_v);
+
+            if(getenv("KSR_DEBUG_LAYERS"))
+            {
+                fprintf(stderr, "  [layer] li=%d keyrange=%d..%d velrange=%d..%d root=%ld sr=%ld root_key=%d orig_f=%ld inc=%ld\n",
+                        li, layer->low_key, layer->high_key, (int)layer->low_vel, (int)layer->high_vel,
+                        layer->root_freq, layer->sample_rate, (int)layer->root_key,
+                        ksr->voice[layer_v].orig_frequency, ksr->voice[layer_v].sample_increment);
+            }
+
+            if(layer->modes & MODES_ENVELOPE)
+            {
+                ksr->voice[layer_v].envelope_stage  = 0;
+                ksr->voice[layer_v].envelope_volume = 0;
+                ksr->voice[layer_v].control_counter = 0;
+                recompute_envelope(ksr, layer_v);
+                apply_envelope_to_amp(ksr, layer_v);
+            }
+            else
+            {
+                ksr->voice[layer_v].envelope_increment = 0;
+                apply_envelope_to_amp(ksr, layer_v);
+            }
+        }
     }
+#endif
 }
 
 static void invalidate_press_for_voice(Kasaria *ksr, int vi)
@@ -581,8 +575,17 @@ static void invalidate_press_for_voice(Kasaria *ksr, int vi)
             
             if(p->voice2 == vi)
                 p->voice2 = -1;
-            
-            if(p->voice < 0 && p->voice2 < 0)
+
+            for(int l = 0; l < MAX_NOTE_LAYERS; l++)
+                if(p->layer[l] == vi)
+                    p->layer[l] = -1;
+
+            int any = (p->voice >= 0 || p->voice2 >= 0);
+            for(int l = 0; l < MAX_NOTE_LAYERS; l++)
+                if(p->layer[l] >= 0)
+                    any = 1;
+
+            if(!any)
                 p->active = 0;
         }
     }
@@ -717,7 +720,7 @@ void note_on(Kasaria *ksr, MidiEvent *e)
             if(ring[slot].voice2 >= 0)
                 kill_note(ksr, ring[slot].voice2);
 
-            for(int s = 0; s < MAX_NOTE_PRESSES; s++)
+            for(int s = 0; s < MAX_NOTE_LAYERS; s++)
                 if(ring[slot].layer[s] >= 0)
                     kill_note(ksr, ring[slot].layer[s]);
         }
@@ -726,21 +729,21 @@ void note_on(Kasaria *ksr, MidiEvent *e)
         ring[slot].gen    = ++ksr->note_gen;
         ring[slot].voice  = v;
         ring[slot].voice2 = -1;
-
-        for(int s = 0; s < MAX_NOTE_PRESSES; s++)
+        for(int s = 0; s < MAX_NOTE_LAYERS; s++)
             ring[slot].layer[s] = -1;
         
-        Voice *pv = ksr->voice_by_channel_note[e->channel][e->key][1]; // partner filled by start_note
-        
-        if(pv && pv->channel == e->channel && pv->note == e->key)
-            ring[slot].voice2 = (int)(pv - ksr->voice);
+        ring[slot].voice2 = -1;
 
-        int n = 0;
-        for(int s = 2; s < 8 && n < MAX_NOTE_PRESSES; s++)
+        // Capture the layered voices start_note registered (slots 2..7) so they
+        // can be released/evicted together with this press.
         {
-            Voice *lv = ksr->voice_by_channel_note[e->channel][e->key][s];
-            if(lv && lv->channel == e->channel && lv->note == e->key)
-                ring[slot].layer[n++] = (int)(lv - ksr->voice);
+            int n = 0;
+            for(int s = 2; s < 8 && n < MAX_NOTE_LAYERS; s++)
+            {
+                Voice *lv = ksr->voice_by_channel_note[e->channel][e->key][s];
+                if(lv && lv->channel == e->channel && lv->note == e->key)
+                    ring[slot].layer[n++] = (int)(lv - ksr->voice);
+            }
         }
     }
     else
@@ -853,18 +856,21 @@ void note_off(Kasaria *ksr, MidiEvent *e)
                     finish_note(ksr, p->voice2);
             }
         }
-
-        for(int s = 0; s < MAX_NOTE_PRESSES; s++)
+    
+        // Release this press's layered voices. They are tracked per-press (not
+        // via the shared voice_by_channel_note slots, which a later retrigger
+        // may have overwritten), so overlapping notes release the right ones.
+        for(int s = 0; s < MAX_NOTE_LAYERS; s++)
         {
             int idx = p->layer[s];
             p->layer[s] = -1;
             if(idx < 0)
                 continue;
-         
+
             Voice *v = &ksr->voice[idx];
             if(v->channel != e->channel || v->note != e->key)
                 continue;
-            
+
             if(v->status == VOICE_ON)
             {
                 if(ksr->channel[e->channel].sustain)
@@ -873,11 +879,13 @@ void note_off(Kasaria *ksr, MidiEvent *e)
                     finish_note(ksr, idx);
             }
         }
-    
+
         p->active = 0;
         p->voice  = -1;
         p->voice2 = -1;
-        
+
+        // Drop the shared slot pointers for this key. Any live layered voice is
+        // owned by its press record above, so this is bookkeeping only.
         for(int s = 0; s < 8; s++)
             ksr->voice_by_channel_note[e->channel][e->key][s] = NULL;
     }
@@ -907,7 +915,8 @@ void all_notes_off(Kasaria *ksr, int c)
         {
             for(int s = 0; s < MAX_NOTE_PRESSES; s++)
             {
-                ksr->note_press[c][n][s].layer[s] = -1;
+                for(int l = 0; l < MAX_NOTE_LAYERS; l++)
+                    ksr->note_press[c][n][s].layer[l] = -1;
                 ksr->note_press[c][n][s].active = 0;
                 ksr->note_press[c][n][s].voice  = -1;
                 ksr->note_press[c][n][s].voice2 = -1;
@@ -946,6 +955,8 @@ void all_sounds_off(Kasaria *ksr, int c)
         {
             for(int s = 0; s < MAX_NOTE_PRESSES; s++)
             {
+                for(int l = 0; l < MAX_NOTE_LAYERS; l++)
+                    ksr->note_press[c][n][s].layer[l] = -1;
                 ksr->note_press[c][n][s].active = 0;
                 ksr->note_press[c][n][s].voice  = -1;
                 ksr->note_press[c][n][s].voice2 = -1;
@@ -986,13 +997,6 @@ void adjust_panning(Kasaria *ksr, int c)
     while(i--)
         if((ksr->voice[i].channel == c) && (ksr->voice[i].status == VOICE_ON || ksr->voice[i].status == VOICE_SUSTAINED))
         {
-            u16 st = ksr->voice[i].sample ? ksr->voice[i].sample->sample_type : 0;
-            
-            // Keep stereo-pair halves hard-panned; applying the channel pan
-            // to them would collapse the pair back to mono.
-            if(st == SF_SAMPLETYPE_LEFT || st == SF_SAMPLETYPE_RIGHT)
-                continue;
-                        
             ksr->voice[i].panning = ksr->channel[c].panning;
             recompute_amp(ksr, i);
             apply_envelope_to_amp(ksr, i);
@@ -1031,10 +1035,9 @@ void reset_controllers(Kasaria *ksr, int c)
     ksr->channel[c].mono        = 0;
     ksr->channel[c].pitchbend   = 0x2000;
     ksr->channel[c].pitchfactor = 0; // to be computed
-    ksr->channel[c].coarse_tune = 64;
+    ksr->channel[c].coarse_tune = 64; // RPN 0x0002 center (no tuning offset)
     ksr->channel[c].reverb      = 40;
     ksr->channel[c].chorus      = 0;
-    ksr->voice[c].chorus_send = DEFALT_CHORUS_SEND;
 }
 
 void reset_midi(Kasaria *ksr)

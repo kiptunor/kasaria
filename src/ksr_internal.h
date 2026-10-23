@@ -346,6 +346,7 @@ enum {
 
 #define MAX_ELEMENT 8
 #define HPF_PARAM_NUM 3
+#define MAX_NOTE_LAYERS  6
 
 // Voice status options:
 #define VOICE_FREE            0
@@ -716,10 +717,13 @@ typedef struct
     u_char           note;
     u_char           velocity;
     Sample          *sample;
+    Sample          *sample_right;
     long             orig_frequency;
     long             frequency;
     long             sample_offset;
     long             sample_increment;
+    long             sample_offset_right;
+    long             sample_increment_right;
     long             envelope_volume;
     long             envelope_target;
     long             envelope_increment;
@@ -861,6 +865,13 @@ struct Kasaria
     f32      common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
     f32     *buffer_pointer;
 
+    #ifdef LOOKUP_HACK
+        long *mixup;
+    #ifdef LOOKUP_INTERPOLATION
+        char *iplookup;
+    #endif
+    #endif
+
     
     // ==============[Channel FX]==============
     
@@ -920,6 +931,7 @@ struct Kasaria
     long     sample_increment;
     long     sample_correction;
     sample_t resample_buffer[AUDIO_BUFFER_SIZE];
+    sample_t resample_buffer_right[AUDIO_BUFFER_SIZE];
 #ifdef LOOKUP_HACK
     long *mixup;
 #ifdef LOOKUP_INTERPOLATION
@@ -1053,6 +1065,7 @@ void compute_sample_increment(Kasaria *ksr, long tempo, long divisions);
 
 // ------------- Resampling functions (ksr_resample.c) -------------
 sample_t   *resample_voice(Kasaria *tm, int v, long *countptr);
+sample_t   *resample_voice_right(Kasaria *tm, int v, long *countptr);
 void        pre_resample(Kasaria *tm, Sample *sp);
 
 
