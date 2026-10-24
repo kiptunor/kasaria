@@ -412,9 +412,7 @@ static void mix_mystery_signal(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int c
 
             cc = 0;
             if(sp_r && n == 0)
-            {
-                n = count - (vp->control_counter >= 0 ? 0 : 0); /* not used */
-            }
+                n = count - (vp->control_counter >= 0 ? 0 : 0); // not used
         }
     }
 }
@@ -606,6 +604,7 @@ static void mix_mystery(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
     final_volume_t left  = vp->left_mix;
     final_volume_t right = vp->right_mix;
     sample_t *sp_r = NULL;
+    
     if(vp->sample_right)
         sp_r = ksr->resample_buffer_right;
     
@@ -679,8 +678,8 @@ static void mix_single(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
     while(count >= MIX_BLOCK && (ksr->common_buffer + AUDIO_BUFFER_SIZE * 2 - lp) >= 2 * MIX_BLOCK)
     {
         mix_single_block(lp, sp, left);
-        sp += MIX_BLOCK;
-        lp += 2 * MIX_BLOCK;
+        sp    += MIX_BLOCK;
+        lp    += 2 * MIX_BLOCK;
         count -= MIX_BLOCK;
     }
 #endif
@@ -700,8 +699,8 @@ static void mix_mono(Kasaria *ksr, sample_t *sp, f32 *lp, int v, int count)
     while(count >= MIX_BLOCK)
     {
         mix_mono_block(lp, sp, left);
-        sp += MIX_BLOCK;
-        lp += MIX_BLOCK;
+        sp    += MIX_BLOCK;
+        lp    += MIX_BLOCK;
         count -= MIX_BLOCK;
     }
 #endif
@@ -728,6 +727,7 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
 
     left       = vp->left_mix;
     li         = -(left / c);
+    
     if(!li)
         li = -1;
 
@@ -736,11 +736,11 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
         if(vp->panned == PANNED_MYSTERY || vp->sample_right)
         {
             if(vp->sample_right)
-            {
                 sp_r = ksr->resample_buffer_right;
-            }
+            
             right = vp->right_mix;
             ri    = -(right / c);
+            
             while(c--)
             {
                 left += li;
@@ -771,6 +771,7 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
             while(c--)
             {
                 left += li;
+                
                 if(left < 0)
                     return;
 
@@ -785,6 +786,7 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
             while(c--)
             {
                 left += li;
+                
                 if(left < 0)
                     return;
                 s = *sp++;
@@ -798,6 +800,7 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
             while(c--)
             {
                 left += li;
+                
                 if(left < 0)
                     return;
 
@@ -814,6 +817,7 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
         while(c--)
         {
             left += li;
+            
             if(left < 0)
                 return;
 
@@ -826,28 +830,25 @@ static void ramp_out(Kasaria *ksr, sample_t *sp, f32 *lp, int v, long c)
 
 static void mix_reverb_send(Kasaria *ksr, sample_t *sp, long *lp, int v, int count)
 {
-    Voice *vp = ksr->voice + v;
+    Voice *vp           = ksr->voice + v;
     long channel_reverb = ksr->channel[vp->channel].reverb;
     final_volume_t gain;
     sample_t s;
-    if (channel_reverb <= 0 || count <= 0)
-    {
+    
+    if(channel_reverb <= 0 || count <= 0)
         return;
-    }
-    if (vp->panned == PANNED_MYSTERY)
-    {
+    
+    if(vp->panned == PANNED_MYSTERY)
         gain = (vp->left_mix + vp->right_mix) / 2;
-    }
     else
-    {
         gain = vp->left_mix;
-    }
+    
     gain = (gain * channel_reverb) / 127;
-    if (!gain)
-    {
+    
+    if(!gain)
         return;
-    }
-    while (count--)
+    
+    while(count--)
     {
         s = *sp++;
         MIXIONL(gain);
