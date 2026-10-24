@@ -45,7 +45,7 @@ playmidi.c -- random stuff in need of rearrangement
 void reset_voices(Kasaria *ksr)
 {
     log_debug("Reset voices");
-
+/*
     ksr->steal_scan = 0;
    
     for(int i = 0; i < MAX_VOICES; i++)    // ← MAX_VOICES, not ksr->voices
@@ -60,6 +60,23 @@ void reset_voices(Kasaria *ksr)
     memset(ksr->channel_voice_count, 0, sizeof(ksr->channel_voice_count));
     memset(ksr->voice_by_channel_note, 0, sizeof(ksr->voice_by_channel_note));
     memset(ksr->note_press, 0, sizeof(ksr->note_press));
+    ksr->note_gen = 0;
+    */
+
+    ksr->steal_scan = 0;
+
+    for(int i = 0; i < ksr->voices; i++)
+    {
+        ksr->voice[i].status = VOICE_FREE;
+        ksr->free_voice_stack[i] = i;
+    }
+
+    ksr->free_voice_count = ksr->voices;
+
+    memset(ksr->channel_voice_count, 0, sizeof(ksr->channel_voice_count));
+    memset(ksr->voice_by_channel_note, 0, sizeof(ksr->voice_by_channel_note));
+    memset(ksr->note_press, 0, sizeof(ksr->note_press));
+
     ksr->note_gen = 0;
 }
 
@@ -105,6 +122,7 @@ void select_sample(Kasaria *ksr, int v, Instrument *ip)
     }
 
     f = ksr->voice[v].orig_frequency;
+    
     for(i = 0; i < s; i++)
     {
         if(sp->low_freq <= f && sp->high_freq >= f)
@@ -122,11 +140,14 @@ void select_sample(Kasaria *ksr, int v, Instrument *ip)
 
     cdiff   = 0x7FFFFFFF;
     closest = sp = ip->sample;
+    
     for(i = 0; i < s; i++)
     {
         diff = sp->root_freq - f;
+        
         if(diff < 0)
             diff = -diff;
+        
         if(diff < cdiff)
         {
             cdiff   = diff;
@@ -141,8 +162,8 @@ void select_sample(Kasaria *ksr, int v, Instrument *ip)
 
 void recompute_freq(Kasaria *ksr, int v)
 {
-    int sign = (ksr->voice[v].sample_increment < 0), // for bidirectional loops
-        pb   = ksr->channel[ksr->voice[v].channel].pitchbend;
+    int sign = (ksr->voice[v].sample_increment < 0); // for bidirectional loops
+    int pb   = ksr->channel[ksr->voice[v].channel].pitchbend;
     f64 a;
 
     if(!ksr->voice[v].sample->sample_rate && !ksr->voice[v].sample_right)
@@ -211,29 +232,15 @@ void recompute_freq(Kasaria *ksr, int v)
 
     if(ksr->voice[v].sample_right)
     {
-        /*
-        int signr = (ksr->voice[v].sample_increment_right < 0);
-        f64 ar = FSCALE(((f64)(ksr->voice[v].sample_right->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample_right->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
-        if(signr)
-            ar = -ar;
-        else if(ksr->voice[v].sample_increment < 0 && ar > 0)
-            ar = -ar;
-        else if(ksr->voice[v].sample_increment > 0 && ar < 0)
-            ar = -ar;
-        ksr->voice[v].sample_increment_right = (long)(ar);
-        */
         int signr = (ksr->voice[v].sample_increment_right < 0);
         f64 ar;
         
         if(ksr->voice[v].sample_right->sample_rate)
         {
             if(ksr->voice[v].sample->sample_rate)
-                ar = base * ((f64)(ksr->voice[v].sample_right->sample_rate) /
-                             (f64)(ksr->voice[v].sample->sample_rate));
+                ar = base * ((f64)(ksr->voice[v].sample_right->sample_rate) / (f64)(ksr->voice[v].sample->sample_rate));
             else
-                ar = FSCALE(((f64)(ksr->voice[v].sample_right->sample_rate) * (f64)(ksr->voice[v].frequency)) /
-                            ((f64)(ksr->voice[v].sample_right->root_freq) * (f64)(ksr->play_mode.rate)),
-                            FRACTION_BITS);
+                ar = FSCALE(((f64)(ksr->voice[v].sample_right->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample_right->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
         }
         else
             ar = (f64)(1 << FRACTION_BITS); // pre-resampled
@@ -436,176 +443,87 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
     // SF2 stereo support: mix both samples into a single voice
     if(!ISDRUMCHANNEL(ksr, e->channel) && ip && ip->samples > 1)
     {
-        /*
         Sample *primary = ksr->voice[i].sample;
+        Sample *left    = NULL;
+        Sample *right   = NULL;
         int     si;
-        for(si = 0; si < ip->samples; si++)
+        
+        if(primary->sample_type & SF_SAMPLETYPE_LEFT)
+            left = primary;
+        else if(primary->sample_type & SF_SAMPLETYPE_RIGHT)
+            right = primary;
+        
+        if(left || right)
         {
-            Sample *candidate = &ip->sample[si];
-            if(candidate == primary)
-                continue;
+            Sample *best       = NULL;
+            long    best_score = -1;
 
-            if(primary->sample_type == SF_SAMPLETYPE_LEFT && candidate->sample_type == SF_SAMPLETYPE_RIGHT &&
-               primary->sf_sample_link == candidate->sf_sample_index)
-            {
-                ksr->voice[i].sample_right = candidate;
-                ksr->voice[i].sample_offset_right = 0;
-                ksr->voice[i].sample_increment_right = 0;
-                recompute_freq(ksr, i);
-                recompute_amp(ksr, i);
-                stereo_partner = candidate;
-                break;
-            }
-            else if(candidate->sample_type == SF_SAMPLETYPE_LEFT && primary->sample_type == SF_SAMPLETYPE_RIGHT &&
-                    candidate->sf_sample_index == primary->sf_sample_link)
-            {
-                // put left as right buffer and keep primary as left? easier to swap conceptually by just attaching
-                ksr->voice[i].sample_right = candidate;
-                ksr->voice[i].sample_offset_right = 0;
-                ksr->voice[i].sample_increment_right = 0;
-                recompute_freq(ksr, i);
-                recompute_amp(ksr, i);
-                stereo_partner = candidate;
-                break;
-            }
-            else if(candidate->sample_type == SF_SAMPLETYPE_RIGHT && primary->sample_type == SF_SAMPLETYPE_LEFT &&
-                    candidate->sf_sample_index == primary->sf_sample_link)
-            {
-                ksr->voice[i].sample_right = candidate;
-                ksr->voice[i].sample_offset_right = 0;
-                ksr->voice[i].sample_increment_right = 0;
-                recompute_freq(ksr, i);
-                recompute_amp(ksr, i);
-                stereo_partner = candidate;
-                break;
-            }
-        }
-        if(!ksr->voice[i].sample_right)
-        {
             for(si = 0; si < ip->samples; si++)
             {
                 Sample *candidate = &ip->sample[si];
-                if(candidate == primary) continue;
-                if(candidate->sf_sample_link == primary->sf_sample_index || primary->sf_sample_link == candidate->sf_sample_index)
-                {
-                    ksr->voice[i].sample_right = candidate;
-                    ksr->voice[i].sample_offset_right = 0;
-                    ksr->voice[i].sample_increment_right = 0;
-                    recompute_freq(ksr, i);
-                    recompute_amp(ksr, i);
-                    stereo_partner = candidate;
-                    break;
-                }
-            }
-        }
+                long    score;
 
-        // If primary is right and left is linked differently, try to find left
-        if(!ksr->voice[i].sample_right && primary->sample_type == SF_SAMPLETYPE_RIGHT && primary->sf_sample_link)
-        {
-            for(si = 0; si < ip->samples; si++)
-            {
-                Sample *candidate = &ip->sample[si];
                 if(candidate == primary)
                     continue;
-                if(candidate->sample_type == SF_SAMPLETYPE_LEFT && candidate->sf_sample_index == primary->sf_sample_link)
+
+                if(left && !(candidate->sample_type & SF_SAMPLETYPE_RIGHT))
+                    continue;
+                if(right && !(candidate->sample_type & SF_SAMPLETYPE_LEFT))
+                    continue;
+
+                if(left && left->sf_sample_link == candidate->sf_sample_index)
+                    score = 0;
+                else if(right && right->sf_sample_link == candidate->sf_sample_index)
+                    score = 0;
+                else
                 {
-                    // swap so primary is treated as left? keep as-is but store right in our new slot - easier: store candidate as right? no, better to find left and right
-                    // try to assign: put left in voice? but we already selected primary; alternatively just set sample_right to candidate and note order
-                    ksr->voice[i].sample_right = candidate;
-                    ksr->voice[i].sample_offset_right = 0;
-                    ksr->voice[i].sample_increment_right = 0;
-                    recompute_freq(ksr, i);
-                    recompute_amp(ksr, i);
-                    stereo_partner = candidate;
-                    break;
+                    score = 1000000;
+
+                    if(candidate->low_key != primary->low_key || candidate->high_key != primary->high_key)
+                        score += 100000;
+                    if(candidate->low_vel != primary->low_vel || candidate->high_vel != primary->high_vel)
+                        score += 10000;
+
+                    score += labs((long)candidate->data_length - (long)primary->data_length) >> 8;
+
+                    if(candidate->root_key != primary->root_key)
+                        score += 1000;
+                }
+
+                if(best == NULL || score < best_score)
+                {
+                    best       = candidate;
+                    best_score = score;
                 }
             }
+
+            // Require a plausible match.  A structural match with a wildly
+            // different length is almost certainly a different layer.
+            if(best && (best_score < 1000000 || labs((long)best->data_length - (long)primary->data_length) < (primary->data_length / 2)))
+            {
+                if(left)
+                    right = best;
+                else
+                    left = best;
+
+                ksr->voice[i].sample                 = left;
+                ksr->voice[i].sample_right           = right;
+                ksr->voice[i].sample_offset          = 0;
+                ksr->voice[i].sample_increment       = 0;
+                ksr->voice[i].sample_offset_right    = 0;
+                ksr->voice[i].sample_increment_right = 0;
+                recompute_freq(ksr, i);
+                recompute_amp(ksr, i);
+                stereo_partner = right;
+            }
         }
-        */
-
-        Sample *primary = ksr->voice[i].sample;
-                Sample *left    = NULL;
-                Sample *right   = NULL;
-                int     si;
-        
-                if(primary->sample_type & SF_SAMPLETYPE_LEFT)
-                    left = primary;
-                else if(primary->sample_type & SF_SAMPLETYPE_RIGHT)
-                    right = primary;
-        
-                if(left || right)
-                {
-                    Sample *best       = NULL;
-                    long    best_score = -1;
-        
-                    for(si = 0; si < ip->samples; si++)
-                    {
-                        Sample *candidate = &ip->sample[si];
-                        long    score;
-        
-                        if(candidate == primary)
-                            continue;
-        
-                        if(left && !(candidate->sample_type & SF_SAMPLETYPE_RIGHT))
-                            continue;
-                        if(right && !(candidate->sample_type & SF_SAMPLETYPE_LEFT))
-                            continue;
-        
-                        if(left && left->sf_sample_link == candidate->sf_sample_index)
-                            score = 0;
-                        else if(right && right->sf_sample_link == candidate->sf_sample_index)
-                            score = 0;
-                        else
-                        {
-                            score = 1000000;
-        
-                            if(candidate->low_key != primary->low_key || candidate->high_key != primary->high_key)
-                                score += 100000;
-                            if(candidate->low_vel != primary->low_vel || candidate->high_vel != primary->high_vel)
-                                score += 10000;
-        
-                            score += labs((long)candidate->data_length - (long)primary->data_length) >> 8;
-        
-                            if(candidate->root_key != primary->root_key)
-                                score += 1000;
-                        }
-        
-                        if(best == NULL || score < best_score)
-                        {
-                            best       = candidate;
-                            best_score = score;
-                        }
-                    }
-        
-                    // Require a plausible match.  A structural match with a wildly
-                    // different length is almost certainly a different layer.
-                    if(best && (best_score < 1000000 ||
-                                labs((long)best->data_length - (long)primary->data_length) < (primary->data_length / 2)))
-                    {
-                        if(left)
-                            right = best;
-                        else
-                            left = best;
-        
-                        ksr->voice[i].sample                  = left;
-                        ksr->voice[i].sample_right            = right;
-                        ksr->voice[i].sample_offset           = 0;
-                        ksr->voice[i].sample_increment        = 0;
-                        ksr->voice[i].sample_offset_right     = 0;
-                        ksr->voice[i].sample_increment_right  = 0;
-                        recompute_freq(ksr, i);
-                        recompute_amp(ksr, i);
-                        stereo_partner = right;
-                    }
-                }
     }
-
-    // ==== REPORTED INSTRUMENT LAYER BLOCK (test) ====
-//#ifdef KSR_LAYER_BLOCK
 
     for(int li = 0; li < ip->samples; li++)
     {
         Sample *layer = &ip->sample[li];
+        Sample *layer_left  = NULL;
+        Sample *layer_right = NULL;
 
         if(layer == ksr->voice[i].sample)
             continue;
@@ -618,9 +536,82 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         if(e->vel < layer->low_vel || e->vel > layer->high_vel)
             continue;
 
-        /* Only start a layered voice if we can register it in a trackable
-         * slot (2..7); unregistered voices would never be released and would
-         * leak the voice pool. */
+        if(layer->sample_type & SF_SAMPLETYPE_LEFT)
+            layer_left = layer;
+        else if(layer->sample_type & SF_SAMPLETYPE_RIGHT)
+            layer_right = layer;
+
+        if(layer_left || layer_right)
+        {
+            Sample *best = NULL;
+            long best_score = -1;
+
+            for(int sj = 0; sj < ip->samples; sj++)
+            {
+                Sample *candidate = &ip->sample[sj];
+                long score;
+
+                if(candidate == layer)
+                    continue;
+
+                if(layer_left && !(candidate->sample_type & SF_SAMPLETYPE_RIGHT))
+                    continue;
+
+                if(layer_right && !(candidate->sample_type & SF_SAMPLETYPE_LEFT))
+                    continue;
+
+                if((layer_left && layer_left->sf_sample_link == candidate->sf_sample_index) ||
+                    (layer_right && layer_right->sf_sample_link == candidate->sf_sample_index))
+                {
+                    score = 0;
+                }
+                else
+                {
+                    score = 1000000;
+
+                    if(candidate->low_key != layer->low_key || candidate->high_key != layer->high_key)
+                        score += 100000;
+
+                    if(candidate->low_vel != layer->low_vel || candidate->high_vel != layer->high_vel)
+                        score += 10000;
+
+                    score += labs((long)candidate->data_length - (long)layer->data_length) >> 8;
+
+                    if(candidate->root_key != layer->root_key)
+                        score += 1000;
+                }
+
+                if(best == NULL || score < best_score)
+                {
+                    best = candidate;
+                    best_score = score;
+                }
+            }
+
+            if(best && (best_score < 1000000 || labs((long)best->data_length - (long)layer->data_length) < layer->data_length / 2))
+            {
+                if(layer_left)
+                    layer_right = best;
+                else
+                    layer_left = best;
+            }
+        }
+        
+        if(layer_left)
+        {
+            if(layer != layer_left)
+                continue;
+
+            layer = layer_left;
+        }
+        
+        if(layer == ksr->voice[i].sample || layer == stereo_partner)
+            continue;
+
+
+         // Only start a layered voice if we can register it in a trackable
+         // slot (2..7); unregistered voices would never be released and would
+         // leak the voice pool. 
         int layer_slot = -1;
         for(int s = 2; s < 8; s++)
         {
@@ -634,6 +625,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         if(layer_slot >= 0 && ksr->free_voice_count > 0)
         {
             int layer_v = ksr->free_voice_stack[--ksr->free_voice_count];
+            Voice *lv   = &ksr->voice[layer_v];
             ksr->voice_by_channel_note[e->channel][e->key][layer_slot] = &ksr->voice[layer_v];
 
             channel_voice_add(ksr, e->channel, layer_v);
@@ -642,8 +634,11 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             ksr->voice[layer_v].note            = e->key;
             ksr->voice[layer_v].velocity        = e->vel;
             ksr->voice[layer_v].sample          = layer;
+            ksr->voice[layer_v].sample_right    = layer_right;
             ksr->voice[layer_v].sample_offset   = 0;
+            ksr->voice[layer_v].sample_offset_right = 0;
             ksr->voice[layer_v].sample_increment = 0;
+            ksr->voice[layer_v].sample_increment_right = 0;
             ksr->voice[layer_v].orig_frequency  = ksr->voice[i].orig_frequency;
 
             ksr->voice[layer_v].tremolo_phase              = 0;
@@ -656,6 +651,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
             ksr->voice[layer_v].vibrato_control_ratio      = layer->vibrato_control_ratio;
             ksr->voice[layer_v].vibrato_control_counter    = 0;
             ksr->voice[layer_v].vibrato_phase              = 0;
+            
             for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
                 ksr->voice[layer_v].vibrato_sample_increment[j] = 0;
 
