@@ -2518,6 +2518,7 @@ static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable
 {
     SFSampleInfo *sp = &sf->sample[tbl->val[SF_sampleId]];
 	int is_rom = 0;
+	int loop_ok = 1;
 
 	if((sp->sampletype & SF_SAMPLETYPE_ROM) && sfrom_load >= 1)
 	{
@@ -2581,6 +2582,7 @@ static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable
 		{
 			vp->v.loop_start = vp->len;
 			vp->v.loop_end = vp->len + 1;
+			loop_ok = 0;
 		}
 	}
 
@@ -2616,11 +2618,15 @@ static void set_sample_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable
 		vp->v.loop_end = vp->len + 1;
 		break;
 	case 1: // looping
-		vp->v.modes |= MODES_LOOPING | MODES_SUSTAIN;
-		vp->v.data_length = vp->v.loop_end; // strip the tail
+        if(loop_ok)
+		{
+		    vp->v.modes |= MODES_LOOPING | MODES_SUSTAIN;
+		    vp->v.data_length = vp->v.loop_end; // strip the tail
+	    }
 		break;
 	case 3: // looping , release sample
-		vp->v.modes |= MODES_LOOPING | MODES_SUSTAIN | MODES_RELEASE;
+	    if(loop_ok)
+		    vp->v.modes |= MODES_LOOPING | MODES_SUSTAIN | MODES_RELEASE;
 		break;	
 	}
 
