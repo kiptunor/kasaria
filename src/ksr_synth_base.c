@@ -260,20 +260,43 @@ void recompute_amp(Kasaria *ksr, int v)
 
     //f64 vel_scaled = vel ? vol_table[vel] * 127.0 : 0.0;
     //f64 vel_scaled = vel ? pow(vol_table[vel], 1.40) * 127.0 : 0.0;
-    f64 vel_scaled = vel ? pow(vol_table[vel] / vol_table[127], 1.15) * 127.0 : 0.0;
-    f64 vol_scaled = vol ? vol_table[vol] * 127.0 : 0.0;
-    f64 expr_scaled = expr ? vol_table[expr] * 127.0 : 0.0;
+    //f64 vel_scaled = vel ? pow(vol_table[vel] / vol_table[127], 1.10) * 127.0 : 0.0;
+    //f64 vel_scaled = vel ? (f64)vel * (f64)vel / 127.0 : 0.0;
+    //f64 vol_scaled = vol ? vol_table[vol] * 127.0 : 0.0;
+    //f64 vol_scaled = vol ? (f64)vol * (f64)vol / 127.0 : 0.0;
+    //f64 expr_scaled = expr ? vol_table[expr] * 127.0 : 0.0;
+    //f64 expr_scaled = expr ? (f64)expr * (f64)expr / 127.0 : 0.0;
+
+    f64 vel_scaled = vel ? (f64)vel * (f64)vel / 127.0 : 0.0;
+    f64 vol_scaled = vol ? (f64)vol * (f64)vol / 127.0 : 0.0;
+    f64 expr_scaled = expr ? (f64)expr * (f64)expr / 127.0 : 0.0;
+
+    
     f64 tempamp = vel_scaled * vol_scaled * expr_scaled;
 
-    f64 base = (f64)(tempamp) * ksr->voice[v].sample->volume * ksr->master_volume;
+    f64 base = (f64)(tempamp) * ksr->voice[v].sample->volume * ksr->master_volume * MIX_HEADROOM;
 
     if(!(ksr->play_mode.encoding & PE_MONO))
     {
         if(ksr->voice[v].sample_right)
         {
-            ksr->voice[v].panned     = PANNED_MYSTERY;
-            ksr->voice[v].left_amp   = base / (f64)(1 << 18);
-            ksr->voice[v].right_amp  = base / (f64)(1 << 18);
+            int pan  = ksr->voice[v].panning;
+            f64 lamp = base / (f64)(1 << 20);
+            f64 ramp = base / (f64)(1 << 20);
+            
+            if(pan < 0)
+                pan = 0;
+            else if(pan > 127)
+                pan = 127;
+            
+            if(pan < 64)
+                ramp *= (f64)pan / 64.0;
+            else if(pan > 64)
+                lamp *= (f64)(127 - pan) / 63.0;
+        
+            ksr->voice[v].panned    = PANNED_MYSTERY;
+            ksr->voice[v].left_amp  = lamp;
+            ksr->voice[v].right_amp = ramp;
         }
         else if(ksr->voice[v].panning > 60 && ksr->voice[v].panning < 68)
         {

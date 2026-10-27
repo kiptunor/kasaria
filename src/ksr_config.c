@@ -115,7 +115,7 @@ void set_default_config(Kasaria *ksr)
     //ksr->reverb_preset                 = KSR_REVERB_PRESET_SPORT_EMPTYSTADIUM;
     //ksr->reverb_preset                 = KSR_REVERB_PRESET_SPORT_FULLSTADIUM;
     //ksr->reverb_preset                 = KSR_REVERB_PRESET_DOME_TOMB;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_PIPE_RESONANT;
+    //ksr->reverb_preset                 = KSR_REVERB_PRESET_PIPE_RESONANT; // Honestly this sounds a little cursed
     //ksr->reverb_preset                 = KSR_REVERB_PRESET_MOOD_HEAVEN;
     //ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_PITGARAGE;
     //ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_INCAR_RACER; // not my favorite but still very interesting

@@ -239,13 +239,16 @@ typedef unsigned char final_volume_t;
     #define FINAL_VOLUME(v) (~_l2u[v])
     #define MIXUP_SHIFT     5
     #define MAX_AMP_VALUE   4095
+    #define MAX_MIX_GAIN    4095
 #else
 typedef short sample_t;
 typedef long  final_volume_t;
     #define FINAL_VOLUME(v) (v)
     #define MAX_AMP_VALUE   ((1 << (AMP_BITS + 1)) - 1)
+    #define MAX_MIX_GAIN   32767
 #endif
 
+#define MIX_HEADROOM   0.28
 
 /* Vibrato and tremolo Choices of the Day */
 #define SWEEP_TUNING              38

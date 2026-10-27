@@ -189,14 +189,18 @@ void apply_envelope_to_amp(Kasaria *ksr, int v)
                 ramp *= vol_table[ksr->voice[v].envelope_volume >> 23];
         }
 
-        la = FSCALE(lamp, AMP_BITS);
+        // la = FSCALE(lamp, AMP_BITS);
+        la = (long)(FSCALE(lamp, AMP_BITS) + 0.5);
 
-        if(la > MAX_AMP_VALUE)
-            la = MAX_AMP_VALUE;
+        if(la > MAX_MIX_GAIN)
+            la = MAX_MIX_GAIN;
 
-        ra = FSCALE(ramp, AMP_BITS);
-        if(ra > MAX_AMP_VALUE)
-            ra = MAX_AMP_VALUE;
+        //ra = FSCALE(ramp, AMP_BITS);
+        // if(ra > MAX_AMP_VALUE)
+        //     ra = MAX_AMP_VALUE;
+        ra = (long)(FSCALE(ramp, AMP_BITS) + 0.5);
+        if(ra > MAX_MIX_GAIN)
+            ra = MAX_MIX_GAIN;
 
 
         ksr->voice[v].left_mix  = FINAL_VOLUME(la);
@@ -207,13 +211,16 @@ void apply_envelope_to_amp(Kasaria *ksr, int v)
         if(ksr->voice[v].tremolo_phase_increment)
             lamp *= ksr->voice[v].tremolo_volume;
         if(ksr->voice[v].sample->modes & MODES_ENVELOPE)
-            //lamp *= vol_table[ksr->voice[v].envelope_volume >> 23];
-            lamp *= (f64)(ksr->voice[v].envelope_volume >> 23) / 127.0;
+            lamp *= vol_table[ksr->voice[v].envelope_volume >> 23];
+            //lamp *= (f64)(ksr->voice[v].envelope_volume >> 23) / 127.0;
 
-        la = FSCALE(lamp, AMP_BITS);
+        // la = FSCALE(lamp, AMP_BITS);
+        la = (long)(FSCALE(lamp, AMP_BITS) + 0.5);
 
-        if(la > MAX_AMP_VALUE)
-            la = MAX_AMP_VALUE;
+        // if(la > MAX_AMP_VALUE)
+        //     la = MAX_AMP_VALUE;
+        if(la > MAX_MIX_GAIN)
+            la = MAX_MIX_GAIN;
 
         ksr->voice[v].left_mix = FINAL_VOLUME(la);
     }
