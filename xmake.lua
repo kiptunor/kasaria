@@ -103,6 +103,10 @@ target("kasaria_static")
     add_defines("LOGC__USER_SETTINGS")
     set_kind("static")
    -- set_toolset("sh", "clang")
+
+   if has_config("internal-audio-handler") then
+       add_defines("KSR_INTERNAL_AUDIO_HANDLER")
+   end
     
     if is_plat("linux") then
         add_ldflags("-Wl,--as-needed")
