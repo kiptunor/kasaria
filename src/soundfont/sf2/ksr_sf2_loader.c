@@ -357,6 +357,7 @@ typedef struct SF2SampleCacheEntry
 	i32   note_to_use;
 	i32   root_key;
 	i32   play_rate;   // output rate at load time
+	f64   normalize_factor; // peak normalization applied to the first copy
 }SF2SampleCacheEntry;
 
 
@@ -1423,7 +1424,7 @@ static void dump_sample_wav(Sample *sample)
     log_info("dumped %s (%ld frames, %u Hz)", path, frames, rate);
 }
 
-static Sample *sf2_sample_cache_find(FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate)
+static SF2SampleCacheEntry *sf2_sample_cache_find(FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate)
 {
 	SF2SampleCacheEntry *e;
 
@@ -1436,7 +1437,7 @@ static Sample *sf2_sample_cache_find(FILE *tf, i64 start, i64 lowbit, i32 src_ra
 		if(e->note_to_use != note_to_use || e->root_key != root_key ||
 		   e->play_rate != play_rate)
 			continue;
-		return &e->sample;
+		return e;
 	}
 	return NULL;
 }
@@ -1540,18 +1541,19 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 
 		if(!ksr->pre_resampling_allowed || !sample->note_to_use || (sample->modes & MODES_LOOPING))
 		{
-		    Sample *found = sf2_sample_cache_find(tf, sp->start, sp->lowbit, src_rate, src_len, note_to_use, root_key, play_rate);
+		    SF2SampleCacheEntry *found = sf2_sample_cache_find(tf, sp->start, sp->lowbit, src_rate, src_len, note_to_use, root_key, play_rate);
 						
 			if(found)
 			{
-				sample->data_type   = found->data_type;
-				sample->data        = found->data;
+				sample->data_type   = found->sample.data_type;
+				sample->data        = found->sample.data;
 				sample->data_alloced = 0;
-				sample->data_length = found->data_length;
-				sample->sample_rate = found->sample_rate;
-				sample->loop_start  = found->loop_start;
-				sample->loop_end    = found->loop_end;
-				sample->modes       = found->modes;
+				sample->data_length = found->sample.data_length;
+				sample->sample_rate = found->sample.sample_rate;
+				sample->loop_start  = found->sample.loop_start;
+				sample->loop_end    = found->sample.loop_end;
+				sample->modes       = found->sample.modes;
+				sample->volume     *= found->normalize_factor;
 				continue;
 			}
 		}
@@ -2086,6 +2088,12 @@ static void set_to_table(SFInfo *sf, LayerTable *tbl, SFGenLayer *lay, int level
 	for(i = 0; i < lay->nlists; i++)
 	{
 		SFGenRec *gen       = &lay->list[i];
+
+		if(gen->oper < 0 || gen->oper >= SF_EOF)
+		{
+		    log_warn("set_to_table: ignoring invalid generator %d (amount %d)", gen->oper, gen->amount);
+		    continue;
+		}
 		
 		// copy the value regardless of its copy policy
 		tbl->val[gen->oper] = gen->amount;
@@ -2233,16 +2241,26 @@ static int sanity_range(LayerTable *tbl)
 	*/
 
     int lo, hi;
+    bool key_empty = false, vel_empty = false;
     
 	lo = LOWNUM(tbl->val[SF_keyRange]);
 	hi = HIGHNUM(tbl->val[SF_keyRange]);
-	if(lo < 0 || lo > 127 || hi < 0 || hi > 127 || hi < lo)
+	//if(lo < 0 || lo > 127 || hi < 0 || hi > 127 || hi < lo)
+	if(lo < 0 || lo > 127 || hi < 0 || hi > 127)
 		tbl->val[SF_keyRange] = RANGE(0, 127);
+	else if(hi < lo)
+	    key_empty = true;
     
 	lo = LOWNUM(tbl->val[SF_velRange]);
 	hi = HIGHNUM(tbl->val[SF_velRange]);
-	if(lo < 0 || lo > 127 || hi < 0 || hi > 127 || hi < lo)
+	//if(lo < 0 || lo > 127 || hi < 0 || hi > 127 || hi < lo)
+	if(lo < 0 || lo > 127 || hi < 0 || hi > 127)
 		tbl->val[SF_velRange] = RANGE(0, 127);
+	else if(hi < lo)
+	    vel_empty = true;
+
+	if(key_empty || vel_empty)
+	    return 0;
     
 	return 1;
 }

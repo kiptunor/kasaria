@@ -281,8 +281,9 @@ void recompute_amp(Kasaria *ksr, int v)
         if(ksr->voice[v].sample_right)
         {
             int pan  = ksr->voice[v].panning;
+            f64 base_r = (f64)(tempamp) * ksr->voice[v].sample_right->volume * ksr->master_volume * MIX_HEADROOM;
             f64 lamp = base / (f64)(1 << 20);
-            f64 ramp = base / (f64)(1 << 20);
+            f64 ramp = base_r / (f64)(1 << 20);
             
             if(pan < 0)
                 pan = 0;

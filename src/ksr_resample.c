@@ -2089,16 +2089,25 @@ void pre_resample(Kasaria *ksr, Sample *sp)
 
     a                                  = ((f64)(sp->sample_rate) * freq_table[(int)(sp->note_to_use)]) / ((f64)(sp->root_freq) * ksr->play_mode.rate);
 
+    if(!(a > 0.0))
+    {
+        // Invalid ratio (zero, negative or NaN): nothing sensible to resample.
+        return;
+    }
+
     if(sp->data_length / a >= 0x7fffffffL)
     {
         // Too large to compute
         return;
     }
     newlen = (long)(sp->data_length / a);
-    dest = newdata = (short *)safe_malloc((newlen >> (FRACTION_BITS - 1)) + 2);
-
     count          = (newlen >> FRACTION_BITS) - 1;
-    ofs = incr = (sp->data_length - (1 << FRACTION_BITS)) / count;
+    
+    if(count <= 0)
+        return;
+    
+    dest = newdata = (short *)safe_malloc((newlen >> (FRACTION_BITS - 1)) + 2);
+    ofs  = incr = (sp->data_length - (1 << FRACTION_BITS)) / count;
 
     if(--count)
         *dest++ = src[0];
