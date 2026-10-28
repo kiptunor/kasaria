@@ -43,16 +43,16 @@ common.c
 #endif
 
 
-
+#include "ext_deps/libfort/fort.h"
 #include "ksr_internal.h"
 // #include "ext_deps/log_c/log.h"
 
 // I guess "rb" should be right for any libc
 #define OPEN_MODE "rb"
 
+#define BOOL2STRING(value) ((value) ? "\033[32mON\033[0m" : "\033[31mOFF\033[0m")
 
-
-
+KsrFeatures constr_build_conf;
 
 
 
@@ -442,4 +442,31 @@ int free_global_mblock(void)
 	cnt++;
     }
     return cnt;
+}
+
+void construct_build_config()
+{
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
+    constr_build_conf.internal_audio = true;
+#else
+    constr_build_conf.internal_audio = false;
+#endif
+
+#ifdef KSR_BUILTIN_MIDI_PLAYER
+    constr_build_conf.internal_midi_player = true;
+#else
+    constr_build_conf.internal_midi_player = false;
+#endif
+}
+
+void ksr_print_feature_table()
+{
+    ft_table_t *feature_table = ft_create_table();
+    ft_set_border_style(feature_table, FT_NICE_STYLE);
+
+    ft_set_cell_prop(feature_table, 0, FT_ANY_COLUMN, FT_CPROP_ROW_TYPE, FT_ROW_HEADER);
+    ft_write_ln(feature_table, "Feature", "Build config value");
+    
+    ft_write_ln(feature_table, "Internal Audio Handler", BOOL2STRING(constr_build_conf.internal_audio));
+    ft_write_ln(feature_table, "Internal MIDI Player", BOOL2STRING(constr_build_conf.internal_midi_player));
 }

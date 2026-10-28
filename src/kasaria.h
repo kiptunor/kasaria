@@ -259,7 +259,9 @@ enum
 };
 
 
-KsrFeatures ksr_get_available_features();
+void ksr_print_feature_table();
+const char * ksr_get_version();
+const char * ksr_get_commit_hash();
 
 
 /*
