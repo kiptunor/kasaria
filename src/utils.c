@@ -48,7 +48,7 @@ common.c
 // #include "ext_deps/log_c/log.h"
 
 // I guess "rb" should be right for any libc
-#define OPEN_MODE "rb"
+#define OPEN_MODE          "rb"
 
 #define BOOL2STRING(value) ((value) ? "\033[32mON\033[0m" : "\033[31mOFF\033[0m")
 
@@ -59,7 +59,7 @@ KsrFeatures constr_build_conf;
 
 
 
-int fp_equals(float a, float b, float tolerance)
+int         fp_equals(float a, float b, float tolerance)
 {
     return ((a + tolerance > b) && (b > a - tolerance)) ? 1 : 0;
 }
@@ -143,7 +143,7 @@ FILE *open_file(Kasaria *ksr, const char *name, int decompress, int noise_mode)
 
     if((fp = try_to_open(ksr->current_filename, decompress, noise_mode)))
         return fp;
-    
+
 
     if(name[0] != PATH_SEP)
     {
@@ -208,22 +208,22 @@ void *safe_malloc(size_t count)
 
 void *safe_large_malloc(size_t count)
 {
-    void *p;
+    void      *p;
     static int errflag = 0;
 
     if(errflag)
-	    exit(10);
-	
+        exit(10);
+
     if(count == 0)
-      /* Some malloc routine return NULL if count is zero, such as
-       * malloc routine from libmalloc.a of Solaris.
-       * But TiMidity doesn't want to return NULL even if count is zero.
-       */
+        /* Some malloc routine return NULL if count is zero, such as
+         * malloc routine from libmalloc.a of Solaris.
+         * But TiMidity doesn't want to return NULL even if count is zero.
+         */
         count = 1;
-    
-    if((p = (void*) malloc(count)) != NULL)
+
+    if((p = (void *)malloc(count)) != NULL)
         return p;
-    
+
     errflag = 1;
 
 #ifdef ABORT_AT_FATAL
@@ -231,7 +231,7 @@ void *safe_large_malloc(size_t count)
 #endif // ABORT_AT_FATAL
     exit(10);
     // NOTREACHED
-	return 0;
+    return 0;
 }
 
 // This adds a directory to the path list
@@ -261,42 +261,42 @@ const char *url_unexpand_home_dir(const char *fname)
 {
     static char path[BUFSIZ];
     const char *dir, *p;
-    int dirlen;
+    int         dirlen;
 
     if(!IS_PATH_SEP(fname[0]))
-	    return fname;
+        return fname;
 
     if((dir = getenv("HOME")) == NULL)
-	    if((dir = getenv("home")) == NULL)
-	        return fname;
-    
+        if((dir = getenv("home")) == NULL)
+            return fname;
+
     dirlen = strlen(dir);
-    
+
     if(dirlen == 0 || dirlen >= sizeof(path) - 2)
-	    return fname;
-    
+        return fname;
+
     memcpy(path, dir, dirlen);
-    
+
     if(!IS_PATH_SEP(path[dirlen - 1]))
-	    path[dirlen++] = PATH_SEP;
+        path[dirlen++] = PATH_SEP;
 
 #ifndef __W32__
     if(strncmp(path, fname, dirlen))
 #else
     if(strncasecmp(path, fname, dirlen))
 #endif /* __W32__ */
-	    return fname;
+        return fname;
 
     path[0] = '~';
     path[1] = '/';
-    p = fname + dirlen;
-    
+    p       = fname + dirlen;
+
     if(strlen(p) >= sizeof(path) - 3)
-	    return fname;
-    
+        return fname;
+
     path[2] = '\0';
     strcat(path, p);
-    
+
     return path;
 }
 
@@ -306,7 +306,7 @@ static MBlockNode *free_mblock_list = NULL;
 
 void init_mblock(MBlockList *mblock)
 {
-    mblock->first = NULL;
+    mblock->first     = NULL;
     mblock->allocated = 0;
 }
 
@@ -316,24 +316,24 @@ static MBlockNode *new_mblock_node(size_t n)
 
     if(n > MIN_MBLOCK_SIZE)
     {
-	if((p = (MBlockNode *)safe_malloc(n + sizeof(MBlockNode))) == NULL)
-	    return NULL;
-	p->block_size = n;
+        if((p = (MBlockNode *)safe_malloc(n + sizeof(MBlockNode))) == NULL)
+            return NULL;
+        p->block_size = n;
     }
     else if(free_mblock_list == NULL)
     {
-	if((p = (MBlockNode *)safe_malloc(sizeof(MBlockNode) + MIN_MBLOCK_SIZE)) == NULL)
-	    return NULL;
-	p->block_size = MIN_MBLOCK_SIZE;
+        if((p = (MBlockNode *)safe_malloc(sizeof(MBlockNode) + MIN_MBLOCK_SIZE)) == NULL)
+            return NULL;
+        p->block_size = MIN_MBLOCK_SIZE;
     }
     else
     {
-	p = free_mblock_list;
-	free_mblock_list = free_mblock_list->next;
+        p                = free_mblock_list;
+        free_mblock_list = free_mblock_list->next;
     }
 
     p->offset = 0;
-    p->next = NULL;
+    p->next   = NULL;
 
     return p;
 }
@@ -343,15 +343,15 @@ static int enough_block_memory(MBlockList *mblock, size_t n)
     size_t newoffset;
 
     if(mblock->first == NULL)
-	return 0;
+        return 0;
 
     newoffset = mblock->first->offset + n;
 
     if(newoffset < mblock->first->offset) // exceed representable in size_t
-	return 0;
+        return 0;
 
     if(newoffset > mblock->first->block_size)
-	return 0;
+        return 0;
 
     return 1;
 }
@@ -359,28 +359,28 @@ static int enough_block_memory(MBlockList *mblock, size_t n)
 void *new_segment(MBlockList *mblock, size_t nbytes)
 {
     MBlockNode *p;
-    void *addr;
+    void       *addr;
 
     // round up to ADDRALIGN
     nbytes = ((nbytes + ADDRALIGN - 1) & ~(ADDRALIGN - 1));
     if(!enough_block_memory(mblock, nbytes))
     {
-	p = new_mblock_node(nbytes);
-	p->next = mblock->first;
-	mblock->first = p;
-	mblock->allocated += p->block_size;
+        p                  = new_mblock_node(nbytes);
+        p->next            = mblock->first;
+        mblock->first      = p;
+        mblock->allocated += p->block_size;
     }
     else
-	p = mblock->first;
+        p = mblock->first;
 
-    addr = (void *)(p->buffer + p->offset);
+    addr       = (void *)(p->buffer + p->offset);
     p->offset += nbytes;
 
 #ifdef DEBUG
-    if(((unsigned long)addr) & (ADDRALIGN-1))
+    if(((unsigned long)addr) & (ADDRALIGN - 1))
     {
-	fprintf(stderr, "Bad address: 0x%x\n", addr);
-	exit(1);
+        fprintf(stderr, "Bad address: 0x%x\n", addr);
+        exit(1);
     }
 #endif // DEBUG
 
@@ -390,11 +390,11 @@ void *new_segment(MBlockList *mblock, size_t nbytes)
 static void reuse_mblock1(MBlockNode *p)
 {
     if(p->block_size > MIN_MBLOCK_SIZE)
-	safe_free(p);
+        safe_free(p);
     else // p->block_size <= MIN_MBLOCK_SIZE
     {
-	p->next = free_mblock_list;
-	free_mblock_list = p;
+        p->next          = free_mblock_list;
+        free_mblock_list = p;
     }
 }
 
@@ -403,26 +403,26 @@ void reuse_mblock(MBlockList *mblock)
     MBlockNode *p;
 
     if((p = mblock->first) == NULL)
-	return;			// There is nothing to collect memory
+        return; // There is nothing to collect memory
 
     while(p)
     {
-	MBlockNode *tmp;
+        MBlockNode *tmp;
 
-	tmp = p;
-	p = p->next;
-	reuse_mblock1(tmp);
+        tmp = p;
+        p   = p->next;
+        reuse_mblock1(tmp);
     }
     init_mblock(mblock);
 }
 
 char *strdup_mblock(MBlockList *mblock, const char *str)
 {
-    int len;
+    int   len;
     char *p;
 
     len = strlen(str);
-    p = (char *)new_segment(mblock, len + 1); // for '\0'
+    p   = (char *)new_segment(mblock, len + 1); // for '\0'
     memcpy(p, str, len + 1);
     return p;
 }
@@ -434,12 +434,12 @@ int free_global_mblock(void)
     cnt = 0;
     while(free_mblock_list)
     {
-	MBlockNode *tmp;
+        MBlockNode *tmp;
 
-	tmp = free_mblock_list;
-	free_mblock_list = free_mblock_list->next;
-	safe_free(tmp);
-	cnt++;
+        tmp              = free_mblock_list;
+        free_mblock_list = free_mblock_list->next;
+        safe_free(tmp);
+        cnt++;
     }
     return cnt;
 }
@@ -466,7 +466,7 @@ void ksr_print_feature_table()
 
     ft_set_cell_prop(feature_table, 0, FT_ANY_COLUMN, FT_CPROP_ROW_TYPE, FT_ROW_HEADER);
     ft_write_ln(feature_table, "Feature", "Build config value");
-    
+
     ft_write_ln(feature_table, "Internal Audio Handler", BOOL2STRING(constr_build_conf.internal_audio));
     ft_write_ln(feature_table, "Internal MIDI Player", BOOL2STRING(constr_build_conf.internal_midi_player));
 }

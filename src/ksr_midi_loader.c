@@ -531,9 +531,9 @@ static MidiEvent *groom_list(Kasaria *ksr, long divisions, long *eventsp, long *
     st = at = sample_cum = 0;
     // Strip any silence before the first NOTE ON.
     if(ksr->skip_initial_midi_silence)
-        counting_time        = 2;
+        counting_time = 2;
     else
-        counting_time        = 0;
+        counting_time = 0;
 
     for(i = 0; i < ksr->event_count && meep != NULL; i++)
     {

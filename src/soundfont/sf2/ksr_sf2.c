@@ -59,9 +59,8 @@
 
 
 
-
-#include <stdio.h>
 #include <errno.h>
+#include <stdio.h>
 
 #ifndef NO_STRING_H
     #include <string.h>
@@ -278,7 +277,7 @@ SoundFontEffects default_sf2_effects = {
 int load_soundfont(SFInfo *sf, FILE *fp)
 {
     SFChunk chunk;
-    //FILE   *fp;
+    // FILE   *fp;
 
     sf->preset  = NULL;
     sf->sample  = NULL;
@@ -288,7 +287,7 @@ int load_soundfont(SFInfo *sf, FILE *fp)
     prbags.bag = inbags.bag = NULL;
     prbags.gen = inbags.gen = NULL;
 
-    //fp                      = fopen(filename, "rb");
+    // fp                      = fopen(filename, "rb");
     if(!fp)
     {
         log_error("Failed to open soundfont: %s", strerror(errno));
@@ -330,7 +329,7 @@ int load_soundfont(SFInfo *sf, FILE *fp)
 
     // Why the soundfont loader keept failing ???
     // because of this little shtty function was called at the worst time
-    //fclose(fp);
+    // fclose(fp);
 
     // parse layer structure
     convert_layers(sf);
@@ -685,7 +684,6 @@ static void load_sample_info(int size, SFInfo *sf, FILE *fp)
         }
         else if(sf->nsamples != nsamples)
             sf->nsamples = nsamples;
-        
     }
 
     in_rom = 1;
@@ -694,13 +692,13 @@ static void load_sample_info(int size, SFInfo *sf, FILE *fp)
         if(sf->version > 1)
             READSTR(sf->sample[i].name, fp);
 
-        READDW((u32*)&sf->sample[i].startsample, fp);
-        READDW((u32*)&sf->sample[i].endsample, fp);
-        READDW((u32*)&sf->sample[i].startloop, fp);
-        READDW((u32*)&sf->sample[i].endloop, fp);
+        READDW((u32 *)&sf->sample[i].startsample, fp);
+        READDW((u32 *)&sf->sample[i].endsample, fp);
+        READDW((u32 *)&sf->sample[i].startloop, fp);
+        READDW((u32 *)&sf->sample[i].endloop, fp);
         if(sf->version > 1)
         {
-            READDW((u32*)&sf->sample[i].samplerate, fp);
+            READDW((u32 *)&sf->sample[i].samplerate, fp);
             READB(sf->sample[i].originalPitch, fp);
             READB(sf->sample[i].pitchCorrection, fp);
             READW(&sf->sample[i].samplelink, fp);

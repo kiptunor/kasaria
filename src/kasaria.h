@@ -490,7 +490,7 @@ KSR_API int  ksr_reload_midi(Kasaria *ksr);
 @brief        Get the generated audio stream from the builtin player
 @param ksr    Kasaria instance
 @param type   Sets the audio output format (float, double, short, etc. See Audio format identifier macros)
-@param buffer The audio output buffer that can be fed to an audio device (Requires audio callback) or 
+@param buffer The audio output buffer that can be fed to an audio device (Requires audio callback) or
               an audio codec
 @param count  The number of samples to process
 
@@ -503,7 +503,7 @@ KSR_API int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, unsigned char *b
 /*
 @brief        Handle advamced player controls (play, pause, seek forward / backwards, position tracking) and get the generated audio
               from the internal MIDI Player
-              
+
 @param ksr    Kasaria instance
 @param out    Raw audio output from the midi player + synth
 @param frames Audio frame counter
@@ -531,7 +531,7 @@ KSR_API void ksr_player_get_byte_pos(Kasaria *ksr, uint64_t *position);
 @param ksr              Kasaria instance
 @param wait_midi_ending When set to true the function finishes execution only when midi end is reached
 
-@remark                 !! Important !! This is a simplified way to use the internal midi player and it 
+@remark                 !! Important !! This is a simplified way to use the internal midi player and it
                         requires the internal audio handler to be initialized and started
 */
 KSR_API int  ksr_player_begin(Kasaria *ksr, bool wait_midi_ending);

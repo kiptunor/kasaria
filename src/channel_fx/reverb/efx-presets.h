@@ -6,7 +6,7 @@
 #include "../../internal_types.h"
 
 #ifndef EFXEAXREVERBPROPERTIES_DEFINED
-#define EFXEAXREVERBPROPERTIES_DEFINED
+    #define EFXEAXREVERBPROPERTIES_DEFINED
 typedef struct
 {
     f32 flDensity;
@@ -31,12 +31,12 @@ typedef struct
     f32 flHFReference;
     f32 flLFReference;
     f32 flRoomRolloffFactor;
-    int   iDecayHFLimit;
+    int iDecayHFLimit;
 } EFXEAXREVERBPROPERTIES, *LPEFXEAXREVERBPROPERTIES;
 #endif
 
 // Default Presets
-
+// clang-format off
 #define EFX_REVERB_PRESET_GENERIC \
     { 1.0000f, 1.0000f, 0.3162f, 0.8913f, 1.0000f, 1.4900f, 0.8300f, 1.0000f, 0.0500f, 0.0070f, { 0.0000f, 0.0000f, 0.0000f }, 1.2589f, 0.0110f, { 0.0000f, 0.0000f, 0.0000f }, 0.2500f, 0.0000f, 0.2500f, 0.0000f, 0.9943f, 5000.0000f, 250.0000f, 0.0000f, 0x1 }
 
@@ -402,4 +402,5 @@ typedef struct
 #define EFX_REVERB_PRESET_SMALLWATERROOM \
     { 1.0000f, 0.7000f, 0.3162f, 0.4477f, 1.0000f, 1.5100f, 1.2500f, 1.1400f, 0.8913f, 0.0200f, { 0.0000f, 0.0000f, 0.0000f }, 1.4125f, 0.0300f, { 0.0000f, 0.0000f, 0.0000f }, 0.1790f, 0.1500f, 0.8950f, 0.1900f, 0.9920f, 5000.0000f, 250.0000f, 0.0000f, 0x0 }
 
+// clang-format on
 #endif // EFX_PRESETS_H

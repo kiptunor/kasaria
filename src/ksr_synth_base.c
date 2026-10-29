@@ -24,8 +24,8 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <stdint.h>
 #include <time.h>
@@ -45,29 +45,29 @@ playmidi.c -- random stuff in need of rearrangement
 void reset_voices(Kasaria *ksr)
 {
     log_debug("Reset voices");
-/*
-    ksr->steal_scan = 0;
-   
-    for(int i = 0; i < MAX_VOICES; i++)    // ← MAX_VOICES, not ksr->voices
-        ksr->voice[i].status = VOICE_FREE;
-    
-    ksr->free_voice_count = ksr->voices;
-    for(int i = 0; i < ksr->voices; i++)
-    {
-        ksr->voice[i].status = VOICE_FREE;
-        ksr->free_voice_stack[i] = i;
-    }
-    memset(ksr->channel_voice_count, 0, sizeof(ksr->channel_voice_count));
-    memset(ksr->voice_by_channel_note, 0, sizeof(ksr->voice_by_channel_note));
-    memset(ksr->note_press, 0, sizeof(ksr->note_press));
-    ksr->note_gen = 0;
-    */
+    /*
+        ksr->steal_scan = 0;
+
+        for(int i = 0; i < MAX_VOICES; i++)    // ← MAX_VOICES, not ksr->voices
+            ksr->voice[i].status = VOICE_FREE;
+
+        ksr->free_voice_count = ksr->voices;
+        for(int i = 0; i < ksr->voices; i++)
+        {
+            ksr->voice[i].status = VOICE_FREE;
+            ksr->free_voice_stack[i] = i;
+        }
+        memset(ksr->channel_voice_count, 0, sizeof(ksr->channel_voice_count));
+        memset(ksr->voice_by_channel_note, 0, sizeof(ksr->voice_by_channel_note));
+        memset(ksr->note_press, 0, sizeof(ksr->note_press));
+        ksr->note_gen = 0;
+        */
 
     ksr->steal_scan = 0;
 
     for(int i = 0; i < ksr->voices; i++)
     {
-        ksr->voice[i].status = VOICE_FREE;
+        ksr->voice[i].status     = VOICE_FREE;
         ksr->free_voice_stack[i] = i;
     }
 
@@ -82,7 +82,7 @@ void reset_voices(Kasaria *ksr)
 
 void free_voice_push(Kasaria *ksr, int i)
 {
-    //ulog_debug("free_voice_push: i=%d", i);
+    // ulog_debug("free_voice_push: i=%d", i);
     ksr->free_voice_stack[ksr->free_voice_count++] = i;
 }
 
@@ -122,7 +122,7 @@ void select_sample(Kasaria *ksr, int v, Instrument *ip)
     }
 
     f = ksr->voice[v].orig_frequency;
-    
+
     for(i = 0; i < s; i++)
     {
         if(sp->low_freq <= f && sp->high_freq >= f)
@@ -140,14 +140,14 @@ void select_sample(Kasaria *ksr, int v, Instrument *ip)
 
     cdiff   = 0x7FFFFFFF;
     closest = sp = ip->sample;
-    
+
     for(i = 0; i < s; i++)
     {
         diff = sp->root_freq - f;
-        
+
         if(diff < 0)
             diff = -diff;
-        
+
         if(diff < cdiff)
         {
             cdiff   = diff;
@@ -213,8 +213,6 @@ void recompute_freq(Kasaria *ksr, int v)
         }
     }
 
-    //a = FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
-
     if(ksr->voice[v].sample->sample_rate)
         a = FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS);
     else
@@ -223,9 +221,9 @@ void recompute_freq(Kasaria *ksr, int v)
     if(sign)
         a = -a; // need to preserve the loop direction
 
-    f64 base = ksr->voice[v].sample->sample_rate ? FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS) : (f64)(1 << FRACTION_BITS);
-    
-    a = sign ? -base : base; // need to preserve the loop direction
+    f64 base                       = ksr->voice[v].sample->sample_rate ? FSCALE(((f64)(ksr->voice[v].sample->sample_rate) * (f64)(ksr->voice[v].frequency)) / ((f64)(ksr->voice[v].sample->root_freq) * (f64)(ksr->play_mode.rate)), FRACTION_BITS) : (f64)(1 << FRACTION_BITS);
+
+    a                              = sign ? -base : base; // need to preserve the loop direction
 
 
     ksr->voice[v].sample_increment = (long)(a);
@@ -234,7 +232,7 @@ void recompute_freq(Kasaria *ksr, int v)
     {
         int signr = (ksr->voice[v].sample_increment_right < 0);
         f64 ar;
-        
+
         if(ksr->voice[v].sample_right->sample_rate)
         {
             if(ksr->voice[v].sample->sample_rate)
@@ -254,47 +252,38 @@ void recompute_freq(Kasaria *ksr, int v)
 
 void recompute_amp(Kasaria *ksr, int v)
 {
-    long vol = ksr->channel[ksr->voice[v].channel].volume;
-    long expr = ksr->channel[ksr->voice[v].channel].expression;
-    long vel = ksr->voice[v].velocity;
+    long vol         = ksr->channel[ksr->voice[v].channel].volume;
+    long expr        = ksr->channel[ksr->voice[v].channel].expression;
+    long vel         = ksr->voice[v].velocity;
 
-    //f64 vel_scaled = vel ? vol_table[vel] * 127.0 : 0.0;
-    //f64 vel_scaled = vel ? pow(vol_table[vel], 1.40) * 127.0 : 0.0;
-    //f64 vel_scaled = vel ? pow(vol_table[vel] / vol_table[127], 1.10) * 127.0 : 0.0;
-    //f64 vel_scaled = vel ? (f64)vel * (f64)vel / 127.0 : 0.0;
-    //f64 vol_scaled = vol ? vol_table[vol] * 127.0 : 0.0;
-    //f64 vol_scaled = vol ? (f64)vol * (f64)vol / 127.0 : 0.0;
-    //f64 expr_scaled = expr ? vol_table[expr] * 127.0 : 0.0;
-    //f64 expr_scaled = expr ? (f64)expr * (f64)expr / 127.0 : 0.0;
+    f64  vel_scaled  = vel ? (f64)vel * (f64)vel / 127.0 : 0.0;
+    f64  vol_scaled  = vol ? (f64)vol * (f64)vol / 127.0 : 0.0;
+    f64  expr_scaled = expr ? (f64)expr * (f64)expr / 127.0 : 0.0;
 
-    f64 vel_scaled = vel ? (f64)vel * (f64)vel / 127.0 : 0.0;
-    f64 vol_scaled = vol ? (f64)vol * (f64)vol / 127.0 : 0.0;
-    f64 expr_scaled = expr ? (f64)expr * (f64)expr / 127.0 : 0.0;
 
-    
-    f64 tempamp = vel_scaled * vol_scaled * expr_scaled;
+    f64  tempamp     = vel_scaled * vol_scaled * expr_scaled;
 
-    f64 base = (f64)(tempamp) * ksr->voice[v].sample->volume * ksr->master_volume * MIX_HEADROOM;
+    f64  base        = (f64)(tempamp)*ksr->voice[v].sample->volume * ksr->master_volume * MIX_HEADROOM;
 
     if(!(ksr->play_mode.encoding & PE_MONO))
     {
         if(ksr->voice[v].sample_right)
         {
-            int pan  = ksr->voice[v].panning;
-            f64 base_r = (f64)(tempamp) * ksr->voice[v].sample_right->volume * ksr->master_volume * MIX_HEADROOM;
-            f64 lamp = base / (f64)(1 << 20);
-            f64 ramp = base_r / (f64)(1 << 20);
-            
+            int pan    = ksr->voice[v].panning;
+            f64 base_r = (f64)(tempamp)*ksr->voice[v].sample_right->volume * ksr->master_volume * MIX_HEADROOM;
+            f64 lamp   = base / (f64)(1 << 20);
+            f64 ramp   = base_r / (f64)(1 << 20);
+
             if(pan < 0)
                 pan = 0;
             else if(pan > 127)
                 pan = 127;
-            
+
             if(pan < 64)
                 ramp *= (f64)pan / 64.0;
             else if(pan > 64)
                 lamp *= (f64)(127 - pan) / 63.0;
-        
+
             ksr->voice[v].panned    = PANNED_MYSTERY;
             ksr->voice[v].left_amp  = lamp;
             ksr->voice[v].right_amp = ramp;
@@ -340,20 +329,20 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         ToneBank *db = ksr->drumset[ksr->channel[e->channel].bank];
         if(!db)
             db = ksr->drumset[0];
-        
+
         if(!db)
             return;
-        
+
         if(!IS_VALID_INSTRUMENT(ip = db->tone[e->key].instrument))
         {
             db = ksr->drumset[0];
             if(!db)
                 return;
-            
+
             if(!IS_VALID_INSTRUMENT(ip = db->tone[e->key].instrument))
                 return;
         }
-    
+
         Sample *best = NULL;
         for(j = 0; j < ip->samples; j++)
         {
@@ -367,7 +356,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         if(!best)
             return;
         ksr->voice[i].sample = best;
-            
+
         if(ksr->voice[i].sample->note_to_use)
             ksr->voice[i].orig_frequency = freq_table[(int)(ksr->voice[i].sample->note_to_use)];
         else
@@ -388,7 +377,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         {
             ToneBank *tb = ksr->tonebank[ksr->channel[e->channel].bank];
 
-            ip = NULL;
+            ip           = NULL;
             if(tb)
                 ip = tb->tone[ksr->channel[e->channel].program].instrument;
 
@@ -406,7 +395,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
 
         if(!ip)
             return;
-        
+
 
         if(ip->sample->note_to_use)
             ksr->voice[i].orig_frequency = freq_table[(int)(ip->sample->note_to_use)];
@@ -420,26 +409,26 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         ksr->voice_by_channel_note[e->channel][e->key][s] = NULL;
 
     channel_voice_add(ksr, e->channel, i);
-    ksr->voice[i].status                            = VOICE_ON;
-    ksr->voice[i].channel                           = e->channel;
-    ksr->voice[i].note                              = e->key;
-    ksr->voice[i].velocity                          = e->vel;
+    ksr->voice[i].status                              = VOICE_ON;
+    ksr->voice[i].channel                             = e->channel;
+    ksr->voice[i].note                                = e->key;
+    ksr->voice[i].velocity                            = e->vel;
     ksr->voice_by_channel_note[e->channel][e->key][0] = &ksr->voice[i];
-    ksr->voice[i].sample_offset                     = 0;
-    ksr->voice[i].sample_increment                  = 0;
-    ksr->voice[i].sample_right                      = NULL;
-    ksr->voice[i].sample_offset_right               = 0;
-    ksr->voice[i].sample_increment_right            = 0;
+    ksr->voice[i].sample_offset                       = 0;
+    ksr->voice[i].sample_increment                    = 0;
+    ksr->voice[i].sample_right                        = NULL;
+    ksr->voice[i].sample_offset_right                 = 0;
+    ksr->voice[i].sample_increment_right              = 0;
 
-    ksr->voice[i].tremolo_phase                     = 0;
-    ksr->voice[i].tremolo_phase_increment           = ksr->voice[i].sample->tremolo_phase_increment;
-    ksr->voice[i].tremolo_sweep                     = ksr->voice[i].sample->tremolo_sweep_increment;
-    ksr->voice[i].tremolo_sweep_position            = 0;
-    
-    ksr->voice[i].vibrato_sweep                     = ksr->voice[i].sample->vibrato_sweep_increment;
-    ksr->voice[i].vibrato_sweep_position            = 0;
-    ksr->voice[i].vibrato_control_ratio             = ksr->voice[i].sample->vibrato_control_ratio;
-    ksr->voice[i].vibrato_control_counter           = ksr->voice[i].vibrato_phase = 0;
+    ksr->voice[i].tremolo_phase                       = 0;
+    ksr->voice[i].tremolo_phase_increment             = ksr->voice[i].sample->tremolo_phase_increment;
+    ksr->voice[i].tremolo_sweep                       = ksr->voice[i].sample->tremolo_sweep_increment;
+    ksr->voice[i].tremolo_sweep_position              = 0;
+
+    ksr->voice[i].vibrato_sweep                       = ksr->voice[i].sample->vibrato_sweep_increment;
+    ksr->voice[i].vibrato_sweep_position              = 0;
+    ksr->voice[i].vibrato_control_ratio               = ksr->voice[i].sample->vibrato_control_ratio;
+    ksr->voice[i].vibrato_control_counter = ksr->voice[i].vibrato_phase = 0;
     for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
         ksr->voice[i].vibrato_sample_increment[j] = 0;
 
@@ -471,12 +460,12 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
         Sample *left    = NULL;
         Sample *right   = NULL;
         int     si;
-        
+
         if(primary->sample_type & SF_SAMPLETYPE_LEFT)
             left = primary;
         else if(primary->sample_type & SF_SAMPLETYPE_RIGHT)
             right = primary;
-        
+
         if(left || right)
         {
             Sample *best       = NULL;
@@ -545,7 +534,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
 
     for(int li = 0; li < ip->samples; li++)
     {
-        Sample *layer = &ip->sample[li];
+        Sample *layer       = &ip->sample[li];
         Sample *layer_left  = NULL;
         Sample *layer_right = NULL;
 
@@ -567,13 +556,13 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
 
         if(layer_left || layer_right)
         {
-            Sample *best = NULL;
-            long best_score = -1;
+            Sample *best       = NULL;
+            long    best_score = -1;
 
             for(int sj = 0; sj < ip->samples; sj++)
             {
                 Sample *candidate = &ip->sample[sj];
-                long score;
+                long    score;
 
                 if(candidate == layer)
                     continue;
@@ -584,8 +573,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                 if(layer_right && !(candidate->sample_type & SF_SAMPLETYPE_LEFT))
                     continue;
 
-                if((layer_left && layer_left->sf_sample_link == candidate->sf_sample_index) ||
-                    (layer_right && layer_right->sf_sample_link == candidate->sf_sample_index))
+                if((layer_left && layer_left->sf_sample_link == candidate->sf_sample_index) || (layer_right && layer_right->sf_sample_link == candidate->sf_sample_index))
                 {
                     score = 0;
                 }
@@ -607,7 +595,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
 
                 if(best == NULL || score < best_score)
                 {
-                    best = candidate;
+                    best       = candidate;
                     best_score = score;
                 }
             }
@@ -620,7 +608,7 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
                     layer_left = best;
             }
         }
-        
+
         if(layer_left)
         {
             if(layer != layer_left)
@@ -628,14 +616,14 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
 
             layer = layer_left;
         }
-        
+
         if(layer == ksr->voice[i].sample || layer == stereo_partner)
             continue;
 
 
-         // Only start a layered voice if we can register it in a trackable
-         // slot (2..7); unregistered voices would never be released and would
-         // leak the voice pool. 
+        // Only start a layered voice if we can register it in a trackable
+        // slot (2..7); unregistered voices would never be released and would
+        // leak the voice pool.
         int layer_slot = -1;
         for(int s = 2; s < 8; s++)
         {
@@ -648,34 +636,34 @@ void start_note(Kasaria *ksr, MidiEvent *e, int i)
 
         if(layer_slot >= 0 && ksr->free_voice_count > 0)
         {
-            int layer_v = ksr->free_voice_stack[--ksr->free_voice_count];
-            Voice *lv   = &ksr->voice[layer_v];
+            int    layer_v                                             = ksr->free_voice_stack[--ksr->free_voice_count];
+            Voice *lv                                                  = &ksr->voice[layer_v];
             ksr->voice_by_channel_note[e->channel][e->key][layer_slot] = &ksr->voice[layer_v];
 
             channel_voice_add(ksr, e->channel, layer_v);
-            ksr->voice[layer_v].status          = VOICE_ON;
-            ksr->voice[layer_v].channel         = e->channel;
-            ksr->voice[layer_v].note            = e->key;
-            ksr->voice[layer_v].velocity        = e->vel;
-            ksr->voice[layer_v].sample          = layer;
-            ksr->voice[layer_v].sample_right    = layer_right;
-            ksr->voice[layer_v].sample_offset   = 0;
-            ksr->voice[layer_v].sample_offset_right = 0;
-            ksr->voice[layer_v].sample_increment = 0;
-            ksr->voice[layer_v].sample_increment_right = 0;
-            ksr->voice[layer_v].orig_frequency  = ksr->voice[i].orig_frequency;
+            ksr->voice[layer_v].status                  = VOICE_ON;
+            ksr->voice[layer_v].channel                 = e->channel;
+            ksr->voice[layer_v].note                    = e->key;
+            ksr->voice[layer_v].velocity                = e->vel;
+            ksr->voice[layer_v].sample                  = layer;
+            ksr->voice[layer_v].sample_right            = layer_right;
+            ksr->voice[layer_v].sample_offset           = 0;
+            ksr->voice[layer_v].sample_offset_right     = 0;
+            ksr->voice[layer_v].sample_increment        = 0;
+            ksr->voice[layer_v].sample_increment_right  = 0;
+            ksr->voice[layer_v].orig_frequency          = ksr->voice[i].orig_frequency;
 
-            ksr->voice[layer_v].tremolo_phase              = 0;
-            ksr->voice[layer_v].tremolo_phase_increment    = layer->tremolo_phase_increment;
-            ksr->voice[layer_v].tremolo_sweep              = layer->tremolo_sweep_increment;
-            ksr->voice[layer_v].tremolo_sweep_position     = 0;
+            ksr->voice[layer_v].tremolo_phase           = 0;
+            ksr->voice[layer_v].tremolo_phase_increment = layer->tremolo_phase_increment;
+            ksr->voice[layer_v].tremolo_sweep           = layer->tremolo_sweep_increment;
+            ksr->voice[layer_v].tremolo_sweep_position  = 0;
 
-            ksr->voice[layer_v].vibrato_sweep              = layer->vibrato_sweep_increment;
-            ksr->voice[layer_v].vibrato_sweep_position     = 0;
-            ksr->voice[layer_v].vibrato_control_ratio      = layer->vibrato_control_ratio;
-            ksr->voice[layer_v].vibrato_control_counter    = 0;
-            ksr->voice[layer_v].vibrato_phase              = 0;
-            
+            ksr->voice[layer_v].vibrato_sweep           = layer->vibrato_sweep_increment;
+            ksr->voice[layer_v].vibrato_sweep_position  = 0;
+            ksr->voice[layer_v].vibrato_control_ratio   = layer->vibrato_control_ratio;
+            ksr->voice[layer_v].vibrato_control_counter = 0;
+            ksr->voice[layer_v].vibrato_phase           = 0;
+
             for(j = 0; j < VIBRATO_SAMPLE_INCREMENTS; j++)
                 ksr->voice[layer_v].vibrato_sample_increment[j] = 0;
 
@@ -708,22 +696,22 @@ static void invalidate_press_for_voice(Kasaria *ksr, int vi)
 {
     if(!ksr->overlapping_notes)
         return;
-    
+
     int ch  = ksr->voice[vi].channel;
     int key = ksr->voice[vi].note;
-    
+
     if(ch < 0 || key < 0)
         return;
-    
+
     for(int s = 0; s < MAX_NOTE_PRESSES; s++)
     {
         NotePress *p = &ksr->note_press[ch][key][s];
-        
+
         if(p->active)
         {
             if(p->voice == vi)
                 p->voice = -1;
-            
+
             if(p->voice2 == vi)
                 p->voice2 = -1;
 
@@ -764,27 +752,27 @@ static int grab_voice(Kasaria *ksr)
         return ksr->free_voice_stack[--ksr->free_voice_count];
 
     int i = ksr->steal_scan, n = ksr->voices;
-    
+
     while(n--)
     {
         if(ksr->voice[i].status != VOICE_ON && ksr->voice[i].status != VOICE_DIE)
             break;
-        
+
         i = (i + 1) % ksr->voices;
     }
-    
+
     if(ksr->voice[i].status == VOICE_ON || ksr->voice[i].status == VOICE_DIE)
     {
         ksr->lost_notes++;
         return -1;
     }
-    
+
     ksr->steal_scan = (i + 1) % ksr->voices;
     ksr->cut_notes++;
-    
+
     invalidate_press_for_voice(ksr, i);
     channel_voice_remove(ksr, ksr->voice[i].channel, i);
-    
+
     return i;
 }
 
@@ -794,15 +782,15 @@ void note_on(Kasaria *ksr, MidiEvent *e)
 {
     if(!ksr->is_soundfont_loaded)
         return;
-    
+
     if(ksr->note_vel_skipping)
         if(e->vel >= ksr->low_vel_treshold && e->vel <= ksr->high_vel_treshold)
         {
-            ksr->skip_note_vel[e->channel][e->key] = e->vel;
+            ksr->skip_note_vel[e->channel][e->key]    = e->vel;
             ksr->skip_note_active[e->channel][e->key] = 1;
             return;
         }
-    
+
     ksr->skip_note_active[e->channel][e->key] = 0;
     ksr->skip_note_vel[e->channel][e->key]    = 0;
 
@@ -820,10 +808,10 @@ void note_on(Kasaria *ksr, MidiEvent *e)
             for(int k = 0; k < 8; k++)
             {
                 Voice *vp = ksr->voice_by_channel_note[e->channel][e->key][k];
-                
+
                 if(vp && vp->channel == e->channel && vp->note == e->key)
                     kill_note(ksr, (int)(vp - ksr->voice));
-                
+
                 ksr->voice_by_channel_note[e->channel][e->key][k] = NULL;
             }
         }
@@ -835,17 +823,17 @@ void note_on(Kasaria *ksr, MidiEvent *e)
             ksr->voice_by_channel_note[e->channel][e->key][s] = NULL;
 
         int v = grab_voice(ksr);
-        
+
         if(v < 0)
             return;
-    
+
         start_note(ksr, e, v);
-    
-        NotePress *ring = ksr->note_press[e->channel][e->key];
-        int slot        = -1;
-        int oldest      = -1;
-        u32 oldest_gen  = UINT32_MAX;
-    
+
+        NotePress *ring       = ksr->note_press[e->channel][e->key];
+        int        slot       = -1;
+        int        oldest     = -1;
+        u32        oldest_gen = UINT32_MAX;
+
         for(int s = 0; s < MAX_NOTE_PRESSES; s++)
         {
             if(!ring[s].active)
@@ -853,21 +841,21 @@ void note_on(Kasaria *ksr, MidiEvent *e)
                 slot = s;
                 break;
             }
-            
+
             if(ring[s].gen < oldest_gen)
             {
                 oldest_gen = ring[s].gen;
-                oldest = s;
+                oldest     = s;
             }
         }
-    
+
         if(slot < 0)
         {
             slot = oldest;
-            
-            if(ring[slot].voice  >= 0)
+
+            if(ring[slot].voice >= 0)
                 kill_note(ksr, ring[slot].voice);
-            
+
             if(ring[slot].voice2 >= 0)
                 kill_note(ksr, ring[slot].voice2);
 
@@ -875,14 +863,14 @@ void note_on(Kasaria *ksr, MidiEvent *e)
                 if(ring[slot].layer[s] >= 0)
                     kill_note(ksr, ring[slot].layer[s]);
         }
-    
+
         ring[slot].active = 1;
         ring[slot].gen    = ++ksr->note_gen;
         ring[slot].voice  = v;
         ring[slot].voice2 = -1;
         for(int s = 0; s < MAX_NOTE_LAYERS; s++)
             ring[slot].layer[s] = -1;
-        
+
         ring[slot].voice2 = -1;
 
         // Capture the layered voices start_note registered (slots 2..7) so they
@@ -907,7 +895,7 @@ void note_on(Kasaria *ksr, MidiEvent *e)
             start_note(ksr, e, ksr->free_voice_stack[--ksr->free_voice_count]);
             return;
         }
-    
+
         int i      = ksr->steal_scan;
         int n      = ksr->voices;
         int lowest = -1;
@@ -936,7 +924,7 @@ void note_on(Kasaria *ksr, MidiEvent *e)
 void finish_note(Kasaria *ksr, int i)
 {
     invalidate_press_for_voice(ksr, i); // Only works if overlapping_notes is enabled
-    
+
     if(ksr->voice[i].sample->modes & MODES_ENVELOPE)
     {
         // We need to get the envelope out of Sustain stage
@@ -958,11 +946,15 @@ void finish_note(Kasaria *ksr, int i)
 static NotePress *oldest_active(Kasaria *ksr, int ch, int key)
 {
     NotePress *best = NULL;
-    uint32_t bg = UINT32_MAX;
+    uint32_t   bg   = UINT32_MAX;
     for(int s = 0; s < MAX_NOTE_PRESSES; s++)
     {
         NotePress *p = &ksr->note_press[ch][key][s];
-        if(p->active && p->gen < bg) { bg = p->gen; best = p; }
+        if(p->active && p->gen < bg)
+        {
+            bg   = p->gen;
+            best = p;
+        }
     }
     return best;
 }
@@ -973,17 +965,17 @@ void note_off(Kasaria *ksr, MidiEvent *e)
     if(ksr->skip_note_active[e->channel][e->key])
     {
         ksr->skip_note_active[e->channel][e->key] = 0;
-        ksr->skip_note_vel[e->channel][e->key] = 0;
+        ksr->skip_note_vel[e->channel][e->key]    = 0;
         return;
     }
-    
+
     if(ksr->overlapping_notes)
     {
         NotePress *p = oldest_active(ksr, e->channel, e->key);
 
         if(!p)
-            return;             // OFF-before-ON or duplicate OFF → safe no-op
-    
+            return; // OFF-before-ON or duplicate OFF → safe no-op
+
         if(p->voice >= 0)
         {
             Voice *v = &ksr->voice[p->voice];
@@ -995,7 +987,7 @@ void note_off(Kasaria *ksr, MidiEvent *e)
                     finish_note(ksr, p->voice);
             }
         }
-    
+
         if(p->voice2 >= 0)
         {
             Voice *v = &ksr->voice[p->voice2];
@@ -1007,13 +999,13 @@ void note_off(Kasaria *ksr, MidiEvent *e)
                     finish_note(ksr, p->voice2);
             }
         }
-    
+
         // Release this press's layered voices. They are tracked per-press (not
         // via the shared voice_by_channel_note slots, which a later retrigger
         // may have overwritten), so overlapping notes release the right ones.
         for(int s = 0; s < MAX_NOTE_LAYERS; s++)
         {
-            int idx = p->layer[s];
+            int idx     = p->layer[s];
             p->layer[s] = -1;
             if(idx < 0)
                 continue;
@@ -1072,12 +1064,12 @@ void all_notes_off(Kasaria *ksr, int c)
                 ksr->note_press[c][n][s].voice  = -1;
                 ksr->note_press[c][n][s].voice2 = -1;
             }
-            
+
             for(int k = 0; k < 8; k++)
                 ksr->voice_by_channel_note[c][n][k] = NULL;
         }
     }
-    
+
     int i = ksr->voices;
     while(i--)
         if(ksr->voice[i].status == VOICE_ON && ksr->voice[i].channel == c)
@@ -1112,12 +1104,12 @@ void all_sounds_off(Kasaria *ksr, int c)
                 ksr->note_press[c][n][s].voice  = -1;
                 ksr->note_press[c][n][s].voice2 = -1;
             }
-            
+
             for(int k = 0; k < 8; k++)
                 ksr->voice_by_channel_note[c][n][k] = NULL;
         }
     }
-    
+
     int i = ksr->voices;
     while(i--)
         if(ksr->voice[i].channel == c && ksr->voice[i].status != VOICE_FREE && ksr->voice[i].status != VOICE_DIE)
@@ -1185,7 +1177,7 @@ void reset_controllers(Kasaria *ksr, int c)
     ksr->channel[c].sustain     = 0;
     ksr->channel[c].mono        = 0;
     ksr->channel[c].pitchbend   = 0x2000;
-    ksr->channel[c].pitchfactor = 0; // to be computed
+    ksr->channel[c].pitchfactor = 0;  // to be computed
     ksr->channel[c].coarse_tune = 64; // RPN 0x0002 center (no tuning offset)
     ksr->channel[c].reverb      = 40;
     ksr->channel[c].chorus      = 0;
@@ -1200,7 +1192,7 @@ void reset_midi(Kasaria *ksr)
         reset_controllers(ksr, i);
         // The rest of these are unaffected by the Reset All Controllers event
         ksr->channel[i].program   = ksr->default_program;
-        //ksr->channel[i].panning   = NO_PANNING;
+        // ksr->channel[i].panning   = NO_PANNING;
         ksr->channel[i].panning   = 64;
         ksr->channel[i].pitchsens = 2;
         ksr->channel[i].bank      = 0; // tone bank or drum set
@@ -1214,8 +1206,8 @@ void reset_midi(Kasaria *ksr)
 
     if(ksr->chorus_enabled)
         reset_chorus(ksr);
-    
-    
+
+
     ksr->lost_notes = 0;
     ksr->cut_notes  = 0;
 }
@@ -1233,10 +1225,10 @@ void do_compute_data(Kasaria *ksr, long count)
 
     if(ksr->chorus_enabled)
         memset(ksr->chorus_send_buffer, 0, count * sizeof(ksr->chorus_send_buffer[0]));
-        //memset(ksr->chorus_send_buffer, 0, count * 4);
-        //memset(ksr->reverb_send_buffer, 0, count * sizeof(ksr->reverb_send_buffer[0]));
-    
-    
+    // memset(ksr->chorus_send_buffer, 0, count * 4);
+    // memset(ksr->reverb_send_buffer, 0, count * sizeof(ksr->reverb_send_buffer[0]));
+
+
 
     for(i = 0; i < samples; i++)
         ksr->buffer_pointer[i] = 0;
@@ -1252,8 +1244,8 @@ void do_compute_data(Kasaria *ksr, long count)
 
     if(ksr->chorus_enabled)
         process_chorus(ksr, ksr->buffer_pointer, ksr->chorus_send_buffer, count);
-    
-    
+
+
 
     if(ksr->audio_compressor)
         audio_compressor(&ksr->compressor_settings, (f32 *)ksr->buffer_pointer, samples * sizeof(f32));

@@ -57,21 +57,21 @@ Kasaria *raw_midi_event_ctx;
 
 
 
-void ksr_print_config(Kasaria *ksr)
+void     ksr_print_config(Kasaria *ksr)
 {
-    printf("fast_decay                 = %d",  ksr->fast_decay);
-    printf("antialiasing_allowed       = %d",  ksr->antialiasing_allowed);
-    printf("pre_resampling_allowed     = %d",  ksr->pre_resampling_allowed);
+    printf("fast_decay                 = %d", ksr->fast_decay);
+    printf("antialiasing_allowed       = %d", ksr->antialiasing_allowed);
+    printf("pre_resampling_allowed     = %d", ksr->pre_resampling_allowed);
     printf("sample_rate                = %ld", ksr->play_mode.rate);
     printf("control_rate               = %ld", ksr->control_rate);
     printf("control_ratio              = %ld", ksr->control_ratio);
-    printf("master_volume              = %f",  ksr->master_volume);
+    printf("master_volume              = %f", ksr->master_volume);
     printf("drum_channels              = %ld", ksr->drumchannels);
     printf("quiet_channels             = %ld", ksr->quietchannels);
-    printf("voice_limit                = %d",  ksr->voices);
-    printf("adjust_panning_immediately = %d",  ksr->adjust_panning_immediately);
-    printf("overlapping_notes          = %d",  ksr->overlapping_notes);
-    printf("skip_initial_silence       = %d",  ksr->skip_initial_midi_silence);
+    printf("voice_limit                = %d", ksr->voices);
+    printf("adjust_panning_immediately = %d", ksr->adjust_panning_immediately);
+    printf("overlapping_notes          = %d", ksr->overlapping_notes);
+    printf("skip_initial_silence       = %d", ksr->skip_initial_midi_silence);
 
 
     printf("\n------------- [Filters and audio DSP Effects] -------------\n\n");
@@ -96,10 +96,10 @@ void ksr_print_config(Kasaria *ksr)
 
 void init_internal_state(Kasaria *ksr)
 {
-    ksr->f_mmap = calloc(1, sizeof(FileMap));
+    ksr->f_mmap                = calloc(1, sizeof(FileMap));
 
-    ksr->is_midi_loaded = false;
-    ksr->is_midi_ended  = false;
+    ksr->is_midi_loaded        = false;
+    ksr->is_midi_ended         = false;
 
     // Internal MIDI Player State setup
     ksr->is_midi_player_paused = false;
@@ -120,12 +120,12 @@ Kasaria *ksr_init(bool disable_logs)
     log_set_quiet(disable_logs);
 
     set_default_config(ksr);
-    
+
     init_internal_state(ksr);
-    
+
     init_reverb(ksr);
     init_chorus(ksr);
-    
+
     init_tables(ksr);
     reset_midi(ksr);
 
@@ -160,7 +160,7 @@ void ksr_restore_defaults(Kasaria *ksr)
 static void hard_kill_voice(Kasaria *ksr, int v)
 {
     Voice *vp = &ksr->voice[v];
-    int c, k, t;
+    int    c, k, t;
 
     vp->status = VOICE_FREE;
     channel_voice_remove(ksr, vp->channel, v);
@@ -177,7 +177,7 @@ static void hard_kill_voice(Kasaria *ksr, int v)
 static bool remap_voice(Kasaria *ksr, int v)
 {
     Voice *vp = &ksr->voice[v];
-    int ch = vp->channel;
+    int    ch = vp->channel;
 
     // if(ksr->voice_by_channel_note[ch][vp->note][1] == vp)
     //     return false; // stereo partner voice: let the primary drive it
@@ -187,9 +187,9 @@ static bool remap_voice(Kasaria *ksr, int v)
 
     if(ISDRUMCHANNEL(ksr, ch))
     {
-        ToneBank *db = ksr->drumset[ksr->channel[ch].bank];
+        ToneBank   *db = ksr->drumset[ksr->channel[ch].bank];
         Instrument *ip;
-        int j;
+        int         j;
 
         if(!db || !IS_VALID_INSTRUMENT(db->tone[vp->note].instrument))
         {
@@ -210,16 +210,16 @@ static bool remap_voice(Kasaria *ksr, int v)
         return false;
     }
 
-    int pg = ksr->channel[ch].program;
-    int bk = ksr->channel[ch].bank;
-    ToneBank *tb = (bk >= 0 && bk < 128) ? ksr->tonebank[bk] : NULL;
+    int         pg = ksr->channel[ch].program;
+    int         bk = ksr->channel[ch].bank;
+    ToneBank   *tb = (bk >= 0 && bk < 128) ? ksr->tonebank[bk] : NULL;
     Instrument *ip = NULL;
-    
+
     if(tb && IS_VALID_INSTRUMENT(tb->tone[pg].instrument))
         ip = tb->tone[pg].instrument;
     else if(ksr->tonebank[0] && IS_VALID_INSTRUMENT(ksr->tonebank[0]->tone[pg].instrument))
         ip = ksr->tonebank[0]->tone[pg].instrument;
-    
+
     if(!ip)
         return false;
 
@@ -235,7 +235,7 @@ static void unload_instruments(Kasaria *ksr)
     int          i, j, k, n, v;
     int          count = 0;
     Instrument **freed;
-    
+
     if(!ksr)
         return;
 
@@ -243,7 +243,7 @@ static void unload_instruments(Kasaria *ksr)
         ksr_player_pause(ksr);
 
     freed = (Instrument **)safe_malloc(sizeof(Instrument *) * (128 * 2 * 128));
-    
+
     for(i = 0; i < 128; i++)
     {
         ToneBank *banks[2];
@@ -274,11 +274,11 @@ static void unload_instruments(Kasaria *ksr)
             }
         }
     }
-    
+
     for(v = 0; v < ksr->voices; v++)
     {
-        Voice *vp = &ksr->voice[v];
-        bool doomed = false;
+        Voice *vp     = &ksr->voice[v];
+        bool   doomed = false;
 
         if(vp->status == VOICE_FREE || !vp->sample)
             continue;
@@ -309,8 +309,8 @@ static void release_freed(Kasaria *ksr, Instrument **freed, int count)
 
     for(v = 0; v < ksr->voices; v++)
     {
-        Voice *vp = &ksr->voice[v];
-        bool doomed = false;
+        Voice *vp     = &ksr->voice[v];
+        bool   doomed = false;
 
         if(vp->status == VOICE_FREE || !vp->sample)
             continue;
@@ -337,9 +337,9 @@ static void preserve_instrument(Instrument *ip)
     for(s = 0; s < ip->samples; s++)
     {
         Sample *sp = &ip->sample[s];
-        long   frames;
-        size_t bytes, elem;
-        void  *copy;
+        long    frames;
+        size_t  bytes, elem;
+        void   *copy;
 
         if(!sp->data || sp->data_alloced)
             continue;
@@ -350,10 +350,18 @@ static void preserve_instrument(Instrument *ip)
 
         switch(sp->data_type)
         {
-            case SAMPLE_TYPE_FLOAT:  elem = sizeof(f32); break;
-            case SAMPLE_TYPE_DOUBLE: elem = sizeof(f64); break;
-            case SAMPLE_TYPE_INT32:  elem = sizeof(i32); break;
-            default:                 elem = sizeof(sample_t); break;
+        case SAMPLE_TYPE_FLOAT:
+            elem = sizeof(f32);
+            break;
+        case SAMPLE_TYPE_DOUBLE:
+            elem = sizeof(f64);
+            break;
+        case SAMPLE_TYPE_INT32:
+            elem = sizeof(i32);
+            break;
+        default:
+            elem = sizeof(sample_t);
+            break;
         }
 
         bytes = (size_t)frames * elem + 128 * elem;
@@ -369,50 +377,50 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, KsrSoundfontOpts
 {
     if(!ksr || !filename)
         return 0;
-    
-    FILE *fp;
+
+    FILE       *fp;
     const char *ext;
 
     log_debug("Loading soundfont file: %s", filename);
 
     ext = strrchr(filename, '.');
-    
+
     if(ext)
         ext++;
-    
+
     if(!ext || strcasecmp(ext, "sf2") != 0)
     {
         log_error("Unsupported soundfont format!");
         return 0;
     }
-    
+
     fp = fopen(filename, "rb");
-    
+
     if(!fp)
     {
         log_error("Can't open soundfont file: %s", filename);
         return 0;
     }
-    
+
     // Fresh temp on EVERY load => 1st and 2nd load follow the identical path
     SFInfo *tmp = (SFInfo *)safe_malloc(sizeof(SFInfo));
     memset(tmp, 0, sizeof(SFInfo));
-    
+
     if(load_soundfont(tmp, fp) != 0)
     {
         fclose(fp);
         safe_free(tmp);
         return 0;
     }
-    
+
     fclose(fp);
-    
-    
+
+
     if(ksr->sf_loaded && ksr->sf_info)
     {
-        Instrument **freed = (Instrument **)safe_malloc(sizeof(Instrument *) * (128 * 2 * 128));
-        int count = 0, i, n, k;
-        bool new_has_drums = false;
+        Instrument **freed         = (Instrument **)safe_malloc(sizeof(Instrument *) * (128 * 2 * 128));
+        int          count         = 0, i, n, k;
+        bool         new_has_drums = false;
 
         for(i = 0; i < tmp->npresets; i++)
             if(tmp->preset[i].bank == 128)
@@ -420,26 +428,26 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, KsrSoundfontOpts
 
         for(i = 0; i < tmp->npresets; i++)
         {
-            int b = tmp->preset[i].bank, p = tmp->preset[i].preset;
+            int         b = tmp->preset[i].bank, p = tmp->preset[i].preset;
             Instrument *ip;
 
             if(b < 0 || b > 127 || p < 0 || p > 127)
                 continue;
-            
+
             if(!ksr->tonebank[b])
                 continue;
 
             ip = ksr->tonebank[b]->tone[p].instrument;
-            
+
             if(!ip || ip == MAGIC_LOAD_INSTRUMENT)
                 continue;
 
             ksr->tonebank[b]->tone[p].instrument = NULL;
-            
+
             for(n = 0; n < count; n++)
                 if(freed[n] == ip)
                     break;
-            
+
             if(n == count)
                 freed[count++] = ip;
         }
@@ -451,22 +459,22 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, KsrSoundfontOpts
             for(i = 0; i < 128; i++)
             {
                 ToneBank *db = ksr->drumset[i];
-                
+
                 if(!db)
                     continue;
-                
+
                 for(k = 0; k < 128; k++)
                 {
                     Instrument *ip = db->tone[k].instrument;
                     if(!ip || ip == MAGIC_LOAD_INSTRUMENT)
                         continue;
-                    
+
                     db->tone[k].instrument = NULL;
-                    
+
                     for(n = 0; n < count; n++)
                         if(freed[n] == ip)
                             break;
-                    
+
                     if(n == count)
                         freed[count++] = ip;
                 }
@@ -482,26 +490,26 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, KsrSoundfontOpts
             ToneBank *banks[2];
             banks[0] = ksr->tonebank[i];
             banks[1] = ksr->drumset[i];
-            
+
             for(int j = 0; j < 2; j++)
             {
                 ToneBank *b2 = banks[j];
-                
+
                 if(!b2)
                     continue;
-                
+
                 for(int s2 = 0; s2 < 128; s2++)
                 {
                     Instrument *ip = b2->tone[s2].instrument;
-                    int n2;
-                    
+                    int         n2;
+
                     if(!ip || ip == MAGIC_LOAD_INSTRUMENT)
                         continue;
-                    
+
                     for(n2 = 0; n2 < count; n2++)
                         if(freed[n2] == ip)
                             break;
-                    
+
                     if(n2 == count)
                         preserve_instrument(ip);
                 }
@@ -518,7 +526,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, KsrSoundfontOpts
 
     strncpy(ksr->sf_filename, filename, sizeof(ksr->sf_filename) - 1);
     ksr->sf_filename[sizeof(ksr->sf_filename) - 1] = '\0'; // This needs to be changed for the internal midi player
-    ksr->sf_loaded = 1;
+    ksr->sf_loaded                                 = 1;
 
     log_debug("active_presets=%d", soundfont_opts.active_presets);
     load_soundfont_presets(ksr, soundfont_opts.active_presets, soundfont_opts.load_percussion_bank);
@@ -713,7 +721,7 @@ int ksr_init_audio(Kasaria *ksr, int init_scope)
         return 0;
     }
 
-    ksr->audio_init_scope = init_scope;
+    ksr->audio_init_scope              = init_scope;
 
     ksr->dev_config                    = ma_device_config_init(ma_device_type_playback);
 
@@ -727,10 +735,10 @@ int ksr_init_audio(Kasaria *ksr, int init_scope)
 
     if(ksr->audio_init_scope == RAW_MIDI_EVENTS)
     {
-        raw_midi_event_ctx = ksr;
+        raw_midi_event_ctx           = ksr;
         ksr->dev_config.dataCallback = audio_callback;
         ksr->is_init_raw_midi_events = true;
-        ksr->overlapping_notes       = true; // This MUST NOT be changed at all
+        ksr->overlapping_notes       = true;  // This MUST NOT be changed at all
         ksr->reverb_enabled          = false; // Temporary thing
         log_info("!!!\033[38;5;201mIMPORTANT\033[0m!!! Overlapping notes enabled to prevent audio cutouts. \033[4mThis cannot be disabled!\033[0m");
     }
@@ -777,7 +785,7 @@ int ksr_start_audio(Kasaria *ksr)
     }
 
     log_info("Audio device started for internal midi player");
-    //ksr->is_audio_started = true;
+    // ksr->is_audio_started = true;
 
     return 0;
 #else
@@ -809,7 +817,7 @@ int ksr_stop_audio(Kasaria *ksr)
         return 1;
     }
 
-    //ksr->is_audio_started = true;
+    // ksr->is_audio_started = true;
 
     return 0;
 #else

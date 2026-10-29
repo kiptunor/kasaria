@@ -61,14 +61,14 @@
 
 
 
-#include <stdio.h>
-#include <stdint.h>
-#include <sys/types.h>
 #include "../../internal_types.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <sys/types.h>
 
 
 #ifndef KSR_SF2_H
-#define KSR_SF2_H
+    #define KSR_SF2_H
 
 
 typedef off_t off_size_t;
@@ -76,8 +76,8 @@ typedef off_t off_size_t;
 // chunk record header
 typedef struct _SFChunk
 {
-    char    id[4];
-    i32 size;
+    char id[4];
+    i32  size;
 } SFChunk;
 
 // generator record
@@ -98,7 +98,7 @@ typedef struct _SFGenLayer
 typedef struct _SFHeader
 {
     char        name[20];
-    u16    bagNdx;
+    u16         bagNdx;
     // layered stuff
     int         nlayers;
     SFGenLayer *layer;
@@ -108,7 +108,7 @@ typedef struct _SFHeader
 typedef struct _SFPresetHdr
 {
     SFHeader hdr;
-    u16 preset, bank;
+    u16      preset, bank;
     // int32 lib, genre, morphology; // not used
 } SFPresetHdr;
 
@@ -121,15 +121,15 @@ typedef struct _SFInstHdr
 // sample info record
 typedef struct _SFSampleInfo
 {
-    char     name[20];
+    char name[20];
     i32  startsample, endsample;
     i32  startloop, endloop;
     // ver.2 additional info
     i32  samplerate;
-    u8  originalPitch;
+    u8   originalPitch;
     i8   pitchCorrection;
-    u16 samplelink;
-    u16 sampletype; // 1=mono, 2=right, 4=left, 8=linked, $8000=ROM
+    u16  samplelink;
+    u16  sampletype; // 1=mono, 2=right, 4=left, 8=linked, $8000=ROM
     // optional info
     i32  size;     // sample size
     i32  loopshot; // short-shot loop size
@@ -146,14 +146,14 @@ typedef struct _SFInfo
     char         *sf_name;
 
     // version of this file
-    u16      version, minorversion;
+    u16           version, minorversion;
     // sample position (from origin) & total size (in bytes)
     long          samplepos;
-    i32       samplesize;
+    i32           samplesize;
 
     // raw INFO chunk list
     long          infopos, infosize;
-    off_size_t lowbitpos;
+    off_size_t    lowbitpos;
 
     // preset headers
     int           npresets;
@@ -166,10 +166,11 @@ typedef struct _SFInfo
     // instrument headers
     int           ninsts;
     SFInstHdr    *inst;
-    int use_rom;
-}SFInfo;
+    int           use_rom;
+} SFInfo;
 
 // SF2 generator IDs
+// clang-format off
 #define SF_STARTADDRS           0
 #define SF_ENDADDRS             1
 #define SF_STARTLOOP            2
@@ -229,6 +230,7 @@ typedef struct _SFInfo
 #define SF_SAMPLETYPE_COMPRESSED 0x10
 #define SF_SAMPLERATE_MAX        400000
 #define SF_SAMPLERATE_MIN        400
+// clang-format on
 
 
 /*----------------------------------------------------------------
@@ -236,7 +238,7 @@ typedef struct _SFInfo
  *----------------------------------------------------------------*/
 
 // sffile.c
-extern int load_soundfont(SFInfo *sf, FILE *fp);
+extern int  load_soundfont(SFInfo *sf, FILE *fp);
 extern void free_soundfont(SFInfo *sf);
 extern void correct_samples(SFInfo *sf);
 

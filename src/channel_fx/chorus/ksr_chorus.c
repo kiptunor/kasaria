@@ -24,7 +24,7 @@ chorus.c -- SKChorus integration
 #include <stdio.h>
 
 #ifndef _WIN32_WCE
-#include <string.h>
+    #include <string.h>
 #endif
 
 #include "../../ksr_internal.h"
@@ -61,7 +61,7 @@ void init_chorus(Kasaria *ksr)
     sk_chorus_rate(ksr->chorus_l, CHORUS_RATE);
     sk_chorus_rate(ksr->chorus_r, CHORUS_RATE);
 
-   
+
     sk_chorus_phase(ksr->chorus_l, 0.0f);
     sk_chorus_phase(ksr->chorus_r, 0.5f);
 
@@ -123,14 +123,14 @@ void process_chorus(Kasaria *ksr, f32 *buf, long *send_buf, long count)
 
     if(!ksr->chorus_enabled || ksr->chorus_depth <= 0.0 || count <= 0)
         return;
-    
+
 
     if(!ksr->chorus_l || !ksr->chorus_r)
         return;
 
     if(count > AUDIO_BUFFER_SIZE)
         count = AUDIO_BUFFER_SIZE;
-    
+
     scale = 1L << (31 - GUARD_BITS);
 
     if(scale <= 0)
@@ -160,6 +160,5 @@ void process_chorus(Kasaria *ksr, f32 *buf, long *send_buf, long count)
         }
         else
             buf[i] += wet_l * (f32)scale;
-        
     }
 }

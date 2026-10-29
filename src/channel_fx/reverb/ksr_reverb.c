@@ -24,7 +24,7 @@ reverb.c -- EAXReverb integration
 #include <stdio.h>
 
 #ifndef _WIN32_WCE
-#include <string.h>
+    #include <string.h>
 #endif
 
 #include "../../ksr_internal.h"
@@ -32,8 +32,7 @@ reverb.c -- EAXReverb integration
 #include "ksr_reverb_effect.h"
 
 
-static const EFXEAXREVERBPROPERTIES reverb_presets[] =
-{
+static const EFXEAXREVERBPROPERTIES reverb_presets[] = {
     EFX_REVERB_PRESET_GENERIC,
     EFX_REVERB_PRESET_PADDEDCELL,
     EFX_REVERB_PRESET_ROOM,
@@ -149,20 +148,20 @@ static const EFXEAXREVERBPROPERTIES reverb_presets[] =
     EFX_REVERB_PRESET_SMALLWATERROOM,
 };
 
-#define REVERB_PRESET_COUNT (sizeof(reverb_presets)/sizeof(reverb_presets[0]))
+#define REVERB_PRESET_COUNT (sizeof(reverb_presets) / sizeof(reverb_presets[0]))
 
 static void apply_reverb_preset(Kasaria *ksr)
 {
     int preset;
-    
+
     if(!ksr->reverb_enabled)
         return;
-    
+
     preset = ksr->reverb_preset;
-    
+
     if(preset >= REVERB_PRESET_COUNT || preset < 0)
         preset = KSR_REVERB_PRESET_GENERIC;
-    
+
     ReverbEffectLoadPreset(&ksr->reverb, (EFXEAXREVERBPROPERTIES *)&reverb_presets[preset]);
     ReverbEffectUpdate(&ksr->reverb, ksr->play_mode.rate);
 }
@@ -188,26 +187,26 @@ void set_reverb_preset(Kasaria *ksr, int preset)
 {
     if(preset >= REVERB_PRESET_COUNT || preset < 0)
         return;
-    
+
     ksr->reverb_preset = preset;
     apply_reverb_preset(ksr);
 }
 
 void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count)
 {
-    f32 mono_in[REVERB_BUFFERSIZE];
-    f32 stereo_out[REVERB_BUFFERSIZE * 2];
+    f32  mono_in[REVERB_BUFFERSIZE];
+    f32  stereo_out[REVERB_BUFFERSIZE * 2];
     long scale;
     long offset, i;
-            
+
     if(!ksr->reverb_enabled || ksr->reverb_level <= 0.0 || count <= 0)
         return;
-    
+
     if(count > AUDIO_BUFFER_SIZE)
         count = AUDIO_BUFFER_SIZE;
-            
+
     scale = 1 << (31 - GUARD_BITS);
-    
+
     // Process in blocks of at most REVERB_BUFFERSIZE frames: the stack scratch
     // buffers above and ReverbEffect's internal EarlySamples/ReverbSamples
     // arrays are both sized to REVERB_BUFFERSIZE, so passing a larger count
@@ -227,17 +226,17 @@ void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count)
 
         for(i = 0; i < n; i++)
         {
-            long k = offset + i;
+            long k  = offset + i;
 
-            f32 wl = stereo_out[i*2+0] * (f32)scale * (f32)ksr->reverb_level;
-            f32 wr = stereo_out[i*2+1] * (f32)scale * (f32)ksr->reverb_level;
+            f32  wl = stereo_out[i * 2 + 0] * (f32)scale * (f32)ksr->reverb_level;
+            f32  wr = stereo_out[i * 2 + 1] * (f32)scale * (f32)ksr->reverb_level;
 
             if(ksr->reverb_only)
             {
                 if(!(ksr->play_mode.encoding & PE_MONO))
                 {
-                    buf[k*2+0] = wl;
-                    buf[k*2+1] = wr;
+                    buf[k * 2 + 0] = wl;
+                    buf[k * 2 + 1] = wr;
                 }
                 else
                     buf[k] = (wl + wr) / 2.0f;
@@ -246,8 +245,8 @@ void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count)
             {
                 if(!(ksr->play_mode.encoding & PE_MONO))
                 {
-                    buf[k*2+0] += wl;
-                    buf[k*2+1] += wr;
+                    buf[k * 2 + 0] += wl;
+                    buf[k * 2 + 1] += wr;
                 }
                 else
                     buf[k] += (wl + wr) / 2.0f;

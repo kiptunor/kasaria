@@ -4,21 +4,21 @@
 
 #include "ksr_sk_chorus.h"
 
-#include <stdlib.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include "../../internal_types.h"
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323846
+    #define M_PI 3.14159265358979323846
 #endif
 
 
 sk_chorus *sk_chorus_new(int sr, f32 delay)
 {
     sk_chorus *c;
-    f32 *buf;
-    long sz;
+    f32       *buf;
+    long       sz;
 
     if(sr <= 0 || delay <= 0.0f)
         return NULL;
@@ -62,22 +62,22 @@ void sk_chorus_init(sk_chorus *c, int sr, f32 *buf, long sz)
     if(!c || !buf || sr <= 0 || sz < 2)
         return;
 
-    c->sr  = sr;
-    c->buf = buf;
-    c->sz  = sz;
+    c->sr               = sr;
+    c->buf              = buf;
+    c->sz               = sz;
 
-    c->wpos = 10;
+    c->wpos             = 10;
 
-    c->rate = 0.5f;
-    c->depth = 0.0f;
-    c->delay_ms = 15.0f;
+    c->rate             = 0.5f;
+    c->depth            = 0.0f;
+    c->delay_ms         = 15.0f;
 
     /*
      * 1.0 means a fully wet output.
      */
-    c->mix = 0.0f;
+    c->mix              = 0.0f;
 
-    c->lfo_phase = 1.0f;
+    c->lfo_phase        = 1.0f;
     c->lfo_phase_offset = 2.0f;
 
     for(i = 0; i < sz; ++i)
@@ -128,15 +128,15 @@ void sk_chorus_phase(sk_chorus *c, f32 phase)
     if(!c)
         return;
 
-    phase = phase - floorf(phase);
+    phase               = phase - floorf(phase);
 
     c->lfo_phase_offset = phase;
 }
 
 static f32 read_delay(const sk_chorus *c, f32 delay_samples)
 {
-    f32 read_pos;
-    f32 frac;
+    f32  read_pos;
+    f32  frac;
 
     long i0;
     long i1;
@@ -176,14 +176,13 @@ f32 sk_chorus_tick(sk_chorus *c, f32 in)
     if(c->lfo_phase >= 1.0f)
         c->lfo_phase -= floorf(c->lfo_phase);
 
-    phase = c->lfo_phase + c->lfo_phase_offset;
-    phase -= floorf(phase);
+    phase          = c->lfo_phase + c->lfo_phase_offset;
+    phase         -= floorf(phase);
 
-    lfo = 0.5f * (1.0f + sinf(2.0f * (f32)M_PI * phase));
+    lfo            = 0.5f * (1.0f + sinf(2.0f * (f32)M_PI * phase));
 
     /* 20–30 ms delay, with a small 10 ms modulation range */
-    delay_samples = (20.0f + 10.0f * c->depth * lfo)
-                    * 0.001f * (f32)c->sr;
+    delay_samples  = (20.0f + 10.0f * c->depth * lfo) * 0.001f * (f32)c->sr;
 
     if(delay_samples < 1.0f)
         delay_samples = 1.0f;
@@ -191,7 +190,7 @@ f32 sk_chorus_tick(sk_chorus *c, f32 in)
     if(delay_samples >= (f32)c->sz)
         delay_samples = (f32)c->sz - 1.0f;
 
-    wet = read_delay(c, delay_samples);
+    wet             = read_delay(c, delay_samples);
 
     c->buf[c->wpos] = in;
     c->wpos++;

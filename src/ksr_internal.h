@@ -46,8 +46,8 @@
 
 
 #include <math.h>
-#include <stdbool.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -56,15 +56,15 @@
 
 
 #ifdef KSR_INTERNAL_AUDIO_HANDLER
-#include "ext_deps/miniaudio/miniaudio.h"
+    #include "ext_deps/miniaudio/miniaudio.h"
 #endif
 
 
 #include "internal_types.h"
 
 
-#include "channel_fx/reverb/ksr_reverb_effect.h"
 #include "channel_fx/chorus/ksr_sk_chorus.h"
+#include "channel_fx/reverb/ksr_reverb_effect.h"
 
 
 #include "config.h"
@@ -84,9 +84,9 @@
 
 
 #ifdef PATH_SEP2
-#define IS_PATH_SEP(c) ((c) == PATH_SEP || (c) == PATH_SEP2)
+    #define IS_PATH_SEP(c) ((c) == PATH_SEP || (c) == PATH_SEP2)
 #else
-#define IS_PATH_SEP(c) ((c) == PATH_SEP)
+    #define IS_PATH_SEP(c) ((c) == PATH_SEP)
 #endif
 
 #define safe_free free
@@ -103,133 +103,133 @@
     #define FSCALENEG(a, b) ((a) * (1.0L / (f64)(1 << (b))))
 #endif
 
-#define FP_EQ(a, b) (fp_equals(a, b, 0.001f))
-#define FP_EQ_0(a) (FP_EQ(a, 0.0f))
-#define FP_NE_0(a) ((a) > 0.0 || (a) < 0.0)
+#define FP_EQ(a, b)           (fp_equals(a, b, 0.001f))
+#define FP_EQ_0(a)            (FP_EQ(a, 0.0f))
+#define FP_NE_0(a)            ((a) > 0.0 || (a) < 0.0)
 
-#define RANGE(lo,hi)	(((hi)&0xff) << 8 | ((lo)&0xff))
-#define LOWNUM(val)	((val) & 0xff)
-#define HIGHNUM(val)	(((val) >> 8) & 0xff)
+#define RANGE(lo, hi)         (((hi) & 0xff) << 8 | ((lo) & 0xff))
+#define LOWNUM(val)           ((val) & 0xff)
+#define HIGHNUM(val)          (((val) >> 8) & 0xff)
 
 #define ISDRUMCHANNEL(tm, c)  ((tm->drumchannels & (1 << (c))))
 #define ISQUIETCHANNEL(tm, c) ((tm->quietchannels & (1 << (c))))
 #define MAGIC_LOAD_INSTRUMENT ((Instrument *)(-1))
 
 
-#define DIV_2       ((f64)0.5)
-#define DIV_3       ((f64)0.33333333333333333333333333333333)
-#define DIV_4       ((f64)0.25)
-#define DIV_5       ((f64)0.2)
-#define DIV_6       ((f64)0.16666666666666666666666666666667)
-#define DIV_7       ((f64)0.14285714285714285714285714285714)
-#define DIV_8       ((f64)0.125)
-#define DIV_9       ((f64)0.11111111111111111111111111111111)
-#define DIV_10      ((f64)0.1)
-#define DIV_11      ((f64)0.090909090909090909090909090909091)
-#define DIV_12      ((f64)0.083333333333333333333333333333333)
-#define DIV_13      ((f64)0.076923076923076923076923076923077)
-#define DIV_14      ((f64)0.071428571428571428571428571428571)
-#define DIV_15      ((f64)0.066666666666666666666666666666667)  // 1 / 15
-#define DIV_16      ((f64)0.0625)                               // 1 / 16
-#define DIV_19      ((f64)0.052631578947368421052631578947368)  // 1 / 19
-#define DIV_20      ((f64)0.05)
-#define DIV_24      ((f64)0.041666666666666666666666666666667)  // 1 / 24
-#define DIV_30      ((f64)0.033333333333333333333333333333333)  // 1 / 30
-#define DIV_31      ((f64)0.032258064516129032258064516129032)  // 1 / 31
-#define DIV_32      ((f64)0.03125)                              // 1 / 32
-#define DIV_36      ((f64)0.027777777777777777777777777777778)  // 1 / 36
-#define DIV_40      ((f64)0.025)                                // 1 / 40
-#define DIV_48      ((f64)0.020833333333333333333333333333333)  // 1 / 48
-#define DIV_50      ((f64)0.02)                                 // 1 / 50
-#define DIV_60      ((f64)0.016666666666666666666666666666667)  // 1 / 60
-#define DIV_63      ((f64)0.015873015873015873015873015873016)  // 1 / 63
-#define DIV_64      ((f64)0.015625)                             // 1 / 64
-#define DIV_65      ((f64)0.015384615384615384615384615384615)  // 1 / 65
-#define DIV_80      ((f64)0.0125)                               // 1 / 80
-#define DIV_96      ((f64)0.010416666666666666666666666666)     // 1 / 96
-#define DIV_100     (f64)(0.01)                                 // 1 / 100
-#define DIV_120     ((f64)0.0083333333333333333333333333333333) // 1 / 120
-#define DIV_127     (f64)(0.007874015748031496062992125984252)  // 1 / 127
-#define DIV_128     (f64)(0.0078125)                            // 1 / 128
-#define DIV_140     ((f64)0.0071428571428571428571428571428571) // 1 / 140
-#define DIV_150     ((f64)0.0066666666666666666666666666666667) // 1 / 150
-#define DIV_160     ((f64)0.00625)                              // 1 / 160
-#define DIV_180     (f64)(0.0055555555555555555555555555555556)
-#define DIV_200     (f64)(0.005)                                // 1 / 200
-#define DIV_255     (f64)(0.003921568627450980392156862745098)
-#define DIV_256     (f64)(0.00390625)                           // 1 / 256
-#define DIV_360     (f64)(0.0027777777777777777777777777777778)
-#define DIV_440     (f64)(0.0022727272727272727272727272727273)
-#define DIV_600     (f64)(0.0016666666666666666666666666666667) // 1 / 600
-#define DIV_1000    (f64)(0.001)                                // 1 / 1000
-#define DIV_1023    (f64)(9.7751710654936461388074291300098e-4) // 1 / 1023
-#define DIV_1024    (f64)(0.0009765625)
-#define DIV_1200    (f64)(8.3333333333333333333333333333333e-4) // 1 / 1200
-#define DIV_1600    (f64)(0.000625)                             // 1 / 1600
-#define DIV_2400    (f64)(4.1666666666666666666666666666667e-4) // 1 / 2400
-#define DIV_4800    (f64)(2.0833333333333333333333333333333e-4) // 1 / 4800
-#define DIV_9600    (f64)(1.0416666666666666666666666666667e-4) // 1 / 9600
-#define DIV_10000   (f64)(0.0001)                               // 1 / 10000
-#define DIV_12288   (f64)(8.1380208333333333333333333333333e-5) // 1 / 12288
-#define DIV_22000   (f64)(4.5454545454545454545454545454545e-5) // 1 / 22000
-#define DIV_44100   (f64)(2.2675736961451247165532879818594e-5) // 1 / 44100
-#define DIV_1000000 (f64)(0.000001)                             // 1 / 1000000
+#define DIV_2                 ((f64)0.5)
+#define DIV_3                 ((f64)0.33333333333333333333333333333333)
+#define DIV_4                 ((f64)0.25)
+#define DIV_5                 ((f64)0.2)
+#define DIV_6                 ((f64)0.16666666666666666666666666666667)
+#define DIV_7                 ((f64)0.14285714285714285714285714285714)
+#define DIV_8                 ((f64)0.125)
+#define DIV_9                 ((f64)0.11111111111111111111111111111111)
+#define DIV_10                ((f64)0.1)
+#define DIV_11                ((f64)0.090909090909090909090909090909091)
+#define DIV_12                ((f64)0.083333333333333333333333333333333)
+#define DIV_13                ((f64)0.076923076923076923076923076923077)
+#define DIV_14                ((f64)0.071428571428571428571428571428571)
+#define DIV_15                ((f64)0.066666666666666666666666666666667) // 1 / 15
+#define DIV_16                ((f64)0.0625)                              // 1 / 16
+#define DIV_19                ((f64)0.052631578947368421052631578947368) // 1 / 19
+#define DIV_20                ((f64)0.05)
+#define DIV_24                ((f64)0.041666666666666666666666666666667)  // 1 / 24
+#define DIV_30                ((f64)0.033333333333333333333333333333333)  // 1 / 30
+#define DIV_31                ((f64)0.032258064516129032258064516129032)  // 1 / 31
+#define DIV_32                ((f64)0.03125)                              // 1 / 32
+#define DIV_36                ((f64)0.027777777777777777777777777777778)  // 1 / 36
+#define DIV_40                ((f64)0.025)                                // 1 / 40
+#define DIV_48                ((f64)0.020833333333333333333333333333333)  // 1 / 48
+#define DIV_50                ((f64)0.02)                                 // 1 / 50
+#define DIV_60                ((f64)0.016666666666666666666666666666667)  // 1 / 60
+#define DIV_63                ((f64)0.015873015873015873015873015873016)  // 1 / 63
+#define DIV_64                ((f64)0.015625)                             // 1 / 64
+#define DIV_65                ((f64)0.015384615384615384615384615384615)  // 1 / 65
+#define DIV_80                ((f64)0.0125)                               // 1 / 80
+#define DIV_96                ((f64)0.010416666666666666666666666666)     // 1 / 96
+#define DIV_100               (f64)(0.01)                                 // 1 / 100
+#define DIV_120               ((f64)0.0083333333333333333333333333333333) // 1 / 120
+#define DIV_127               (f64)(0.007874015748031496062992125984252)  // 1 / 127
+#define DIV_128               (f64)(0.0078125)                            // 1 / 128
+#define DIV_140               ((f64)0.0071428571428571428571428571428571) // 1 / 140
+#define DIV_150               ((f64)0.0066666666666666666666666666666667) // 1 / 150
+#define DIV_160               ((f64)0.00625)                              // 1 / 160
+#define DIV_180               (f64)(0.0055555555555555555555555555555556)
+#define DIV_200               (f64)(0.005) // 1 / 200
+#define DIV_255               (f64)(0.003921568627450980392156862745098)
+#define DIV_256               (f64)(0.00390625) // 1 / 256
+#define DIV_360               (f64)(0.0027777777777777777777777777777778)
+#define DIV_440               (f64)(0.0022727272727272727272727272727273)
+#define DIV_600               (f64)(0.0016666666666666666666666666666667) // 1 / 600
+#define DIV_1000              (f64)(0.001)                                // 1 / 1000
+#define DIV_1023              (f64)(9.7751710654936461388074291300098e-4) // 1 / 1023
+#define DIV_1024              (f64)(0.0009765625)
+#define DIV_1200              (f64)(8.3333333333333333333333333333333e-4) // 1 / 1200
+#define DIV_1600              (f64)(0.000625)                             // 1 / 1600
+#define DIV_2400              (f64)(4.1666666666666666666666666666667e-4) // 1 / 2400
+#define DIV_4800              (f64)(2.0833333333333333333333333333333e-4) // 1 / 4800
+#define DIV_9600              (f64)(1.0416666666666666666666666666667e-4) // 1 / 9600
+#define DIV_10000             (f64)(0.0001)                               // 1 / 10000
+#define DIV_12288             (f64)(8.1380208333333333333333333333333e-5) // 1 / 12288
+#define DIV_22000             (f64)(4.5454545454545454545454545454545e-5) // 1 / 22000
+#define DIV_44100             (f64)(2.2675736961451247165532879818594e-5) // 1 / 44100
+#define DIV_1000000           (f64)(0.000001)                             // 1 / 1000000
 
-#define DIV_3_2 ((f64)0.6666666666666666666666666666666) // 1/(3/2)
-#define DIV_32_6 ((f64)0.1875)                           // 1/(32/6)
+#define DIV_3_2               ((f64)0.6666666666666666666666666666666) // 1/(3/2)
+#define DIV_32_6              ((f64)0.1875)                            // 1/(32/6)
 
-#define DIV_1BIT ((f64)0.5)                                      // 1 / (1 << 1)
-#define DIV_2BIT ((f64)0.25)                                     // 1 / (1 << 2)
-#define DIV_3BIT ((f64)0.125)                                    // 1 / (1 << 3)
-#define DIV_4BIT ((f64)0.0625)                                   // 1 / (1 << 4)
-#define DIV_5BIT ((f64)0.03125)                                  // 1 / (1 << 5)
-#define DIV_6BIT ((f64)0.015625)                                 // 1 / (1 << 6)
-#define DIV_7BIT ((f64)0.0078125)                                // 1 / (1 << 7)
-#define DIV_8BIT ((f64)0.00390625)                               // 1 / (1 << 8)
-#define DIV_9BIT ((f64)0.001953125)                              // 1 / (1 << 9)
-#define DIV_10BIT ((f64)0.0009765625)                            // 1 / (1 << 10)
-#define DIV_11BIT ((f64)0.00048828125)                           // 1 / (1 << 11)
-#define DIV_12BIT ((f64)0.000244140625)                          // 1 / (1 << 12)
-#define DIV_13BIT ((f64)0.0001220703125)                         // 1 / (1 << 13)
-#define DIV_14BIT ((f64)0.00006103515625)                        // 1 / (1 << 14)
-#define DIV_15BIT ((f64)0.000030517578125)                       // 1 / (1 << 15)
-#define DIV_16BIT ((f64)0.0000152587890625)                      // 1 / (1 << 16)
-#define DIV_17BIT ((f64)0.00000762939453125)                     // 1 / (1 << 17)
-#define DIV_18BIT ((f64)0.000003814697265625)                    // 1 / (1 << 18)
-#define DIV_19BIT ((f64)0.0000019073486328125)                   // 1 / (1 << 19)
-#define DIV_20BIT ((f64)0.00000095367431640625)                  // 1 / (1 << 20)
-#define DIV_21BIT ((f64)0.000000476837158203125)                 // 1 / (1 << 21)
-#define DIV_22BIT ((f64)0.0000002384185791015625)                // 1 / (1 << 22)
-#define DIV_23BIT ((f64)0.00000011920928955078125)               // 1 / (1 << 23)
-#define DIV_24BIT ((f64)0.000000059604644775390625)              // 1 / (1 << 24)
-#define DIV_25BIT ((f64)0.0000000298023223876953125)             // 1 / (1 << 25)
-#define DIV_26BIT ((f64)0.00000001490116119384765625)            // 1 / (1 << 26)
-#define DIV_27BIT ((f64)0.000000007450580596923828125)           // 1 / (1 << 27)
-#define DIV_28BIT ((f64)0.0000000037252902984619140625)          // 1 / (1 << 28)
-#define DIV_29BIT ((f64)0.00000000186264514923095703125)         // 1 / (1 << 29)
-#define DIV_30BIT ((f64)0.000000000931322574615478515625)        // 1 / (1 << 30)
-#define DIV_31BIT ((f64)0.0000000004656612873077392578125)       // 1 / (1 << 31)
-#define DIV_32BIT ((f64)0.00000000023283064365386962890625)      // 1 / (1 << 32)
-#define DIV_33BIT ((f64)0.000000000116415321826934814453125)     // 1 / (1 << 33)
-#define DIV_34BIT ((f64)0.0000000000582076609134674072265625)    // 1 / (1 << 34)
-#define DIV_35BIT ((f64)(2.910383045673370361328125e-11))        // 1 / (1 << 35)
-#define DIV_36BIT ((f64)(1.4551915228366851806640625e-11))       // 1 / (1 << 36)
-#define DIV_37BIT ((f64)(7.2759576141834259033203125e-12))       // 1 / (1 << 37)
-#define DIV_38BIT ((f64)(3.63797880709171295166015625e-12))      // 1 / (1 << 38)
-#define DIV_39BIT ((f64)(1.818989403545856475830078125e-12))     // 1 / (1 << 39)
-#define DIV_40BIT ((f64)(9.094947017729282379150390625e-13))     // 1 / (1 << 40)
-#define DIV_48BIT ((f64)(3.5527136788005009293556213378906e-15)) // 1 / (1 << 48)
-#define DIV_50BIT ((f64)(8.8817841970012523233890533447266e-16)) // 1 / (1 << 50)
-#define DIV_52BIT ((f64)(2.2204460492503130808472633361816e-16)) // 1 / (1 << 52)
-#define DIV_63BIT ((f64)(1.0842021724855044340074528008699e-19)) // 1 / (1 << 63)
-#define DIV_64BIT ((f64)(5.4210108624275221700372640043497e-20)) // 1 / (1 << 64)
+#define DIV_1BIT              ((f64)0.5)                                     // 1 / (1 << 1)
+#define DIV_2BIT              ((f64)0.25)                                    // 1 / (1 << 2)
+#define DIV_3BIT              ((f64)0.125)                                   // 1 / (1 << 3)
+#define DIV_4BIT              ((f64)0.0625)                                  // 1 / (1 << 4)
+#define DIV_5BIT              ((f64)0.03125)                                 // 1 / (1 << 5)
+#define DIV_6BIT              ((f64)0.015625)                                // 1 / (1 << 6)
+#define DIV_7BIT              ((f64)0.0078125)                               // 1 / (1 << 7)
+#define DIV_8BIT              ((f64)0.00390625)                              // 1 / (1 << 8)
+#define DIV_9BIT              ((f64)0.001953125)                             // 1 / (1 << 9)
+#define DIV_10BIT             ((f64)0.0009765625)                            // 1 / (1 << 10)
+#define DIV_11BIT             ((f64)0.00048828125)                           // 1 / (1 << 11)
+#define DIV_12BIT             ((f64)0.000244140625)                          // 1 / (1 << 12)
+#define DIV_13BIT             ((f64)0.0001220703125)                         // 1 / (1 << 13)
+#define DIV_14BIT             ((f64)0.00006103515625)                        // 1 / (1 << 14)
+#define DIV_15BIT             ((f64)0.000030517578125)                       // 1 / (1 << 15)
+#define DIV_16BIT             ((f64)0.0000152587890625)                      // 1 / (1 << 16)
+#define DIV_17BIT             ((f64)0.00000762939453125)                     // 1 / (1 << 17)
+#define DIV_18BIT             ((f64)0.000003814697265625)                    // 1 / (1 << 18)
+#define DIV_19BIT             ((f64)0.0000019073486328125)                   // 1 / (1 << 19)
+#define DIV_20BIT             ((f64)0.00000095367431640625)                  // 1 / (1 << 20)
+#define DIV_21BIT             ((f64)0.000000476837158203125)                 // 1 / (1 << 21)
+#define DIV_22BIT             ((f64)0.0000002384185791015625)                // 1 / (1 << 22)
+#define DIV_23BIT             ((f64)0.00000011920928955078125)               // 1 / (1 << 23)
+#define DIV_24BIT             ((f64)0.000000059604644775390625)              // 1 / (1 << 24)
+#define DIV_25BIT             ((f64)0.0000000298023223876953125)             // 1 / (1 << 25)
+#define DIV_26BIT             ((f64)0.00000001490116119384765625)            // 1 / (1 << 26)
+#define DIV_27BIT             ((f64)0.000000007450580596923828125)           // 1 / (1 << 27)
+#define DIV_28BIT             ((f64)0.0000000037252902984619140625)          // 1 / (1 << 28)
+#define DIV_29BIT             ((f64)0.00000000186264514923095703125)         // 1 / (1 << 29)
+#define DIV_30BIT             ((f64)0.000000000931322574615478515625)        // 1 / (1 << 30)
+#define DIV_31BIT             ((f64)0.0000000004656612873077392578125)       // 1 / (1 << 31)
+#define DIV_32BIT             ((f64)0.00000000023283064365386962890625)      // 1 / (1 << 32)
+#define DIV_33BIT             ((f64)0.000000000116415321826934814453125)     // 1 / (1 << 33)
+#define DIV_34BIT             ((f64)0.0000000000582076609134674072265625)    // 1 / (1 << 34)
+#define DIV_35BIT             ((f64)(2.910383045673370361328125e-11))        // 1 / (1 << 35)
+#define DIV_36BIT             ((f64)(1.4551915228366851806640625e-11))       // 1 / (1 << 36)
+#define DIV_37BIT             ((f64)(7.2759576141834259033203125e-12))       // 1 / (1 << 37)
+#define DIV_38BIT             ((f64)(3.63797880709171295166015625e-12))      // 1 / (1 << 38)
+#define DIV_39BIT             ((f64)(1.818989403545856475830078125e-12))     // 1 / (1 << 39)
+#define DIV_40BIT             ((f64)(9.094947017729282379150390625e-13))     // 1 / (1 << 40)
+#define DIV_48BIT             ((f64)(3.5527136788005009293556213378906e-15)) // 1 / (1 << 48)
+#define DIV_50BIT             ((f64)(8.8817841970012523233890533447266e-16)) // 1 / (1 << 50)
+#define DIV_52BIT             ((f64)(2.2204460492503130808472633361816e-16)) // 1 / (1 << 52)
+#define DIV_63BIT             ((f64)(1.0842021724855044340074528008699e-19)) // 1 / (1 << 63)
+#define DIV_64BIT             ((f64)(5.4210108624275221700372640043497e-20)) // 1 / (1 << 64)
 
-#define DIV_PI ((f64)0.31830988618379067153776752674503)    // 1 / pi
-#define DIV_PI2 ((f64)0.15915494309189533576888376337251)   // 1 / (pi*2)
-#define DIV_LN2 ((f64)1.4426950408889634073599246810019)    // 1 / log(2)
-#define DIV_LN10 ((f64)0.43429448190325182765112891891661)  // 1 / log(10)
-#define DIV_LOG2 ((f64)3.3219280948873623478703194294894)   // 1 / log10(2)
-#define DIV_SQRT2 ((f64)0.70710678118654752440084436210485) // 1 / sqrt(2)
+#define DIV_PI                ((f64)0.31830988618379067153776752674503) // 1 / pi
+#define DIV_PI2               ((f64)0.15915494309189533576888376337251) // 1 / (pi*2)
+#define DIV_LN2               ((f64)1.4426950408889634073599246810019)  // 1 / log(2)
+#define DIV_LN10              ((f64)0.43429448190325182765112891891661) // 1 / log(10)
+#define DIV_LOG2              ((f64)3.3219280948873623478703194294894)  // 1 / log10(2)
+#define DIV_SQRT2             ((f64)0.70710678118654752440084436210485) // 1 / sqrt(2)
 
 #ifdef KSR_SHIFTDIV
     #define divi_2(i)    ((i) >> 1)
@@ -328,25 +328,26 @@
     #define divt_4096(t) divf_4096(t)
 #endif
 
-#define LPF_FIR_ORDER (20)
-#define LPF_FIR_ORDER2 (10) // LPF_FIR_ORDER/2
+#define LPF_FIR_ORDER            (20)
+#define LPF_FIR_ORDER2           (10) // LPF_FIR_ORDER/2
 #define LPF_FIR_ANTIALIASING_ATT (40.0)
 
-#define IS_VALID_INSTRUMENT(ip) ((ip) != NULL && (ip) != (Instrument *)-1)
+#define IS_VALID_INSTRUMENT(ip)  ((ip) != NULL && (ip) != (Instrument *)-1)
 
-enum {
-	SAMPLE_TYPE_INT16 = 0, // def sample_t int16 int8
-//	SAMPLE_TYPE_INT8,
-	SAMPLE_TYPE_INT32,
-//	SAMPLE_TYPE_INT64,
-	SAMPLE_TYPE_FLOAT,
-	SAMPLE_TYPE_DOUBLE,
+enum
+{
+    SAMPLE_TYPE_INT16 = 0, // def sample_t int16 int8
+                           //	SAMPLE_TYPE_INT8,
+    SAMPLE_TYPE_INT32,
+    //	SAMPLE_TYPE_INT64,
+    SAMPLE_TYPE_FLOAT,
+    SAMPLE_TYPE_DOUBLE,
 };
 
 
-#define MAX_ELEMENT 8
-#define HPF_PARAM_NUM 3
-#define MAX_NOTE_LAYERS  6
+#define MAX_ELEMENT           8
+#define HPF_PARAM_NUM         3
+#define MAX_NOTE_LAYERS       6
 
 // Voice status options:
 #define VOICE_FREE            0
@@ -414,25 +415,25 @@ enum {
 #define MODES_REVERSE         (1 << 4)
 #define MODES_SUSTAIN         (1 << 5)
 #define MODES_ENVELOPE        (1 << 6)
-#define MODES_CLAMPED	      (1<<7) // ?? (for last envelope??)
+#define MODES_CLAMPED         (1 << 7) // ?? (for last envelope??)
 // Flags not defined by GUS
-#define MODES_RELEASE         (1<<8)
-#define MODES_TRIGGER_RANDOM      (1<<9)
-#define MODES_NO_NOTEOFF          (1<<10)
-#define MODES_TRIGGER_RELEASE     (1<<11)
-#define MODES_KEYSWITCH           (1<<12)
+#define MODES_RELEASE         (1 << 8)
+#define MODES_TRIGGER_RANDOM  (1 << 9)
+#define MODES_NO_NOTEOFF      (1 << 10)
+#define MODES_TRIGGER_RELEASE (1 << 11)
+#define MODES_KEYSWITCH       (1 << 12)
 
 #define SPECIAL_PROGRAM       -1
 
 // Causes the instrument's default panning to be used.
 #define NO_PANNING            -1
-#define MAX_NOTE_PRESSES 100
+#define MAX_NOTE_PRESSES      100
 
 
 
-#define DEFALT_REVERB_SEND 127
-#define DEFALT_CHORUS_SEND 127
-#define DEFALT_DELAY_SEND  127
+#define DEFALT_REVERB_SEND    127
+#define DEFALT_CHORUS_SEND    127
+#define DEFALT_DELAY_SEND     127
 
 
 // Anything but PANNED_MYSTERY only uses the left volume
@@ -510,46 +511,44 @@ typedef struct
     int       data_type;
     u16       sample_type;
 
-    i16 tremolo_delay, tremolo_sweep, tremolo_freq;
-    i16 vibrato_delay, vibrato_sweep, vibrato_freq;
-    i16 tremolo_to_amp, tremolo_to_pitch, tremolo_to_fc;
-    i16 vibrato_to_amp, vibrato_to_pitch, vibrato_to_fc;
+    i16       tremolo_delay, tremolo_sweep, tremolo_freq;
+    i16       vibrato_delay, vibrato_sweep, vibrato_freq;
+    i16       tremolo_to_amp, tremolo_to_pitch, tremolo_to_fc;
+    i16       vibrato_to_amp, vibrato_to_pitch, vibrato_to_fc;
 
-    i16 modenv_to_pitch, modenv_to_fc,
-	  envelope_keyf[6], envelope_velf[6], modenv_keyf[6], modenv_velf[6];
-    i8 envelope_velf_bpo, modenv_velf_bpo, envelope_keyf_bpo, modenv_keyf_bpo,
-	  key_to_fc_bpo, vel_to_fc_threshold;	// in notes
-    i32 pitch_envelope[9];
+    i16       modenv_to_pitch, modenv_to_fc, envelope_keyf[6], envelope_velf[6], modenv_keyf[6], modenv_velf[6];
+    i8        envelope_velf_bpo, modenv_velf_bpo, envelope_keyf_bpo, modenv_keyf_bpo, key_to_fc_bpo, vel_to_fc_threshold; // in notes
+    i32       pitch_envelope[9];
 
-    i32 envelope_delay, modenv_delay;	// in samples
+    i32       envelope_delay, modenv_delay; // in samples
 
-    i32 modenv_rate[6], modenv_offset[6];
+    i32       modenv_rate[6], modenv_offset[6];
 
-    i16 vel_to_fc, key_to_fc; // in cents, [-12000, 12000]
-    i16 vel_to_resonance;
+    i16       vel_to_fc, key_to_fc; // in cents, [-12000, 12000]
+    i16       vel_to_resonance;
 
-    i32 cutoff_freq, cutoff_low_limit, cutoff_low_keyf;	// in Hz, [1, 20000]
-    i16 resonance;
-    i64 offset;
+    i32       cutoff_freq, cutoff_low_limit, cutoff_low_keyf; // in Hz, [1, 20000]
+    i16       resonance;
+    i64       offset;
 
-    f64 cfg_amp;
+    f64       cfg_amp;
 
-    i8 inst_type;
-    int lpf_type;
-    i8 keep_voice;
-    i8 def_pan;
-    i8 low_key, high_key, root_key;
-    int hpf[HPF_PARAM_NUM];
-    i32 sf_sample_index, sf_sample_link;	// for stereo SoundFont
+    i8        inst_type;
+    int       lpf_type;
+    i8        keep_voice;
+    i8        def_pan;
+    i8        low_key, high_key, root_key;
+    int       hpf[HPF_PARAM_NUM];
+    i32       sf_sample_index, sf_sample_link; // for stereo SoundFont
 
-    i32 seq_length;	// length of the round robin, 0 == disabled
-    i32 seq_position;	// 1-based position within the round robin, 0 == disabled
-    f64 rt_decay;
-    u8 low_vel, high_vel;
-    f64 sample_pan;
-    i16 scale_freq;	    // in notes
-    i16 scale_factor;	// in 1024divs/key
-    f64 tune;
+    i32       seq_length;   // length of the round robin, 0 == disabled
+    i32       seq_position; // 1-based position within the round robin, 0 == disabled
+    f64       rt_decay;
+    u8        low_vel, high_vel;
+    f64       sample_pan;
+    i16       scale_freq;   // in notes
+    i16       scale_factor; // in 1024divs/key
+    f64       tune;
 } Sample;
 
 typedef struct
@@ -558,7 +557,7 @@ typedef struct
     i16     chorus_snd;
     int     type;
     Sample *sample;
-    char *instname;
+    char   *instname;
 } Instrument;
 
 typedef struct
@@ -567,46 +566,45 @@ typedef struct
     Instrument *instrument;
     int         note, amp, pan, strip_loop, strip_envelope, strip_tail;
 
-    int trempitchnum, tremfcnum, tremdelaynum, tremfreqnum, tremsweepnum, tremampnum;
-	i16 *trempitch, *tremfc, *tremdelay, *tremfreq, *tremsweep, *tremamp;
-	int vibfcnum, vibampnum, vibdelaynum, vibfreqnum, vibsweepnum, vibpitchnum;
-	i16 *vibfc, *vibamp, *vibdelay, *vibfreq, *vibsweep, *vibpitch;
+    int         trempitchnum, tremfcnum, tremdelaynum, tremfreqnum, tremsweepnum, tremampnum;
+    i16        *trempitch, *tremfc, *tremdelay, *tremfreq, *tremsweep, *tremamp;
+    int         vibfcnum, vibampnum, vibdelaynum, vibfreqnum, vibsweepnum, vibpitchnum;
+    i16        *vibfc, *vibamp, *vibdelay, *vibfreq, *vibsweep, *vibpitch;
 
-	//i16 amp;
-	i8 amp_normalize;
-	i8 lokey, hikey, lovel, hivel;
-	i16 rnddelay;
+    // i16 amp;
+    i8          amp_normalize;
+    i8          lokey, hikey, lovel, hivel;
+    i16         rnddelay;
 
-	i8 loop_timeout,
-	font_preset, font_keynote, legato, tva_level, play_note, damper_mode;
+    i8          loop_timeout, font_preset, font_keynote, legato, tva_level, play_note, damper_mode;
 
-	int fclownum, fclowkeyfnum, fcmulnum, fcaddnum;
-	i16 *fclow, *fclowkeyf, *fcmul, *fcadd;
-	i16 vel_to_fc, key_to_fc, vel_to_resonance;
+    int         fclownum, fclowkeyfnum, fcmulnum, fcaddnum;
+    i16        *fclow, *fclowkeyf, *fcmul, *fcadd;
+    i16         vel_to_fc, key_to_fc, vel_to_resonance;
 
-	i8 reverb_send, chorus_send, delay_send;
-	i8 rx_note_off;
-	i8 keep_voice;
+    i8          reverb_send, chorus_send, delay_send;
+    i8          rx_note_off;
+    i8          keep_voice;
 
-	int lpf_type;
-	int hpfnum;
-	int **hpf;
+    int         lpf_type;
+    int         hpfnum;
+    int       **hpf;
 
-	i8 element_num;
-	i8 def_pan;
-	int sample_pan, sample_width;
-	i32 seq_length;
-	i32 seq_position;
+    i8          element_num;
+    i8          def_pan;
+    int         sample_pan, sample_width;
+    i32         seq_length;
+    i32         seq_position;
 
-	int vfxe_num;
+    int         vfxe_num;
 } ToneBankElement;
 
 typedef struct
 {
     ToneBankElement tone[128];
 
-    //ToneBankElement *tone[128][MAX_ELEMENT]; // But it requires this
-    //AlternateAssign *alt;
+    // ToneBankElement *tone[128][MAX_ELEMENT]; // But it requires this
+    // AlternateAssign *alt;
 } ToneBank;
 
 
@@ -712,100 +710,100 @@ typedef struct
 
 typedef struct
 {
-    u_char           status;
-    u_char           channel;
-    u_char           note;
-    u_char           velocity;
-    Sample          *sample;
-    Sample          *sample_right;
-    long             orig_frequency;
-    long             frequency;
-    long             sample_offset;
-    long             sample_increment;
-    long             sample_offset_right;
-    long             sample_increment_right;
-    long             envelope_volume;
-    long             envelope_target;
-    long             envelope_increment;
-    long             tremolo_sweep;
-    long             tremolo_sweep_position;
-    long             tremolo_phase;
-    long             tremolo_phase_increment;
-    long             vibrato_sweep;
-    long             vibrato_sweep_position;
-    final_volume_t   left_mix;
-    final_volume_t   right_mix;
-    f64              left_amp;
-    f64              right_amp;
-    f64              tremolo_volume;
-    long             vibrato_sample_increment[VIBRATO_SAMPLE_INCREMENTS];
-    int              vibrato_phase;
-    int              vibrato_control_ratio;
-    int              vibrato_control_counter;
-    int              envelope_stage;
-    int              control_counter;
-    i8               chorus_send;
-    int              panning;
-    int              panned;
+    u_char         status;
+    u_char         channel;
+    u_char         note;
+    u_char         velocity;
+    Sample        *sample;
+    Sample        *sample_right;
+    long           orig_frequency;
+    long           frequency;
+    long           sample_offset;
+    long           sample_increment;
+    long           sample_offset_right;
+    long           sample_increment_right;
+    long           envelope_volume;
+    long           envelope_target;
+    long           envelope_increment;
+    long           tremolo_sweep;
+    long           tremolo_sweep_position;
+    long           tremolo_phase;
+    long           tremolo_phase_increment;
+    long           vibrato_sweep;
+    long           vibrato_sweep_position;
+    final_volume_t left_mix;
+    final_volume_t right_mix;
+    f64            left_amp;
+    f64            right_amp;
+    f64            tremolo_volume;
+    long           vibrato_sample_increment[VIBRATO_SAMPLE_INCREMENTS];
+    int            vibrato_phase;
+    int            vibrato_control_ratio;
+    int            vibrato_control_counter;
+    int            envelope_stage;
+    int            control_counter;
+    i8             chorus_send;
+    int            panning;
+    int            panned;
     // SoundFontEffects sf2_effects;
 } Voice;
 
 typedef struct
 {
-    u_char  *data;      // pointer to file bytes (page cache)
-    size_t   len;
+    u_char *data; // pointer to file bytes (page cache)
+    size_t  len;
 #ifdef __linux__
-    int      fd;
+    int fd;
 #endif
 
 #ifdef _WIN32
     HANDLE fd;
     HANDLE h_map;
-    //LARGE_INTEGER len;
+        // LARGE_INTEGER len;
 #endif
-}FileMap;
+} FileMap;
 
 typedef struct
 {
-    const u_char *data;          // mapped bytes
-    size_t        len;
-    const u_char *track_start;   // first MTrk chunk
+    const u_char  *data; // mapped bytes
+    size_t         len;
+    const u_char  *track_start; // first MTrk chunk
 
-    unsigned format;
-    unsigned ntrks;
-    long     division;           // ticks per quarter note
+    unsigned       format;
+    unsigned       ntrks;
+    long           division; // ticks per quarter note
 
     // per-track cursors (allocated for ntrks)
-    const u_char **cur;          // next byte to read in each track
-    const u_char **end;          // end of each MTrk
-    u_char *laststatus;          // running status per track
-    u_char *lastchan;
-    u32    *abs_tick;            // cumulative ticks per track
-    u_char *nrpn;                // RPN/NRPN state per track
-    u_char (*rpn_msb)[16];
-    u_char (*rpn_lsb)[16];
-    MidiEvent *pending;          // next raw event per track (k-way merge)
-    u_char *pending_valid;
-    u_char *alive;
+    const u_char **cur;        // next byte to read in each track
+    const u_char **end;        // end of each MTrk
+    u_char        *laststatus; // running status per track
+    u_char        *lastchan;
+    u32           *abs_tick; // cumulative ticks per track
+    u_char        *nrpn;     // RPN/NRPN state per track
+    u_char         (*rpn_msb)[16];
+    u_char         (*rpn_lsb)[16];
+    MidiEvent     *pending; // next raw event per track (k-way merge)
+    u_char        *pending_valid;
+    u_char        *alive;
 
     // grooming state (what groom_list tracked globally)
-    long prev_tick;
-    unsigned last_track;
-    long st;                     // current sample position
-    long sample_cum;
-    int  counting_time;
-    long current_program[16];
-    long current_bank[16];
-    long current_set[16];
+    long           prev_tick;
+    unsigned       last_track;
+    long           st; // current sample position
+    long           sample_cum;
+    int            counting_time;
+    long           current_program[16];
+    long           current_bank[16];
+    long           current_set[16];
 
-    unsigned *heap;
-    unsigned heap_size;
+    unsigned      *heap;
+    unsigned       heap_size;
 
     // current decoded event
-    MidiEvent ev;
-    u_char have;
-    u_char ended;
-}MidiStream;
+    MidiEvent      ev;
+    u_char         have;
+    u_char         ended;
+} MidiStream;
 
 typedef enum
 {
@@ -816,22 +814,22 @@ typedef enum
     STREAM_ERR_INVALID_TRACKS,
     STREAM_ERR_OUT_OF_MEMORY,
     STREAM_ERR_TRACK_DATA_BOUNDS
-}StreamError;
+} StreamError;
 
 
 typedef struct
 {
     uint32_t gen;
     uint8_t  active;
-    int      voice;   /* primary */
-    int      voice2;  /* stereo partner, -1 if none */
+    int      voice;  /* primary */
+    int      voice2; /* stereo partner, -1 if none */
     int      layer[MAX_NOTE_PRESSES];
-}NotePress;
+} NotePress;
 
 typedef struct _MBlockNode
 {
-    size_t block_size;
-    size_t offset;
+    size_t              block_size;
+    size_t              offset;
     struct _MBlockNode *next;
 #ifndef MBLOCK_NOPAD
     void *pad;
@@ -842,15 +840,15 @@ typedef struct _MBlockNode
 typedef struct _MBlockList
 {
     MBlockNode *first;
-    size_t allocated;
+    size_t      allocated;
 } MBlockList;
 
 struct Kasaria
 {
     // int            opt_pre_resamplation;
-    char      current_filename[1024];
-    FILE     *fp;
-    PathList *pathlist; // The paths in this list will be tried whenever we're reading a file
+    char        current_filename[1024];
+    FILE       *fp;
+    PathList   *pathlist; // The paths in this list will be tried whenever we're reading a file
 
     // Soundfont vars
     char        sf_filename[1024];
@@ -861,82 +859,82 @@ struct Kasaria
     int         default_program;    // This is a special instrument, used for all melodic programs
 
     // Audio / output sample vars
-    PlayMode play_mode;
-    f32      common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
-    f32     *buffer_pointer;
+    PlayMode    play_mode;
+    f32         common_buffer[AUDIO_BUFFER_SIZE * 2]; // stereo samples
+    f32        *buffer_pointer;
 
-    #ifdef LOOKUP_HACK
-        long *mixup;
+#ifdef LOOKUP_HACK
+    long *mixup;
     #ifdef LOOKUP_INTERPOLATION
-        char *iplookup;
+    char *iplookup;
     #endif
-    #endif
+#endif
 
-    
+
     // ==============[Channel FX]==============
-    
+
     ReverbEffect reverb;
     f64          reverb_level;
     int          reverb_preset;
     long         reverb_send_buffer[AUDIO_BUFFER_SIZE];
 
-    
-    sk_chorus *chorus_l;
-    sk_chorus *chorus_r;
-    f64        chorus_depth;
-    long       chorus_send_buffer[AUDIO_BUFFER_SIZE];
-    
+
+    sk_chorus   *chorus_l;
+    sk_chorus   *chorus_r;
+    f64          chorus_depth;
+    long         chorus_send_buffer[AUDIO_BUFFER_SIZE];
+
     // Player vars
-    FileMap    *f_mmap;
-    MidiStream *stream;
-    long        sample_count;
-    long        current_sample;
-    FILE       *fp_midi;
+    FileMap     *f_mmap;
+    MidiStream  *stream;
+    long         sample_count;
+    long         current_sample;
+    FILE        *fp_midi;
 
     // MIDI loader (Memory based)
-    char  song_title[256];
-    char  song_copyright[256];
-    char  last_smf[1024];
-    long           at;
-    int   total_midi_tracks;
-    int   current_loaded_track;
-    short midi_file_format;
+    char         song_title[256];
+    char         song_copyright[256];
+    char         last_smf[1024];
+    long         at;
+    int          total_midi_tracks;
+    int          current_loaded_track;
+    short        midi_file_format;
 
     // Voice management
-    int    voices;
-    Voice  voice[MAX_VOICES];
-    Voice *voice_by_channel_note[16][128][8];
-    int    free_voice_stack[MAX_VOICES];
-    int    free_voice_count;
+    int          voices;
+    Voice        voice[MAX_VOICES];
+    Voice       *voice_by_channel_note[16][128][8];
+    int          free_voice_stack[MAX_VOICES];
+    int          free_voice_count;
 
     // Player position tracking (Based on streamed audio)
-    u64         wall_clock_last_ns;
-    f64         phase_ema;
-    int         phase_valid;
-    u64         start_frame;
-    u64         end_frame;
-    u64         duration_ns;
-    u64         now_ns;
-    u64         start_ns;
-    _Atomic u64 position_seq;
-    _Atomic u64 position_start_frame;
-    _Atomic u64 position_end_frame;
-    _Atomic u64 position_start_ns;
-    _Atomic u64 position_end_ns;
-    _Atomic int player_seek_gate;    // 1 while a control thread is rewriting the player
-    _Atomic int player_in_callback;
-    u64         position_clock_end_ns;
+    u64          wall_clock_last_ns;
+    f64          phase_ema;
+    int          phase_valid;
+    u64          start_frame;
+    u64          end_frame;
+    u64          duration_ns;
+    u64          now_ns;
+    u64          start_ns;
+    _Atomic u64  position_seq;
+    _Atomic u64  position_start_frame;
+    _Atomic u64  position_end_frame;
+    _Atomic u64  position_start_ns;
+    _Atomic u64  position_end_ns;
+    _Atomic int  player_seek_gate; // 1 while a control thread is rewriting the player
+    _Atomic int  player_in_callback;
+    u64          position_clock_end_ns;
 
     // Resample vars
-    long     sample_increment;
-    long     sample_correction;
-    sample_t resample_buffer[AUDIO_BUFFER_SIZE];
-    sample_t resample_buffer_right[AUDIO_BUFFER_SIZE];
+    long         sample_increment;
+    long         sample_correction;
+    sample_t     resample_buffer[AUDIO_BUFFER_SIZE];
+    sample_t     resample_buffer_right[AUDIO_BUFFER_SIZE];
 #ifdef LOOKUP_HACK
     long *mixup;
-#ifdef LOOKUP_INTERPOLATION
+    #ifdef LOOKUP_INTERPOLATION
     char *iplookup;
-#endif
+    #endif
 #endif
 
     // MIDI Event processing
@@ -949,20 +947,20 @@ struct Kasaria
     u_char         rpn_lsb[16];
 
     // MIDI Channel
-    Channel channel[16];
-    long    drumchannels;
-    long    quietchannels;
-    int     channel_voice_count[16];
-    int     channel_voice_list[16][MAX_VOICES * 2];
+    Channel        channel[16];
+    long           drumchannels;
+    long           quietchannels;
+    int            channel_voice_count[16];
+    int            channel_voice_list[16][MAX_VOICES * 2];
 
     // Note handler
-    NotePress note_press[16][128][MAX_NOTE_PRESSES];
-    u32       note_gen;
-    int       steal_scan;         // rotating round-robin pointer
-    u_char    skip_note_vel[16][128];    // velocity of a skipped note
-    u_char    skip_note_active[16][128];
-    long      lost_notes;
-    long      cut_notes;
+    NotePress      note_press[16][128][MAX_NOTE_PRESSES];
+    u32            note_gen;
+    int            steal_scan;             // rotating round-robin pointer
+    u_char         skip_note_vel[16][128]; // velocity of a skipped note
+    u_char         skip_note_active[16][128];
+    long           lost_notes;
+    long           cut_notes;
 
 #ifdef KSR_INTERNAL_AUDIO_HANDLER
     // Internal Audio Handler
@@ -971,51 +969,51 @@ struct Kasaria
     int              audio_init_scope;
 #endif
 
-/*
-    ==========================================================================
-    --------------------------------------------------------------------------
-    ==========================================================================
-*/
+    /*
+        ==========================================================================
+        --------------------------------------------------------------------------
+        ==========================================================================
+    */
 
     // ==============[Internal State]==============
-    bool is_audio_init;
-    bool is_init_raw_midi_events;
-    bool is_audio_started;
-    bool is_midi_loaded;
-    bool is_midi_ended;
-    bool is_midi_player_paused;
-    bool is_midi_player_active;
-    bool is_soundfont_loaded; // Works for at least one soundfont
-    bool is_config_locked;
-    int  midi_loading_mode;
-    int  sf_loaded;
-    
+    bool               is_audio_init;
+    bool               is_init_raw_midi_events;
+    bool               is_audio_started;
+    bool               is_midi_loaded;
+    bool               is_midi_ended;
+    bool               is_midi_player_paused;
+    bool               is_midi_player_active;
+    bool               is_soundfont_loaded; // Works for at least one soundfont
+    bool               is_config_locked;
+    int                midi_loading_mode;
+    int                sf_loaded;
+
 
     // ==============[Config Vars]==============
-    bool antialiasing_allowed;
-    bool pre_resampling_allowed;
-    bool fast_decay;
-    bool reverb_enabled;
-    bool reverb_only;
-    bool chorus_enabled;
-    bool overlapping_notes;
-    bool adjust_panning_immediately;
-    bool skip_initial_midi_silence;
-    u32  buffer_period_size;
-    int  opt_modulation_envelope; // This may not be bridged with the API
-    long control_rate;
-    long control_ratio;
-    f64  master_volume;
+    bool               antialiasing_allowed;
+    bool               pre_resampling_allowed;
+    bool               fast_decay;
+    bool               reverb_enabled;
+    bool               reverb_only;
+    bool               chorus_enabled;
+    bool               overlapping_notes;
+    bool               adjust_panning_immediately;
+    bool               skip_initial_midi_silence;
+    u32                buffer_period_size;
+    int                opt_modulation_envelope; // This may not be bridged with the API
+    long               control_rate;
+    long               control_ratio;
+    f64                master_volume;
 
     // MIDI Chunk Limiter
-    bool midi_chunk_limit_enabled;
-    int  midi_chunk_size;
+    bool               midi_chunk_limit_enabled;
+    int                midi_chunk_size;
 
     // Note Velocity Skipping
-    bool note_vel_skipping;
-    u8   low_vel_treshold;
-    u8   high_vel_treshold;
-    
+    bool               note_vel_skipping;
+    u8                 low_vel_treshold;
+    u8                 high_vel_treshold;
+
     bool               audio_compressor;
     CompressorSettings compressor_settings;
 };
@@ -1024,7 +1022,7 @@ struct Kasaria
 
 
 
-void set_default_config(Kasaria *ksr);
+void        set_default_config(Kasaria *ksr);
 
 // ------------- Utility functions (utils.c) -------------
 FILE       *open_file(Kasaria *tm, const char *name, int decompress, int noise_mode);
@@ -1060,7 +1058,7 @@ void        apply_envelope_to_amp(Kasaria *tm, int v);
 
 // ------------- MIDI loading functions (ksr_midi_loader.c) -------------
 MidiEvent  *read_midi_file(Kasaria *tm, FILE *mfp, long *count, long *sp);
-void compute_sample_increment(Kasaria *ksr, long tempo, long divisions);
+void        compute_sample_increment(Kasaria *ksr, long tempo, long divisions);
 
 
 // ------------- Resampling functions (ksr_resample.c) -------------
@@ -1077,63 +1075,63 @@ void        free_tables(Kasaria *tm);
 
 // ------------- Audio callback functions (ksr_midi_player.c) -------------
 #ifdef KSR_INTERNAL_AUDIO_HANDLER
-void        _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
+void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount);
 #endif
 
 
 // ------------- Synth Base functions (ksr_synth_base.c) -------------
-void        channel_voice_add(Kasaria *ksr, int ch, int vi);
-void        channel_voice_remove(Kasaria *ksr, int ch, int vi);
-void        select_sample(Kasaria *ksr, int v, Instrument *ip);
-void        recompute_freq(Kasaria *ksr, int v);
-void        recompute_amp(Kasaria *ksr, int v);
-void        start_note(Kasaria *ksr, MidiEvent *e, int i);
-void        kill_note(Kasaria *ksr, int i);
-void        note_on(Kasaria *ksr, MidiEvent *e);
-void        finish_note(Kasaria *ksr, int i);
-void        note_off(Kasaria *ksr, MidiEvent *e);
-void        all_notes_off(Kasaria *ksr, int c);
-void        all_sounds_off(Kasaria *ksr, int c);
-void        adjust_pressure(Kasaria *ksr, MidiEvent *e);
-void        adjust_panning(Kasaria *ksr, int c);
-void        adjust_pitchbend(Kasaria *ksr, int c);
-void        adjust_volume(Kasaria *ksr, int c);
-void        do_compute_data(Kasaria *ksr, long count);
-void        adjust_amplification(Kasaria *ksr, int amplification);
-void        reset_voices(Kasaria *ksr);
-void        drop_sustain(Kasaria *ksr, int c);
-void        reset_controllers(Kasaria *ksr, int c);
-void        reset_midi(Kasaria *ksr);
-void        free_voice_push(Kasaria *ksr, int i);
-Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset);
-int         load_font(Kasaria *ksr, SFInfo *sf, int pridx);
+void         channel_voice_add(Kasaria *ksr, int ch, int vi);
+void         channel_voice_remove(Kasaria *ksr, int ch, int vi);
+void         select_sample(Kasaria *ksr, int v, Instrument *ip);
+void         recompute_freq(Kasaria *ksr, int v);
+void         recompute_amp(Kasaria *ksr, int v);
+void         start_note(Kasaria *ksr, MidiEvent *e, int i);
+void         kill_note(Kasaria *ksr, int i);
+void         note_on(Kasaria *ksr, MidiEvent *e);
+void         finish_note(Kasaria *ksr, int i);
+void         note_off(Kasaria *ksr, MidiEvent *e);
+void         all_notes_off(Kasaria *ksr, int c);
+void         all_sounds_off(Kasaria *ksr, int c);
+void         adjust_pressure(Kasaria *ksr, MidiEvent *e);
+void         adjust_panning(Kasaria *ksr, int c);
+void         adjust_pitchbend(Kasaria *ksr, int c);
+void         adjust_volume(Kasaria *ksr, int c);
+void         do_compute_data(Kasaria *ksr, long count);
+void         adjust_amplification(Kasaria *ksr, int amplification);
+void         reset_voices(Kasaria *ksr);
+void         drop_sustain(Kasaria *ksr, int c);
+void         reset_controllers(Kasaria *ksr, int c);
+void         reset_midi(Kasaria *ksr);
+void         free_voice_push(Kasaria *ksr, int i);
+Instrument  *sndfont_load_instrument(Kasaria *ksr, int bank, int preset);
+int          load_font(Kasaria *ksr, SFInfo *sf, int pridx);
 
 
 // ------------- Channel FX -------------
-void reset_reverb(Kasaria *ksr);
-void process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count);
-void init_reverb(Kasaria *ksr);
-void free_reverb(Kasaria *ksr);
+void         reset_reverb(Kasaria *ksr);
+void         process_reverb(Kasaria *ksr, f32 *buf, long *send_buf, long count);
+void         init_reverb(Kasaria *ksr);
+void         free_reverb(Kasaria *ksr);
 
-void init_chorus(Kasaria *ksr);
-void free_chorus(Kasaria *ksr);
-void reset_chorus(Kasaria *ksr);
-void apply_chorus_depth(Kasaria *ksr);
-void process_chorus(Kasaria *ksr, f32 *buf, long *send_buf, long count);
+void         init_chorus(Kasaria *ksr);
+void         free_chorus(Kasaria *ksr);
+void         reset_chorus(Kasaria *ksr);
+void         apply_chorus_depth(Kasaria *ksr);
+void         process_chorus(Kasaria *ksr, f32 *buf, long *send_buf, long count);
 
 
-u64         monotonic_ns(void);
+u64          monotonic_ns(void);
 
-Instrument *extract_soundfont(Kasaria *ksr, const char *sf_file, int bank, int preset, int keynote);
-void free_sf2_sample_cache(void);
+Instrument  *extract_soundfont(Kasaria *ksr, const char *sf_file, int bank, int preset, int keynote);
+void         free_sf2_sample_cache(void);
 
-extern void init_mblock(MBlockList *mblock);
+extern void  init_mblock(MBlockList *mblock);
 extern void *new_segment(MBlockList *mblock, size_t nbytes);
-extern void reuse_mblock(MBlockList *mblock);
+extern void  reuse_mblock(MBlockList *mblock);
 extern char *strdup_mblock(MBlockList *mblock, const char *str);
-extern int free_global_mblock(void);
-int fp_equals(float a, float b, float tolerance);
-void *safe_large_malloc(size_t count);
+extern int   free_global_mblock(void);
+int          fp_equals(float a, float b, float tolerance);
+void        *safe_large_malloc(size_t count);
 
-void ksr_profile_voice(Kasaria *ksr);
+void         ksr_profile_voice(Kasaria *ksr);
 #endif

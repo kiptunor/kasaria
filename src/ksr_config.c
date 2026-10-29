@@ -21,9 +21,9 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
 
+#include "ext_deps/log_c/log.h"
 #include "kasaria.h"
 #include "ksr_internal.h"
-#include "ext_deps/log_c/log.h"
 
 
 
@@ -89,46 +89,46 @@ void set_default_config(Kasaria *ksr)
     ksr->fast_decay = 0;
 #endif
 
-    ksr->voices                        = DEFAULT_VOICES;
-    ksr->play_mode.rate                = DEFAULT_RATE;
-    ksr->play_mode.encoding           &= ~PE_MONO;
-    ksr->control_rate                  = CONTROLS_PER_SECOND;
-    ksr->control_ratio                 = ksr->play_mode.rate / ksr->control_rate;
-    ksr->drumchannels                  = DEFAULT_DRUMCHANNELS;
-    ksr->quietchannels                 = 0;
-    ksr->adjust_panning_immediately    = 1;
+    ksr->voices                      = DEFAULT_VOICES;
+    ksr->play_mode.rate              = DEFAULT_RATE;
+    ksr->play_mode.encoding         &= ~PE_MONO;
+    ksr->control_rate                = CONTROLS_PER_SECOND;
+    ksr->control_ratio               = ksr->play_mode.rate / ksr->control_rate;
+    ksr->drumchannels                = DEFAULT_DRUMCHANNELS;
+    ksr->quietchannels               = 0;
+    ksr->adjust_panning_immediately  = 1;
     // ksr->preload_soundfont_instruments = 1; // Unused
-    ksr->buffer_period_size            = 800;
-    ksr->skip_initial_midi_silence     = false;
-    ksr->overlapping_notes             = true;
-    ksr->audio_compressor              = true;
-    ksr->midi_chunk_limit_enabled      = false;
-    ksr->midi_chunk_size               = 64;
-    ksr->reverb_only                   = false;
-    ksr->reverb_level                  = 8.0;
+    ksr->buffer_period_size          = 800;
+    ksr->skip_initial_midi_silence   = false;
+    ksr->overlapping_notes           = true;
+    ksr->audio_compressor            = true;
+    ksr->midi_chunk_limit_enabled    = false;
+    ksr->midi_chunk_size             = 64;
+    ksr->reverb_only                 = false;
+    ksr->reverb_level                = 8.0;
     // Reverb presets I like
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_GENERIC;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_CASTLE_SHORTPASSAGE; // One of the best
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_CASTLE_LONGPASSAGE;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_SPACESTATION_SHORTPASSAGE;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_SPACESTATION_LONGPASSAGE;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_SPORT_EMPTYSTADIUM;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_SPORT_FULLSTADIUM;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DOME_TOMB;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_PIPE_RESONANT; // Honestly this sounds a little cursed
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_MOOD_HEAVEN;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_PITGARAGE;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_INCAR_RACER; // not my favorite but still very interesting
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_EMPTYGRANDSTAND;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_TUNNEL;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_MUSEUM;
-    ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_LIBRARY;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_ABANDONED;
-    //ksr->reverb_preset                 = KSR_REVERB_PRESET_DUSTYROOM;
-    ksr->reverb_enabled                = true;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_GENERIC;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_CASTLE_SHORTPASSAGE; // One of the best
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_CASTLE_LONGPASSAGE;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_SPACESTATION_SHORTPASSAGE;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_SPACESTATION_LONGPASSAGE;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_SPORT_EMPTYSTADIUM;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_SPORT_FULLSTADIUM;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_DOME_TOMB;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_PIPE_RESONANT; // Honestly this sounds a little cursed
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_MOOD_HEAVEN;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_PITGARAGE;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_INCAR_RACER; // not my favorite but still very interesting
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_EMPTYGRANDSTAND;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_DRIVING_TUNNEL;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_MUSEUM;
+    ksr->reverb_preset               = KSR_REVERB_PRESET_CITY_LIBRARY;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_CITY_ABANDONED;
+    // ksr->reverb_preset                 = KSR_REVERB_PRESET_DUSTYROOM;
+    ksr->reverb_enabled              = true;
 
-    ksr->chorus_enabled                = true;
-    ksr->chorus_depth                  = 0.4;
+    ksr->chorus_enabled              = true;
+    ksr->chorus_depth                = 0.4;
 
     default_compressor_settings(ksr);
 
@@ -152,11 +152,11 @@ void ksr_config_set_overlapping_notes(Kasaria *ksr, bool value)
         return; // Ignore the user XD
     }
 
-    
+
     // Prevent any stale voices from being held when changing overlapping notes
     if(ksr->is_midi_player_active)
         reset_voices(ksr);
-    
+
     ksr->overlapping_notes = value;
 }
 
@@ -165,7 +165,7 @@ void ksr_config_set_midi_chunk_limit(Kasaria *ksr, int size, bool enabled)
     if(!ksr || ksr->is_config_locked)
         return;
 
-    ksr->midi_chunk_size = size;
+    ksr->midi_chunk_size          = size;
     ksr->midi_chunk_limit_enabled = enabled;
 }
 
@@ -233,7 +233,7 @@ void ksr_config_enable_reverb(Kasaria *ksr, bool value)
 {
     if(!ksr || ksr->is_config_locked)
         return;
-    
+
     ksr->reverb_enabled = value;
     reset_reverb(ksr);
 }
@@ -242,7 +242,7 @@ void ksr_config_set_reverb_only(Kasaria *ksr, bool value)
 {
     if(!ksr || ksr->is_config_locked)
         return;
-    
+
     ksr->reverb_only = value;
 }
 
@@ -250,7 +250,7 @@ void ksr_config_set_reverb_preset(Kasaria *ksr, int preset)
 {
     if(!ksr || ksr->is_config_locked)
         return;
-    
+
     ksr->reverb_preset = preset;
 }
 
@@ -528,6 +528,6 @@ void ksr_set_config(Kasaria *ksr, KasariaConfig config)
     if(ksr->audio_init_scope == RAW_MIDI_EVENTS)
         ksr->overlapping_notes = true;
     else
-        ksr->overlapping_notes          = config.allow_overlapping_notes;
+        ksr->overlapping_notes = config.allow_overlapping_notes;
 #endif
 }
