@@ -128,7 +128,7 @@ void set_default_config(Kasaria *ksr)
     ksr->reverb_enabled              = true;
 
     ksr->chorus_enabled              = true;
-    ksr->chorus_depth                = 0.4;
+    ksr->chorus_depth                = 1.4;
 
     default_compressor_settings(ksr);
 
