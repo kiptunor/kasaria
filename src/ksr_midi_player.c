@@ -70,7 +70,7 @@ playmidi.c -- random stuff in need of rearrangement
 
 
 
-
+// clang-format off
 #ifdef KSR_INTERNAL_AUDIO_HANDLER
     #define SLEEP_MILIS(ms) ma_sleep(ms)
 #else
@@ -81,6 +81,7 @@ playmidi.c -- random stuff in need of rearrangement
             nanosleep(&ts, NULL); \
         }while(0)
 #endif
+// clang-format on
 
 
 

@@ -24,12 +24,12 @@
 
 
 
-#define MIN_MBLOCK_SIZE 8192
+#define MIN_MBLOCK_SIZE          8192
 #define MIDI_MAP_MAX_TRACK_COUNT 85535 // More bc some weirdos like to deal with large MIDI files for some unknown reason
-//#define MIDI_MAP_MAX_TRACK_COUNT 1000
+// #define MIDI_MAP_MAX_TRACK_COUNT 1000
 
-#define DEFAULT_SOUNDFONT_ORDER 0
-#define MAP_BANK_COUNT 768
+#define DEFAULT_SOUNDFONT_ORDER  0
+#define MAP_BANK_COUNT           768
 
 /* Filename extension, followed by command to run decompressor so that
    output is written to stdout. Terminate the list with a 0.
@@ -42,24 +42,24 @@
    This is currently ignored for Win32. */
 
 
-#define DECOMPRESSOR_LIST     { ".gz", "gunzip -c %s", ".Z", "zcat %s", ".zip", "unzip -p %s", ".lha", "lha -pq %s", ".lzh", "lha -pq %s", ".shn", "shorten -x %s -", ".wav", "wav2pat %s", 0 }
+#define DECOMPRESSOR_LIST        { ".gz", "gunzip -c %s", ".Z", "zcat %s", ".zip", "unzip -p %s", ".lha", "lha -pq %s", ".lzh", "lha -pq %s", ".shn", "shorten -x %s -", ".wav", "wav2pat %s", 0 }
 
 /* When a patch file can't be opened, one of these extensions is
    appended to the filename and the open is tried again.
 
    This is ignored for Win32, which uses only ".pat" (see the bottom
    of this file if you need to change this.) */
-#define PATCH_EXT_LIST        { ".pat", ".shn", ".pat.shn", ".gz", ".pat.gz", 0 }
+#define PATCH_EXT_LIST           { ".pat", ".shn", ".pat.shn", ".gz", ".pat.gz", 0 }
 
 /* Acoustic Grand Piano seems to be the usual default instrument. */
-#define DEFAULT_PROGRAM       0
+#define DEFAULT_PROGRAM          0
 
 /* 9 here is MIDI channel 10, which is the standard percussion channel.
    Some files (notably C:\WINDOWS\CANYON.MID) think that 16 is one too.
    On the other hand, some files know that 16 is not a drum channel and
    try to play music on it. This is now a runtime option, so this isn't
    a critical choice anymore. */
-#define DEFAULT_DRUMCHANNELS  (1 << 9)
+#define DEFAULT_DRUMCHANNELS     (1 << 9)
 // #define DEFAULT_DRUMCHANNELS ((1<<9) | (1<<15))
 
 /* A somewhat arbitrary frequency range. The low end of this will
@@ -67,22 +67,22 @@
    instruments before resampling. */
 // #define MIN_OUTPUT_RATE 	4000
 // #define MAX_OUTPUT_RATE 	65000
-#define MIN_OUTPUT_RATE       1000
-#define MAX_OUTPUT_RATE       1000000
+#define MIN_OUTPUT_RATE          1000
+#define MAX_OUTPUT_RATE          1000000
 
 /* In percent. */
 // #define DEFAULT_AMPLIFICATION 	70
-#define DEFAULT_AMPLIFICATION 100
+#define DEFAULT_AMPLIFICATION    100
 
 /* Default sampling rate, default polyphony, and maximum polyphony.
    All but the last can be overridden from the command line. */
-//#define DEFAULT_RATE          44100 // Audio is way too offpitch and the midi player is too slow
-#define DEFAULT_RATE          48000
-#define DEFAULT_VOICES        520
+// #define DEFAULT_RATE          44100 // Audio is way too offpitch and the midi player is too slow
+#define DEFAULT_RATE             48000
+#define DEFAULT_VOICES           520
 // #define MAX_VOICES	48
-//#define MAX_VOICES            1000000000
+// #define MAX_VOICES            1000000000
 // #define MAX_VOICES            10000000 // Very large memory usage!
-#define MAX_VOICES           9024
+#define MAX_VOICES               9024
 
 /* The size of the internal buffer is 2^AUDIO_BUFFER_BITS samples.
    This determines maximum number of samples ever computed in a row.
@@ -101,12 +101,12 @@
 
 */
 
-#define AUDIO_BUFFER_BITS     14
+#define AUDIO_BUFFER_BITS        14
 
 /* 1000 here will give a control ratio of 22:1 with 22 kHz output.
    Higher CONTROLS_PER_SECOND values allow more accurate rendering
    of envelopes and tremolo. The cost is CPU time. */
-#define CONTROLS_PER_SECOND   50
+#define CONTROLS_PER_SECOND      50
 
 /* Strongly recommended. This option increases CPU usage by half, but
    without it sound quality is very poor. */
@@ -143,7 +143,7 @@
 /* For some reason the sample volume is always set to maximum in all
    patch files. Define this for a crude adjustment that may help
    equalize instrument volumes. */
-//#define ADJUST_SAMPLE_VOLUMES // Used nowhere
+// #define ADJUST_SAMPLE_VOLUMES // Used nowhere
 
 /* If you have root access, you can define DANGEROUS_RENICE and chmod
    timidity setuid root to have it automatically raise its priority
@@ -159,7 +159,7 @@
 
 /* The number of samples to use for ramping out a dying note. Affects
    click removal. */
-#define MAX_DIE_TIME 200
+#define MAX_DIE_TIME  200
 
 /* On some machines (especially PCs without math coprocessors),
    looking up sine values in a table will be significantly faster than
@@ -170,7 +170,7 @@
 /* Shawn McHorse's resampling optimizations. These may not in fact be
    faster on your particular machine and compiler. You'll have to run
    a benchmark to find out. */
-//#define PRECALC_LOOPS
+// #define PRECALC_LOOPS
 
 /* If calling ldexp() is faster than a floating point multiplication
    on your machine/compiler/libm, uncomment this. It doesn't make much
@@ -234,7 +234,7 @@
 #define AMP_BITS          (15 - GUARD_BITS)
 
 #ifdef LOOKUP_HACK
-typedef char  sample_t;
+typedef char          sample_t;
 typedef unsigned char final_volume_t;
     #define FINAL_VOLUME(v) (~_l2u[v])
     #define MIXUP_SHIFT     5
@@ -245,10 +245,10 @@ typedef short sample_t;
 typedef long  final_volume_t;
     #define FINAL_VOLUME(v) (v)
     #define MAX_AMP_VALUE   ((1 << (AMP_BITS + 1)) - 1)
-    #define MAX_MIX_GAIN   32767
+    #define MAX_MIX_GAIN    32767
 #endif
 
-#define MIX_HEADROOM   0.28
+#define MIX_HEADROOM              0.28
 
 /* Vibrato and tremolo Choices of the Day */
 #define SWEEP_TUNING              38
