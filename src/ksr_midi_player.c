@@ -74,12 +74,12 @@ playmidi.c -- random stuff in need of rearrangement
 #ifdef KSR_INTERNAL_AUDIO_HANDLER
     #define SLEEP_MILIS(ms) ma_sleep(ms)
 #else
-    #define SLEEP_MILIS(ms)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            \
-        do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             \
-        {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              \
-            struct timespec ts = { .tv_sec = (ms) / 1000, .tv_nsec = ((ms) % 1000) * 1000000L };                                                                                                                                                                                                                                                                                                                                                                                                                                       \
-            nanosleep(&ts, NULL);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \
-        } while(0)
+    #define SLEEP_MILIS(ms) \
+        do \
+        { \
+            struct timespec ts = { .tv_sec = (ms) / 1000, .tv_nsec = ((ms) % 1000) * 1000000L }; \
+            nanosleep(&ts, NULL); \
+        }while(0)
 #endif
 
 
