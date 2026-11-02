@@ -1156,14 +1156,14 @@ void adjust_pitchbend(Kasaria *ksr, int c)
 
 void adjust_volume(Kasaria *ksr, int c)
 {
-    int n = ksr->channel_voice_count[c];
-    for(int i = 0; i < n; i++)
+    int i = ksr->voices;
+    while(i--)
     {
-        int vi = ksr->channel_voice_list[c][i];
-        if(ksr->voice[vi].status == VOICE_ON || ksr->voice[vi].status == VOICE_SUSTAINED || ksr->voice[vi].status == VOICE_OFF)
+        Voice *vp = &ksr->voice[i];
+        if(vp->channel == c && (vp->status == VOICE_ON || vp->status == VOICE_SUSTAINED || vp->status == VOICE_OFF))
         {
-            recompute_amp(ksr, vi);
-            apply_envelope_to_amp(ksr, vi);
+            recompute_amp(ksr, i);
+            apply_envelope_to_amp(ksr, i);
         }
     }
 }
