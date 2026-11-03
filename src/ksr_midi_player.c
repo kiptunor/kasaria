@@ -416,7 +416,12 @@ int ksr_player_render(Kasaria *ksr, f32 *out, unsigned int frames)
         if(count > 0)
         {
             memcpy(out, buffer->data + start_frame * 2, count * 2 * sizeof(f32));
+            fprintf(stderr, "SEEK time=%ld rate=%d ready=%zu capacity=%zu cursor_before=%llu\n",
+                    time, ksr->play_mode.rate,
+                    available, buffer->capacity,
+                    (unsigned long long)ksr->prerender_playback_frame);
             ksr->prerender_playback_frame += count;
+            fprintf(stderr, "SEEK cursor_after=%llu\n", (unsigned long long)ksr->prerender_playback_frame);
         }
         
         if(count < frames)
@@ -2657,39 +2662,49 @@ bool ksr_player_is_ended(Kasaria *ksr)
 
 int ksr_player_seek(Kasaria *ksr, long time)
 {
-    int total_time;
     if(!ksr || (ksr->midi_playback_mode != 12 && !ksr->stream && !ksr->current_event))
         return 0;
 
-    total_time = ksr_get_duration(ksr);
-
-    if(time > total_time)
-        time = total_time;
-    else if(time < 0)
+    if(time < 0)
         time = 0;
 
     player_seek_gate_enter(ksr);
 
     if(ksr->midi_playback_mode == 12)
     {
-        u64 target_frame = (u64)ksr_millis2samples(ksr, time);
-        size_t available = atomic_load_explicit(&ksr->mp_prerender_buf.frames_ready, memory_order_acquire);
-        bool done = atomic_load_explicit(&ksr->mp_prerender_buf.done, memory_order_acquire);
-    
-        if(done && target_frame > available)
-            target_frame = available;
-    
+        MIDIPlayerPrerenderBuffer *buffer = &ksr->mp_prerender_buf;
+        u64 rate = (u64)ksr->play_mode.rate;
+
+        if(rate == 0)
+        {
+            player_seek_gate_leave(ksr);
+            return 0;
+        }
+
+        u64 target_frame = ((u64)time * rate) / 1000;
+        size_t available = atomic_load_explicit(&buffer->frames_ready, memory_order_acquire);
+        bool done = atomic_load_explicit(&buffer->done, memory_order_acquire);
+        u64 max_frame = done ? available : buffer->capacity;
+
+        if(target_frame > max_frame)
+            target_frame = max_frame;
+
         ksr->prerender_playback_frame = target_frame;
-        reset_position_frame(ksr);
+
         publish_position_frame(ksr, target_frame);
-    
+
         ksr->is_midi_ended = false;
         ksr->is_midi_player_active = true;
-        ksr->is_midi_player_paused = false;
-    
+
         player_seek_gate_leave(ksr);
-        return (int)time;
+
+        return (int)((target_frame * 1000) / rate);
     }
+
+    int total_time = ksr_get_duration(ksr);
+
+    if(time > total_time)
+        time = total_time;
 
     if(ksr->midi_loading_mode == MIDI_MEMORY)
     {
@@ -2701,14 +2716,12 @@ int ksr_player_seek(Kasaria *ksr, long time)
         stream_seek(ksr, ksr_millis2samples(ksr, time));
 
     reset_position_frame(ksr);
-
     publish_position_frame(ksr, (u64)ksr->current_sample);
     ksr->is_midi_ended = false;
 
-    int res            = ksr_get_current_time(ksr);
+    int res = ksr_get_current_time(ksr);
 
     player_seek_gate_leave(ksr);
-
     return res;
 }
 
