@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 
     // ==============[Load MIDI file]==============
     // For this approach file mapping is set which does not store any midi data in RAM
-    if(!ksr_load_midi_file(converter, MIDI_MAP, argv[1]))
+    if(!ksr_load_midi_file(converter, MIDI_MAP, PRERENDER_MIDI_PLAYER, argv[1]))
     {
         printf("Failed to load MIDI file: %s\n", argv[1]);
         ksr_shutdown(converter);

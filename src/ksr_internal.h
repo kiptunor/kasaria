@@ -43,6 +43,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 
 #include <math.h>
@@ -843,6 +844,23 @@ typedef struct _MBlockList
     size_t      allocated;
 } MBlockList;
 
+typedef struct
+{
+    f32 *data;
+    size_t frames;
+    size_t capacity;
+    _Atomic size_t frames_ready;
+    _Atomic bool done;
+    _Atomic bool failed;
+}MIDIPlayerPrerenderBuffer;
+
+typedef struct
+{
+    pthread_t thread;
+    _Atomic int running;
+    _Atomic int stop;
+}RingBufState;
+
 struct Kasaria
 {
     // int            opt_pre_resamplation;
@@ -921,9 +939,19 @@ struct Kasaria
     _Atomic u64  position_end_frame;
     _Atomic u64  position_start_ns;
     _Atomic u64  position_end_ns;
+    _Atomic u64  prerender_frames_written;
+    _Atomic u64  prerender_frames_consumed;
     _Atomic int  player_seek_gate; // 1 while a control thread is rewriting the player
     _Atomic int  player_in_callback;
+    _Atomic bool midi_events_finished;
+    _Atomic bool prerender_done;
+    bool prerender_thread_valid;
+    u64 midi_tail_frames_remaining;
     u64          position_clock_end_ns;
+    RingBufState rb_state;
+    MIDIPlayerPrerenderBuffer mp_prerender_buf;
+    pthread_t prerender_thread;
+    u64 prerender_playback_frame;
 
     // Resample vars
     long         sample_increment;
@@ -986,6 +1014,7 @@ struct Kasaria
     bool               is_soundfont_loaded; // Works for at least one soundfont
     bool               is_config_locked;
     int                midi_loading_mode;
+    int                midi_playback_mode;
     int                sf_loaded;
 
 
@@ -1040,6 +1069,8 @@ void        antialiasing(i16 *data, i32 data_length, i32 sample_rate, i32 output
 void        antialiasing_i32(i32 *data, i32 data_length, i32 sample_rate, i32 output_rate);
 void        antialiasing_f32(f32 *data, i32 data_length, i32 sample_rate, i32 output_rate);
 void        audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
+
+void prerender_player_stop(Kasaria *ksr);
 
 
 // ------------- SoundFont Instrument functions (ksr_instruments.c) -------------

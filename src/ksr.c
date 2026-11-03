@@ -837,6 +837,9 @@ void ksr_shutdown(Kasaria *ksr)
     if(!ksr->is_midi_player_paused)
         ksr_player_pause(ksr);
 
+    // Prevent further callback access and stop/join prerender worker.
+    prerender_player_stop(ksr);
+
     free_reverb(ksr);
     free_chorus(ksr);
 
@@ -850,6 +853,10 @@ void ksr_shutdown(Kasaria *ksr)
     reset_midi(ksr);
     ksr_unload_midi(ksr); // This also calls reset_midi()
     free(ksr->f_mmap);
+    free(ksr->mp_prerender_buf.data);
+    ksr->mp_prerender_buf.data = NULL;
+    ksr->mp_prerender_buf.frames = 0;
+    ksr->mp_prerender_buf.capacity = 0;
     free_tables(ksr);
     memset(ksr, 0, sizeof(Kasaria));
     free(ksr);

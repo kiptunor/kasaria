@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 
 
     // Load a MIDI with file mapping (Set on the second function argument)
-    if(!ksr_load_midi_file(synth, MIDI_MAP, argv[1])) // The midi file is memory mapped so no midi data is stored in RAM
+    if(!ksr_load_midi_file(synth, MIDI_MAP, PRERENDER_MIDI_PLAYER, argv[1])) // The midi file is memory mapped so no midi data is stored in RAM
     {
         printf("Failed to load MIDI file: %s\n", argv[1]);
         ksr_shutdown(synth);

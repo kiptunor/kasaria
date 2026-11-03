@@ -109,7 +109,7 @@ int main(int argc, char **argv)
     printf("Loading midi\n");
 
     // As in the previous examples the MIDI file data is stored in RAM
-    if(!ksr_load_midi_file(synth, MIDI_MAP, argv[1]))
+    if(!ksr_load_midi_file(synth, MIDI_MAP, PRERENDER_MIDI_PLAYER, argv[1]))
     {
         printf("Failed to load MIDI file: %s\n", argv[1]);
         ksr_shutdown(synth);

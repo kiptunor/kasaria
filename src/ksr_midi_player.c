@@ -94,6 +94,31 @@ Kasaria    *async_midi_player; // Required only for the async MIDI player
 
 
 
+
+
+
+
+static void publish_position_range(Kasaria *ksr, u64 start_frame, u64 end_frame, u64 start_ns, u64 end_ns)
+{
+    atomic_fetch_add_explicit(&ksr->position_seq, 1, memory_order_acq_rel);
+    atomic_store_explicit(&ksr->position_start_frame, start_frame, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_end_frame, end_frame, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_start_ns, start_ns, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_end_ns, end_ns, memory_order_relaxed);
+    atomic_fetch_add_explicit(&ksr->position_seq, 1, memory_order_release);
+}
+
+static void publish_position_frame(Kasaria *ksr, u64 frame)
+{
+    ksr->position_clock_end_ns = 0;
+
+    atomic_store_explicit(&ksr->position_seq, 0, memory_order_release);
+    atomic_store_explicit(&ksr->position_start_frame, frame, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_end_frame, frame, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_start_ns, 0, memory_order_relaxed);
+    atomic_store_explicit(&ksr->position_end_ns, 0, memory_order_relaxed);
+}
+
 static void player_seek_gate_enter(Kasaria *ksr)
 {
     atomic_store_explicit(&ksr->player_seek_gate, 1, memory_order_seq_cst);
@@ -105,6 +130,199 @@ static void player_seek_gate_enter(Kasaria *ksr)
 static void player_seek_gate_leave(Kasaria *ksr)
 {
     atomic_store_explicit(&ksr->player_seek_gate, 0, memory_order_seq_cst);
+}
+
+void mp_ring_buf_reset(MIDIPlayerPrerenderBuffer *rb)
+{
+    if(!rb)
+        return;
+
+    rb->frames = 0;
+    atomic_store_explicit(&rb->done, false, memory_order_relaxed);
+    atomic_store_explicit(&rb->failed, false, memory_order_relaxed);
+}
+
+static int prerender_buffer_append(MIDIPlayerPrerenderBuffer *buffer, const f32 *data, size_t frames)
+{
+    if(!buffer || !data || frames == 0)
+        return 0;
+
+    if(frames > SIZE_MAX - buffer->frames)
+        return 0;
+
+    size_t required = buffer->frames + frames;
+
+    if(required > buffer->capacity)
+    {
+        size_t capacity = buffer->capacity ? buffer->capacity : 65536;
+
+        while(capacity < required)
+        {
+            if(capacity > SIZE_MAX / 2)
+            {
+                capacity = required;
+                break;
+            }
+
+            capacity *= 2;
+        }
+
+        if(capacity > SIZE_MAX / (2 * sizeof(f32)))
+            return 0;
+
+        f32 *new_data = realloc(buffer->data, capacity * 2 * sizeof(f32));
+
+        if(!new_data)
+            return 0;
+
+        buffer->data = new_data;
+        buffer->capacity = capacity;
+    }
+
+    memcpy(buffer->data + buffer->frames * 2, data, frames * 2 * sizeof(f32));
+    buffer->frames = required;
+
+    return 1;
+}
+
+#define PRERENDER_SLEEP_NS 2000000L // 2 ms
+
+static void *prerender_worker_thread(void *arg)
+{
+    Kasaria *ksr = (Kasaria *)arg;
+    MIDIPlayerPrerenderBuffer *buffer = &ksr->mp_prerender_buf;
+    const long chunk_size = ksr->buffer_period_size;
+    f32 temp[chunk_size * 2];
+
+    long total = ksr_get_sample_count(ksr) + ksr_millis2samples(ksr, 1000);
+    size_t written = 0;
+
+    while(total > 0 && !atomic_load_explicit(&ksr->rb_state.stop, memory_order_relaxed))
+    {
+        long frames = total < chunk_size ? total : chunk_size;
+
+        if(!ksr_player_get_stream(ksr, AUDIO_FLOAT, (u8 *)temp, frames))
+            break;
+
+        memcpy(buffer->data + written * 2, temp, (size_t)frames * 2 * sizeof(f32));
+
+        written += (size_t)frames;
+        buffer->frames = written;
+
+        atomic_store_explicit(&buffer->frames_ready, written, memory_order_release);
+
+        total -= frames;
+    }
+
+    if(total > 0 && !atomic_load_explicit(&ksr->rb_state.stop, memory_order_relaxed))
+        atomic_store_explicit(&buffer->failed, true, memory_order_release);
+
+    atomic_store_explicit(&buffer->done, true, memory_order_release);
+    atomic_store_explicit(&ksr->rb_state.running, 0, memory_order_release);
+
+    return NULL;
+}
+
+int prerender_player_start(Kasaria *ksr)
+{
+    if(!ksr)
+        return 0;
+
+    MIDIPlayerPrerenderBuffer *buffer = &ksr->mp_prerender_buf;
+    long total = ksr_get_sample_count(ksr) + ksr_millis2samples(ksr, 1000);
+
+    if(total <= 0 || (size_t)total > SIZE_MAX / (2 * sizeof(f32)))
+        return 0;
+
+    size_t required = (size_t)total;
+
+    if(required > buffer->capacity)
+    {
+        f32 *new_data = realloc(buffer->data, required * 2 * sizeof(f32));
+        if(!new_data)
+            return 0;
+
+        buffer->data = new_data;
+        buffer->capacity = required;
+    }
+
+    buffer->frames = 0;
+    atomic_store_explicit(&buffer->frames_ready, 0, memory_order_relaxed);
+    atomic_store_explicit(&buffer->done, false, memory_order_relaxed);
+    atomic_store_explicit(&buffer->failed, false, memory_order_relaxed);
+
+    ksr->prerender_playback_frame = 0;
+
+    atomic_store_explicit(&ksr->rb_state.stop, 0, memory_order_relaxed);
+    atomic_store_explicit(&ksr->rb_state.running, 1, memory_order_release);
+
+    ksr->is_midi_player_active = true;
+    ksr->is_midi_ended = false;
+
+    publish_position_frame(ksr, 0);
+
+    if(pthread_create(&ksr->prerender_thread, NULL, prerender_worker_thread, ksr) != 0)
+    {
+        atomic_store_explicit(&ksr->rb_state.running, 0, memory_order_release);
+        return 0;
+    }
+
+    ksr->prerender_thread_valid = true;
+    atomic_store_explicit(&ksr->player_seek_gate, false, memory_order_seq_cst);
+
+    return 1;
+}
+
+void prerender_player_rewind(Kasaria *ksr)
+{
+    if(!ksr)
+        return;
+
+    player_seek_gate_enter(ksr);
+
+    ksr->prerender_playback_frame = 0;
+    ksr->is_midi_ended = false;
+    ksr->is_midi_player_active = true;
+    ksr->is_midi_player_paused = false;
+
+    publish_position_frame(ksr, 0);
+
+    player_seek_gate_leave(ksr);
+}
+
+void prerender_player_stop(Kasaria *ksr)
+{
+    if(!ksr)
+        return;
+
+    //atomic_store_explicit(&ksr->rb_state.stop, 1, memory_order_release);
+
+    // Prevent the audio callback from accessing MIDI playback state.
+    atomic_store_explicit(&ksr->player_seek_gate, true, memory_order_seq_cst);
+    
+    // Wait for any callback already in progress.
+    while(atomic_load_explicit(&ksr->player_in_callback, memory_order_seq_cst))
+        sched_yield();
+    
+    // Tell the prerender worker to stop.
+    atomic_store_explicit(&ksr->rb_state.stop, 1, memory_order_release);
+    
+    // Wait until it has completely stopped using the MIDI stream.
+    if(ksr->prerender_thread_valid)
+    {
+        pthread_join(ksr->prerender_thread, NULL);
+        ksr->prerender_thread_valid = false;
+    }
+
+    atomic_store_explicit(&ksr->rb_state.running, 0, memory_order_release);
+}
+
+void prerender_player_wait(Kasaria *ksr)
+{
+    if(!ksr)
+        return;
+
+    pthread_join(ksr->prerender_thread, NULL);
 }
 
 void player_pos_start_update(Kasaria *ksr)
@@ -150,33 +368,71 @@ int ksr_player_render(Kasaria *ksr, f32 *out, unsigned int frames)
 
     atomic_store_explicit(&ksr->player_in_callback, 1, memory_order_seq_cst);
 
-    if(atomic_load_explicit(&ksr->player_seek_gate, memory_order_seq_cst) || !ksr->is_midi_loaded || (!ksr->stream && !ksr->current_event) || ksr->is_midi_player_paused)
+    //if(atomic_load_explicit(&ksr->player_seek_gate, memory_order_seq_cst) || !ksr->is_midi_loaded || (!ksr->stream && !ksr->current_event) || ksr->is_midi_player_paused)
+    if(atomic_load_explicit(&ksr->player_seek_gate, memory_order_seq_cst) || !ksr->is_midi_loaded || (ksr->midi_playback_mode == 11 && !ksr->stream && !ksr->current_event) || ksr->is_midi_player_paused)
     {
         atomic_store_explicit(&ksr->player_in_callback, 0, memory_order_seq_cst);
         memset(out, 0, (size_t)frames * 2 * sizeof(f32));
         return 0;
     }
 
-    player_pos_start_update(ksr);
-
-    int  remaining = (int)frames;
     f32 *p         = out;
-    while(remaining > 0)
+
+    // Realtime
+    if(ksr->midi_playback_mode == 11)
     {
-        int chunk = remaining > (int)ksr->buffer_period_size ? (int)ksr->buffer_period_size : remaining;
-
-        if(!ksr_player_get_stream(ksr, AUDIO_FLOAT, (u8 *)p, chunk))
+        player_pos_start_update(ksr);
+        int  remaining = (int)frames;
+        
+        while(remaining > 0)
         {
-            memset(p, 0, (size_t)remaining * 2 * sizeof(f32));
-            atomic_store_explicit(&ksr->player_in_callback, 0, memory_order_seq_cst);
-            return 0;
+            int chunk = remaining > (int)ksr->buffer_period_size ? (int)ksr->buffer_period_size : remaining;
+    
+            if(!ksr_player_get_stream(ksr, AUDIO_FLOAT, (u8 *)p, chunk))
+            {
+                memset(p, 0, (size_t)remaining * 2 * sizeof(f32));
+                atomic_store_explicit(&ksr->player_in_callback, 0, memory_order_seq_cst);
+                return 0;
+            }
+            
+            p         += chunk * 2;
+            remaining -= chunk;
         }
-
-        p         += chunk * 2;
-        remaining -= chunk;
+        player_pos_end_update(ksr, frames);
     }
 
-    player_pos_end_update(ksr, frames);
+    // Ahead of time pre-rendering (Single threaded)
+    if(ksr->midi_playback_mode == 12)
+    {
+        MIDIPlayerPrerenderBuffer *buffer = &ksr->mp_prerender_buf;
+        
+        size_t available = atomic_load_explicit(&buffer->frames_ready, memory_order_acquire);
+        u64 start_frame = ksr->prerender_playback_frame;
+        u64 start_ns = monotonic_ns();
+        
+        size_t remaining = start_frame < available ? available - start_frame : 0;
+        size_t count = frames < remaining ? frames : remaining;
+        
+        if(count > 0)
+        {
+            memcpy(out, buffer->data + start_frame * 2, count * 2 * sizeof(f32));
+            ksr->prerender_playback_frame += count;
+        }
+        
+        if(count < frames)
+            memset(out + count * 2, 0, (size_t)(frames - count) * 2 * sizeof(f32));
+        
+        u64 end_frame = ksr->prerender_playback_frame;
+        u64 end_ns = start_ns + (count * 1000000000ULL) / ksr->play_mode.rate;
+        
+        publish_position_range(ksr, start_frame, end_frame, start_ns, end_ns);
+        
+        if(atomic_load_explicit(&buffer->done, memory_order_acquire) && end_frame >= available)
+        {
+            ksr->is_midi_ended = true;
+            ksr->is_midi_player_active = false;
+        }
+    }
 
     atomic_store_explicit(&ksr->player_in_callback, 0, memory_order_seq_cst);
     return (int)frames;
@@ -202,17 +458,6 @@ static void reset_position_frame(Kasaria *ksr)
     atomic_store_explicit(&ksr->position_seq, 0, memory_order_release);
     atomic_store_explicit(&ksr->position_start_frame, 0, memory_order_relaxed);
     atomic_store_explicit(&ksr->position_end_frame, 0, memory_order_relaxed);
-    atomic_store_explicit(&ksr->position_start_ns, 0, memory_order_relaxed);
-    atomic_store_explicit(&ksr->position_end_ns, 0, memory_order_relaxed);
-}
-
-static void publish_position_frame(Kasaria *ksr, u64 frame)
-{
-    ksr->position_clock_end_ns = 0;
-
-    atomic_store_explicit(&ksr->position_seq, 0, memory_order_release);
-    atomic_store_explicit(&ksr->position_start_frame, frame, memory_order_relaxed);
-    atomic_store_explicit(&ksr->position_end_frame, frame, memory_order_relaxed);
     atomic_store_explicit(&ksr->position_start_ns, 0, memory_order_relaxed);
     atomic_store_explicit(&ksr->position_end_ns, 0, memory_order_relaxed);
 }
@@ -1711,12 +1956,13 @@ static void stream_seek(Kasaria *ksr, long until_time)
     ksr->current_sample = until_time;
 }
 
-int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
+int ksr_load_midi_file(Kasaria *ksr, int loading_mode, int playback_mode, const char *filename)
 {
     if(!ksr || !filename)
         return 0;
 
     ksr->midi_loading_mode = loading_mode;
+    ksr->midi_playback_mode = playback_mode;
 
     reset_position_frame(ksr);
     ksr_unload_midi(ksr);
@@ -1971,6 +2217,10 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename)
         ksr->is_midi_player_paused = false;
 
 #endif
+
+        if(ksr->midi_playback_mode == 12)
+            prerender_player_start(ksr);
+        
         return 1;
     }
 
@@ -1987,6 +2237,8 @@ void ksr_unload_midi(Kasaria *ksr)
     // Maybe this can prevent crashes in read_vlq ?
     if(!ksr->is_midi_player_paused)
         ksr_player_pause(ksr);
+
+    prerender_player_stop(ksr);
 
     if(ksr->midi_loading_mode == MIDI_MAP)
         ksr_unmap_file(ksr->f_mmap);
@@ -2063,7 +2315,7 @@ int ksr_reload_midi(Kasaria *ksr)
         memset(temp, 0, sizeof(temp));
         strncpy(temp, ksr->last_smf, 1023);
         temp[1023] = '\0';
-        return ksr_load_midi_file(ksr, ksr->midi_loading_mode, temp);
+        return ksr_load_midi_file(ksr, ksr->midi_loading_mode, ksr->midi_playback_mode, temp);
     }
 
     return 0;
@@ -2129,8 +2381,16 @@ int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long cou
             {
                 if(e->type == ME_EOT)
                 {
-                    ksr->is_midi_ended         = true;
-                    ksr->is_midi_player_active = false;
+                    log_info("MIDI End reached!");
+                    if(ksr->midi_playback_mode != 12)
+                        ksr->is_midi_ended         = true;
+                    //ksr->is_midi_player_active = false;
+
+                    //ksr->is_midi_ended = true;
+                    //ksr->is_midi_player_active = false;
+                    atomic_store_explicit(&ksr->midi_events_finished, true, memory_order_release);
+                    ksr->midi_tail_frames_remaining = (u64)ksr->play_mode.rate * 3;
+
                     break;
                 }
 
@@ -2150,6 +2410,10 @@ int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long cou
                 {
                     ksr->is_midi_ended         = true;
                     ksr->is_midi_player_active = false;
+
+                    atomic_store_explicit(&ksr->midi_events_finished, true, memory_order_release);
+                    ksr->midi_tail_frames_remaining = (u64)ksr->play_mode.rate * 3;
+                    
                     break;
                 }
 
@@ -2394,7 +2658,7 @@ bool ksr_player_is_ended(Kasaria *ksr)
 int ksr_player_seek(Kasaria *ksr, long time)
 {
     int total_time;
-    if(!ksr || (!ksr->stream && !ksr->current_event))
+    if(!ksr || (ksr->midi_playback_mode != 12 && !ksr->stream && !ksr->current_event))
         return 0;
 
     total_time = ksr_get_duration(ksr);
@@ -2405,6 +2669,27 @@ int ksr_player_seek(Kasaria *ksr, long time)
         time = 0;
 
     player_seek_gate_enter(ksr);
+
+    if(ksr->midi_playback_mode == 12)
+    {
+        u64 target_frame = (u64)ksr_millis2samples(ksr, time);
+        size_t available = atomic_load_explicit(&ksr->mp_prerender_buf.frames_ready, memory_order_acquire);
+        bool done = atomic_load_explicit(&ksr->mp_prerender_buf.done, memory_order_acquire);
+    
+        if(done && target_frame > available)
+            target_frame = available;
+    
+        ksr->prerender_playback_frame = target_frame;
+        reset_position_frame(ksr);
+        publish_position_frame(ksr, target_frame);
+    
+        ksr->is_midi_ended = false;
+        ksr->is_midi_player_active = true;
+        ksr->is_midi_player_paused = false;
+    
+        player_seek_gate_leave(ksr);
+        return (int)time;
+    }
 
     if(ksr->midi_loading_mode == MIDI_MEMORY)
     {

@@ -119,6 +119,7 @@ typedef struct
 // Soon to be added as argument to ksr_play_midi
 #define REALTIME_MIDI_PLAYER  11
 #define PRERENDER_MIDI_PLAYER 12
+#define MULTITHREADED_PRERENDER_MIDI_PLAYER 13
 
 // Audio format identifiers for ksr_play_midi_raw
 #define AUDIO_CHAR   21
@@ -439,7 +440,7 @@ KSR_API void ksr_load_soundfont_from_mem(Kasaria *ksr, void *mem, long size, boo
                     can read the MIDI data without loading it into memory.
                     The MIDI loading mode is retained accross all MIDI player functions.
 */
-KSR_API int  ksr_load_midi_file(Kasaria *ksr, int loading_mode, const char *filename); // MIDI file player, only supports standard MIDI files
+KSR_API int  ksr_load_midi_file(Kasaria *ksr, int loading_mode, int playback_mode, const char *filename); // MIDI file player, only supports standard MIDI files
 KSR_API int  ksr_load_midi_from_mem(Kasaria *ksr, void *mem, long size); // Todo
 
 /*
