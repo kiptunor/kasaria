@@ -8,13 +8,13 @@ The original version of Timidity 0.2i can be found [here](https://github.com/dat
 
 # Features
 - [X] Realtime MIDI Player
-- [ ] Ahead Pre-reder MIDI Player
+- [x] Ahead of time Pre-reder MIDI Player
 - [X] Custom API for sending MIDI events
 - [X] Playback Controls (Not Yet Tested)
 - [X] SF2 SoundFont format Support
 - [X] Multiple Soundfont Loading
 - [ ] Custom API for loading audio samples
-- [ ] SF2 Effects
+- [x] SF2 Effects (Some soundfont efects may not work)
 - [ ] SFZ Support
 - [x] Audio Capture 
 - [X] Builtin Audio Limiter
