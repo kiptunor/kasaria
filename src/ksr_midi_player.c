@@ -416,12 +416,7 @@ int ksr_player_render(Kasaria *ksr, f32 *out, unsigned int frames)
         if(count > 0)
         {
             memcpy(out, buffer->data + start_frame * 2, count * 2 * sizeof(f32));
-            fprintf(stderr, "SEEK time=%ld rate=%d ready=%zu capacity=%zu cursor_before=%llu\n",
-                    time, ksr->play_mode.rate,
-                    available, buffer->capacity,
-                    (unsigned long long)ksr->prerender_playback_frame);
             ksr->prerender_playback_frame += count;
-            fprintf(stderr, "SEEK cursor_after=%llu\n", (unsigned long long)ksr->prerender_playback_frame);
         }
         
         if(count < frames)
@@ -2386,7 +2381,7 @@ int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, u_char *buffer, long cou
             {
                 if(e->type == ME_EOT)
                 {
-                    log_info("MIDI End reached!");
+                    //log_info("MIDI End reached!");
                     if(ksr->midi_playback_mode != 12)
                         ksr->is_midi_ended         = true;
                     //ksr->is_midi_player_active = false;
