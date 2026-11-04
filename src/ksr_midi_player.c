@@ -367,7 +367,6 @@ int ksr_player_render(Kasaria *ksr, f32 *out, unsigned int frames)
         return 0;
 
     atomic_store_explicit(&ksr->player_in_callback, 1, memory_order_seq_cst);
-
     //if(atomic_load_explicit(&ksr->player_seek_gate, memory_order_seq_cst) || !ksr->is_midi_loaded || (!ksr->stream && !ksr->current_event) || ksr->is_midi_player_paused)
     if(atomic_load_explicit(&ksr->player_seek_gate, memory_order_seq_cst) || !ksr->is_midi_loaded || (ksr->midi_playback_mode == 11 && !ksr->stream && !ksr->current_event) || ksr->is_midi_player_paused)
     {
@@ -2220,6 +2219,8 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, int playback_mode, const 
 
         if(ksr->midi_playback_mode == 12)
             prerender_player_start(ksr);
+
+        atomic_store_explicit(&ksr->player_seek_gate, false, memory_order_seq_cst);
         
         return 1;
     }
