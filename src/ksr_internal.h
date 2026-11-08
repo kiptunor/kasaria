@@ -41,9 +41,9 @@
 #define _FILE_OFFSET_BITS 64
 
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 
 
 #include <math.h>
@@ -846,20 +846,28 @@ typedef struct _MBlockList
 
 typedef struct
 {
-    f32 *data;
-    size_t frames;
-    size_t capacity;
+    f32           *raw_audio;
+    size_t         frames;
+    size_t         capacity;
     _Atomic size_t frames_ready;
-    _Atomic bool done;
-    _Atomic bool failed;
-}MIDIPlayerPrerenderBuffer;
+    _Atomic bool   done;
+    _Atomic bool   failed;
+    /*
+        Todo: add technical field vars
+
+        - active voices
+        - notes per second
+        - rendering time
+        - prerender position
+    */
+} MIDIPlayerPrerenderBuffer;
 
 typedef struct
 {
-    pthread_t thread;
+    pthread_t   thread;
     _Atomic int running;
     _Atomic int stop;
-}RingBufState;
+} RingBufState;
 
 struct Kasaria
 {
@@ -891,73 +899,73 @@ struct Kasaria
 
     // ==============[Channel FX]==============
 
-    ReverbEffect reverb;
-    f64          reverb_level;
-    int          reverb_preset;
-    long         reverb_send_buffer[AUDIO_BUFFER_SIZE];
+    ReverbEffect              reverb;
+    f64                       reverb_level;
+    int                       reverb_preset;
+    long                      reverb_send_buffer[AUDIO_BUFFER_SIZE];
 
 
-    sk_chorus   *chorus_l;
-    sk_chorus   *chorus_r;
-    f64          chorus_depth;
-    long         chorus_send_buffer[AUDIO_BUFFER_SIZE];
+    sk_chorus                *chorus_l;
+    sk_chorus                *chorus_r;
+    f64                       chorus_depth;
+    long                      chorus_send_buffer[AUDIO_BUFFER_SIZE];
 
     // Player vars
-    FileMap     *f_mmap;
-    MidiStream  *stream;
-    long         sample_count;
-    long         current_sample;
-    FILE        *fp_midi;
+    FileMap                  *f_mmap;
+    MidiStream               *stream;
+    long                      sample_count;
+    long                      current_sample;
+    FILE                     *fp_midi;
 
     // MIDI loader (Memory based)
-    char         song_title[256];
-    char         song_copyright[256];
-    char         last_smf[1024];
-    long         at;
-    int          total_midi_tracks;
-    int          current_loaded_track;
-    short        midi_file_format;
+    char                      song_title[256];
+    char                      song_copyright[256];
+    char                      last_smf[1024];
+    long                      at;
+    int                       total_midi_tracks;
+    int                       current_loaded_track;
+    short                     midi_file_format;
 
     // Voice management
-    int          voices;
-    Voice        voice[MAX_VOICES];
-    Voice       *voice_by_channel_note[16][128][8];
-    int          free_voice_stack[MAX_VOICES];
-    int          free_voice_count;
+    int                       voices;
+    Voice                     voice[MAX_VOICES];
+    Voice                    *voice_by_channel_note[16][128][8];
+    int                       free_voice_stack[MAX_VOICES];
+    int                       free_voice_count;
 
     // Player position tracking (Based on streamed audio)
-    u64          wall_clock_last_ns;
-    f64          phase_ema;
-    int          phase_valid;
-    u64          start_frame;
-    u64          end_frame;
-    u64          duration_ns;
-    u64          now_ns;
-    u64          start_ns;
-    _Atomic u64  position_seq;
-    _Atomic u64  position_start_frame;
-    _Atomic u64  position_end_frame;
-    _Atomic u64  position_start_ns;
-    _Atomic u64  position_end_ns;
-    _Atomic u64  prerender_frames_written;
-    _Atomic u64  prerender_frames_consumed;
-    _Atomic int  player_seek_gate; // 1 while a control thread is rewriting the player
-    _Atomic int  player_in_callback;
-    _Atomic bool midi_events_finished;
-    _Atomic bool prerender_done;
-    bool prerender_thread_valid;
-    u64 midi_tail_frames_remaining;
-    u64          position_clock_end_ns;
-    RingBufState rb_state;
+    u64                       wall_clock_last_ns;
+    f64                       phase_ema;
+    int                       phase_valid;
+    u64                       start_frame;
+    u64                       end_frame;
+    u64                       duration_ns;
+    u64                       now_ns;
+    u64                       start_ns;
+    _Atomic u64               position_seq;
+    _Atomic u64               position_start_frame;
+    _Atomic u64               position_end_frame;
+    _Atomic u64               position_start_ns;
+    _Atomic u64               position_end_ns;
+    _Atomic u64               prerender_frames_written;
+    _Atomic u64               prerender_frames_consumed;
+    _Atomic int               player_seek_gate; // 1 while a control thread is rewriting the player
+    _Atomic int               player_in_callback;
+    _Atomic bool              midi_events_finished;
+    _Atomic bool              prerender_done;
+    bool                      prerender_thread_valid;
+    u64                       midi_tail_frames_remaining;
+    u64                       position_clock_end_ns;
+    RingBufState              rb_state;
     MIDIPlayerPrerenderBuffer mp_prerender_buf;
-    pthread_t prerender_thread;
-    u64 prerender_playback_frame;
+    pthread_t                 prerender_thread;
+    u64                       prerender_playback_frame;
 
     // Resample vars
-    long         sample_increment;
-    long         sample_correction;
-    sample_t     resample_buffer[AUDIO_BUFFER_SIZE];
-    sample_t     resample_buffer_right[AUDIO_BUFFER_SIZE];
+    long                      sample_increment;
+    long                      sample_correction;
+    sample_t                  resample_buffer[AUDIO_BUFFER_SIZE];
+    sample_t                  resample_buffer_right[AUDIO_BUFFER_SIZE];
 #ifdef LOOKUP_HACK
     long *mixup;
     #ifdef LOOKUP_INTERPOLATION
@@ -1070,7 +1078,7 @@ void        antialiasing_i32(i32 *data, i32 data_length, i32 sample_rate, i32 ou
 void        antialiasing_f32(f32 *data, i32 data_length, i32 sample_rate, i32 output_rate);
 void        audio_compressor(CompressorSettings *compr_settings, void *buffer, u32 length);
 
-void prerender_player_stop(Kasaria *ksr);
+void        prerender_player_stop(Kasaria *ksr);
 
 
 // ------------- SoundFont Instrument functions (ksr_instruments.c) -------------

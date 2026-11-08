@@ -488,18 +488,53 @@ KSR_API void ksr_unload_midi(Kasaria *ksr);
 KSR_API int  ksr_reload_midi(Kasaria *ksr);
 
 /*
-@brief        Get the generated audio stream from the builtin player
+@brief            Read the retained audio from the generated pre-render playback
+@param ksr        Kasaria instance
+@param out_buffer Raw audio output
+@param frames     How many frames to read
+
+@remark           Reading the retained audio buffer only works when the pre-render player has
+                  fully finished rendering the entire MIDI data to audio
+*/
+KSR_API int  ksr_prerender_read_buf(Kasaria *ksr, float *out_buffer, unsigned int frames);
+
+/*
+@brief     Check if the pre-render player has finished the MIDI to audio conversion
+@param ksr Kasaria instance
+
+@remark    This can be useful to track the rendering status of the pre-render player
+*/
+KSR_API bool ksr_prerender_is_eos(Kasaria *ksr);
+
+/*
+@brief     Clear the retained audio data generated on the first audio playback run
+@param ksr Kasaria instance
+*/
+KSR_API int  ksr_prerender_clear(Kasaria *ksr);
+
+/*
+@brief Get the raw position in bytes of the pre-render player
+@param ksr      Kasaria instance
+@param position Output position
+
+@remark The pre-render player position is the same as the one retrieved from ksr_player_get_pos()
+        and its value oftenly goes ahead, hence the name: ahead-of-time pre-rendering
+*/
+KSR_API void ksr_prerender_get_pos(Kasaria *ksr, uint64_t *position);
+
+/*
+@brief        Process and generate raw audio data using the internal MIDI player
 @param ksr    Kasaria instance
 @param type   Sets the audio output format (float, double, short, etc. See Audio format identifier macros)
 @param buffer The audio output buffer that can be fed to an audio device (Requires audio callback) or
               an audio codec
 @param count  The number of samples to process
 
-@remark     The internal MIDI player is designed to process multiple midi notes in a single audio frame
-            which makes the synth really good for generating the real frequencies of chopped notes.
-            An important capability that most blackers cant go without it
+@remark The internal MIDI player is designed to process multiple midi notes in a single audio frame
+        which makes the synth really good for generating the real frequencies of chopped notes.
+        An important capability that most blackers cant go without it
 */
-KSR_API int ksr_player_get_stream(Kasaria *ksr, long audio_fmt, unsigned char *buffer, long count);
+KSR_API int ksr_player_render_raw(Kasaria *ksr, long audio_fmt, unsigned char *buffer, long count);
 
 /*
 @brief        Handle advamced player controls (play, pause, seek forward / backwards, position tracking) and get the generated audio
@@ -523,9 +558,9 @@ KSR_API int ksr_player_render(Kasaria *ksr, float *out, unsigned int frames);
 @remark         64 bit integer is used for much more precision which can matter in some cases.
                 The raw byte position can be represented in many ways depending on the purpose.
                 One example is converting the raw byte position to seconds which uses 64 bit float.
-                See ksr_byte_pos2sec()
+                See ksr_raw_pos2sec()
 */
-KSR_API void ksr_player_get_byte_pos(Kasaria *ksr, uint64_t *position);
+KSR_API void ksr_player_get_pos(Kasaria *ksr, uint64_t *position);
 
 /*
 @brief                  Start the internal player handler
@@ -576,17 +611,14 @@ KSR_API int  ksr_player_rewind(Kasaria *ksr, long time);
 */
 KSR_API bool ksr_player_is_ended(Kasaria *ksr);
 
-// KSR_API int  ksr_stop_midi(Kasaria *ksr); // Unused
-
 /*
-@brief     Get the current position of the internal MIDI player in seconds
+@brief Read the end position of the MIDI based on the count of samples required to be produced
 @param ksr Kasaria instance
-
-@remark    The player position is calculated on demand using monotonic time and the current sample count
-           and when used in midi visualizer as a pivot point to iterate and display notes on the screen
-           it can make the visualizer a bit less smooth
+@param pos Position to read
 */
-// KSR_API double ksr_player_get_pos(Kasaria *ksr);
+KSR_API int ksr_player_get_end_pos(Kasaria *ksr, uint64_t *pos);
+
+
 
 
 /*
@@ -644,7 +676,7 @@ KSR_API void ksr_render_ulaw(Kasaria *ksr, unsigned char *buffer, long count);
 // --------------------------- Utility functions ---------------------------
 KSR_API int ksr_millis2samples(Kasaria *ksr, long millis);
 KSR_API int ksr_samples2millis(Kasaria *ksr, long samples);
-KSR_API double ksr_byte_pos2sec(Kasaria *ksr, uint64_t byte_pos);
+KSR_API double ksr_raw_pos2sec(Kasaria *ksr, uint64_t byte_pos);
 
 // Close and free an instance of Kasaria. This should be called after all other API function calls
 KSR_API void ksr_shutdown(Kasaria *ksr);

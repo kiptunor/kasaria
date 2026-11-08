@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
         long frames = total < midi_audio_chunk ? total : midi_audio_chunk;
 
         // Advance to the next MIDI event and generate the synthesized audio frames
-        if(!ksr_player_get_stream(converter, AUDIO_FLOAT, (unsigned char*)buf, frames))
+        if(!ksr_player_render_raw(converter, AUDIO_FLOAT, (unsigned char*)buf, frames))
             break;
 
         // Then write each audio frame to the encoder

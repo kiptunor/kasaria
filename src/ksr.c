@@ -853,10 +853,10 @@ void ksr_shutdown(Kasaria *ksr)
     reset_midi(ksr);
     ksr_unload_midi(ksr); // This also calls reset_midi()
     free(ksr->f_mmap);
-    free(ksr->mp_prerender_buf.data);
-    ksr->mp_prerender_buf.data = NULL;
-    ksr->mp_prerender_buf.frames = 0;
-    ksr->mp_prerender_buf.capacity = 0;
+    free(ksr->mp_prerender_buf.raw_audio);
+    ksr->mp_prerender_buf.raw_audio = NULL;
+    ksr->mp_prerender_buf.frames    = 0;
+    ksr->mp_prerender_buf.capacity  = 0;
     free_tables(ksr);
     memset(ksr, 0, sizeof(Kasaria));
     free(ksr);
