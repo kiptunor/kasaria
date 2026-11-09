@@ -1555,6 +1555,7 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
     inst->samples    = ip->samples;
     inst->sample     = (Sample *)safe_malloc(sizeof(Sample) * ip->samples);
     inst->chorus_snd = -1;
+    inst->reverb_snd = -1;
 
     memset(inst->sample, 0, sizeof(Sample) * ip->samples);
 
@@ -1582,6 +1583,9 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 
         if(sp->chorus_send >= 0 && sp->chorus_send > inst->chorus_snd)
             inst->chorus_snd = sp->chorus_send;
+
+        if(sp->reverb_send >= 0 && sp->reverb_send > inst->reverb_snd)
+            inst->reverb_snd = sp->reverb_send;
 
         if(!ksr->pre_resampling_allowed || !sample->note_to_use || (sample->modes & MODES_LOOPING))
         {
@@ -2489,6 +2493,8 @@ static void make_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *tbl)
     }
 
     vp->reverb_send = otd.reverb_send;
+    if(otd.reverb_send) // only if an override is actually set
+        vp->reverb_send = otd.reverb_send;
     // vp->chorus_send = otd.chorus_send;
 
     vp->chorus_send = tbl->set[SF_chorusEffectsSend] ? tbl->val[SF_chorusEffectsSend] : -1;

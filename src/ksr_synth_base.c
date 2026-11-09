@@ -1198,6 +1198,25 @@ void reset_midi(Kasaria *ksr)
         ksr->channel[i].bank      = 0; // tone bank or drum set
         ksr->rpn_msb[i]           = 0xff;
         ksr->rpn_lsb[i]           = 0xff;
+
+        if(ISDRUMCHANNEL(ksr, i))
+            continue;
+            
+        int bk = ksr->channel[i].bank;
+        ToneBank *tb = (bk >= 0 && bk < 128) ? ksr->tonebank[bk] : NULL;
+        
+        if(!tb)
+            tb = ksr->tonebank[0];
+        
+        if(tb && IS_VALID_INSTRUMENT(tb->tone[ksr->channel[i].program].instrument))
+        {
+            if(tb->tone[ksr->channel[i].program].chorus_send >= 0)
+                ksr->channel[i].chorus = tb->tone[ksr->channel[i].program].chorus_send;
+            
+            if(tb->tone[ksr->channel[i].program].reverb_send >= 0)
+                ksr->channel[i].reverb = tb->tone[ksr->channel[i].program].reverb_send;
+        }
+            
     }
     reset_voices(ksr);
 

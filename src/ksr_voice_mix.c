@@ -866,6 +866,8 @@ static void mix_chorus_send(Kasaria *ksr, sample_t *sp, long *lp, int v, int cou
 {
     Voice         *vp             = ksr->voice + v;
     long           channel_chorus = ksr->channel[vp->channel].chorus;
+    long voice_chorus   = vp->chorus_send;
+    long send = channel_chorus > 0 ? channel_chorus : voice_chorus;
     final_volume_t gain;
     sample_t       s;
 
@@ -879,6 +881,7 @@ static void mix_chorus_send(Kasaria *ksr, sample_t *sp, long *lp, int v, int cou
         gain = vp->left_mix;
 
     gain = (gain * channel_chorus) / 127;
+    //gain = (gain * send) / 127;
 
     if(!gain)
         return;

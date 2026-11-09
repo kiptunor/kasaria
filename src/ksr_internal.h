@@ -432,8 +432,8 @@ enum
 
 
 
-#define DEFALT_REVERB_SEND    127
-#define DEFALT_CHORUS_SEND    127
+#define DEFALT_REVERB_SEND    -1
+#define DEFALT_CHORUS_SEND    -1
 #define DEFALT_DELAY_SEND     127
 
 
@@ -556,6 +556,7 @@ typedef struct
 {
     int     samples;
     i16     chorus_snd;
+    i16     reverb_snd;
     int     type;
     Sample *sample;
     char   *instname;

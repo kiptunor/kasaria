@@ -576,7 +576,25 @@ static void seek_forward(Kasaria *ksr, long until_time)
                 // Change drum set
                 ksr->channel[ksr->current_event->channel].bank = ksr->current_event->key;
             else
-                ksr->channel[ksr->current_event->channel].program = ksr->current_event->key;
+            {
+                int ch = ksr->current_event->channel;
+                ksr->channel[ch].program = ksr->current_event->key;
+                // Apply SF2 preset effect sends if explicitly set
+                int bk = ksr->channel[ch].bank;
+                ToneBank *tb = (bk >= 0 && bk < 128) ? ksr->tonebank[bk] : NULL;
+                
+                if(!tb)
+                    tb = ksr->tonebank[0];
+                
+                if(tb && IS_VALID_INSTRUMENT(tb->tone[ksr->channel[ch].program].instrument))
+                {
+                    if(tb->tone[ksr->channel[ch].program].chorus_send >= 0)
+                        ksr->channel[ch].chorus = tb->tone[ksr->channel[ch].program].chorus_send;
+        
+                    if(tb->tone[ksr->channel[ch].program].reverb_send >= 0)
+                        ksr->channel[ch].reverb = tb->tone[ksr->channel[ch].program].reverb_send;
+                }
+            }
             break;
 
         case ME_SUSTAIN:
@@ -706,7 +724,24 @@ static void play_midi(Kasaria *ksr, MidiEvent *e)
                     ksr->channel[e->channel].bank = e->key;
             }
             else
+            {
                 ksr->channel[e->channel].program = e->key;
+
+                int bk = ksr->channel[e->channel].bank;
+                ToneBank *tb = (bk >= 0 && bk < 128) ? ksr->tonebank[bk] : NULL;
+                 
+                if(!tb)
+                    tb = ksr->tonebank[0];
+                
+                if(tb && IS_VALID_INSTRUMENT(tb->tone[ksr->channel[e->channel].program].instrument))
+                {
+                    if(tb->tone[ksr->channel[e->channel].program].chorus_send >= 0)
+                        ksr->channel[e->channel].chorus = tb->tone[ksr->channel[e->channel].program].chorus_send;
+                    
+                    if(tb->tone[ksr->channel[e->channel].program].reverb_send >= 0)
+                        ksr->channel[e->channel].reverb = tb->tone[ksr->channel[e->channel].program].reverb_send;
+                }
+            }
 
             break;
 
