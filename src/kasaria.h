@@ -488,6 +488,15 @@ KSR_API void ksr_unload_midi(Kasaria *ksr);
 KSR_API int  ksr_reload_midi(Kasaria *ksr);
 
 /*
+@brief     Rewind the pre-render position only back to the beginning
+@param ksr Kasaria
+
+@remark Rewinding the pre-render position to the beginning must be done before reading
+        the PCM buffer trough ksr_prerender_read_buf()
+*/
+KSR_API void ksr_prerender_rewind(Kasaria *ksr);
+
+/*
 @brief            Read the retained audio from the generated pre-render playback
 @param ksr        Kasaria instance
 @param out_buffer Raw audio output
@@ -496,7 +505,7 @@ KSR_API int  ksr_reload_midi(Kasaria *ksr);
 @remark           Reading the retained audio buffer only works when the pre-render player has
                   fully finished rendering the entire MIDI data to audio
 */
-KSR_API int  ksr_prerender_read_buf(Kasaria *ksr, float *out_buffer, unsigned int frames);
+KSR_API int  ksr_prerender_read_buf(Kasaria *ksr, float *out_buffer, unsigned int frames, unsigned int* total_frame_count);
 
 /*
 @brief     Check if the pre-render player has finished the MIDI to audio conversion

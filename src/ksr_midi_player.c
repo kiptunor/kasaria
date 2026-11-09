@@ -302,7 +302,7 @@ int prerender_player_start(Kasaria *ksr)
     return 1;
 }
 
-void prerender_player_rewind(Kasaria *ksr)
+void ksr_prerender_rewind(Kasaria *ksr)
 {
     if(!ksr)
         return;
@@ -389,7 +389,7 @@ void player_pos_end_update(Kasaria *ksr, unsigned int frame_count)
     atomic_store_explicit(&ksr->player_in_callback, 0, memory_order_seq_cst);
 }
 
-int  ksr_prerender_read_buf(Kasaria *ksr, float *out_buffer, unsigned int frames)
+int  ksr_prerender_read_buf(Kasaria *ksr, float *out_buffer, unsigned int frames, unsigned int* total_frame_count)
 {
     if(!ksr || !out_buffer)
         return -1;
@@ -405,10 +405,13 @@ int  ksr_prerender_read_buf(Kasaria *ksr, float *out_buffer, unsigned int frames
     size_t                     remaining   = start_frame < available ? available - start_frame : 0;
     size_t                     count       = frames < remaining ? frames : remaining;
 
+    if(total_frame_count)
+        *total_frame_count = (unsigned int)count;
+
     u64 end_frame = ksr->prerender_playback_frame;
     u64 end_ns    = start_ns + (count * 1000000000ULL) / ksr->play_mode.rate;
 
-    if(atomic_load_explicit(&buffer->done, memory_order_acquire) && end_frame >= available)
+    if(!atomic_load_explicit(&buffer->done, memory_order_acquire) && end_frame >= available)
     {
         log_warn("Prerender thread did not finished! Nothing to read.");
         return 1;
