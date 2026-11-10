@@ -2492,7 +2492,8 @@ static void make_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, LayerTable *tbl)
         vp->v.tremolo_to_pitch = OverrideSample.tremolo_to_pitch;
     }
 
-    vp->reverb_send = otd.reverb_send;
+    //vp->reverb_send = otd.reverb_send;
+    vp->reverb_send = tbl->set[SF_reverbEffectsSend] ? tbl->val[SF_reverbEffectsSend] : -1;
     if(otd.reverb_send) // only if an override is actually set
         vp->reverb_send = otd.reverb_send;
     // vp->chorus_send = otd.chorus_send;
