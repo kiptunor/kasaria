@@ -517,7 +517,7 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, KsrSoundfontOpts
         }
 
         safe_free(freed);
-        free_sf2_sample_cache();
+        free_sf2_sample_cache(ksr);
         free_soundfont(ksr->sf_info);
     }
 
@@ -705,7 +705,21 @@ void audio_callback(ma_device *dev, void *out, const void *in, ma_uint32 frames)
 {
     // Sooo simple
     // XD
-    ksr_render_float(raw_midi_event_ctx, out, frames);
+    Kasaria *ksr_ctx = (Kasaria *)dev->pUserData;
+    (void)in;
+
+    if(!ksr_ctx)
+    {
+        ma_uint32 channels = dev->playback.channels;
+        
+        if(channels < 1)
+            channels = 1;
+        
+        memset(out, 0, (size_t)frames * channels * sizeof(f32));
+        return;
+    }
+    
+    ksr_render_float(ksr_ctx, out, frames);
 }
 #endif
 
@@ -725,6 +739,7 @@ int ksr_init_audio(Kasaria *ksr, int init_scope)
 
     ksr->dev_config                    = ma_device_config_init(ma_device_type_playback);
 
+    ksr->dev_config.pUserData          = ksr;
     ksr->dev_config.playback.format    = ma_format_f32;
     ksr->dev_config.playback.channels  = 2;
     ksr->dev_config.sampleRate         = ksr->play_mode.rate;
@@ -768,7 +783,7 @@ int ksr_start_audio(Kasaria *ksr)
 
     if(ksr->is_init_raw_midi_events)
     {
-        if(ma_device_start(&raw_midi_event_ctx->audio_device) != MA_SUCCESS)
+        if(ma_device_start(&ksr->audio_device) != MA_SUCCESS)
         {
             log_error("Failed to start audio device for raw MIDI events");
             return 1;
@@ -802,7 +817,7 @@ int ksr_stop_audio(Kasaria *ksr)
 
     if(ksr->is_init_raw_midi_events)
     {
-        if(ma_device_stop(&raw_midi_event_ctx->audio_device) != MA_SUCCESS)
+        if(ma_device_stop(&ksr->audio_device) != MA_SUCCESS)
         {
             log_error("Failed to stop audio device for raw MIDI events");
             return 1;
@@ -832,6 +847,18 @@ void ksr_shutdown(Kasaria *ksr)
         return;
 
     log_info("Kasaria shutdown...");
+    
+#ifdef KSR_INTERNAL_AUDIO_HANDLER
+    // Stop the audio thread before freeing anything its callback may touch
+    // (voices, DSP state and the soundfont sample cache).
+    if(ksr->is_audio_init)
+    {
+        ma_device_stop(&ksr->audio_device);
+        ma_device_uninit(&ksr->audio_device);
+        ksr->is_audio_init    = false;
+        ksr->is_audio_started = false;
+    }
+#endif
 
     // Maybe the shutdown is forced
     if(!ksr->is_midi_player_paused)
@@ -843,12 +870,7 @@ void ksr_shutdown(Kasaria *ksr)
     free_reverb(ksr);
     free_chorus(ksr);
 
-    free_sf2_sample_cache();
-
-#ifdef KSR_INTERNAL_AUDIO_HANDLER
-    if(ksr->is_audio_init)
-        ma_device_uninit(&ksr->audio_device);
-#endif
+    free_sf2_sample_cache(ksr);
 
     reset_midi(ksr);
     ksr_unload_midi(ksr); // This also calls reset_midi()

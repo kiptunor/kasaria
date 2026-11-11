@@ -870,6 +870,8 @@ typedef struct
     _Atomic int stop;
 } RingBufState;
 
+struct SF2SampleCacheEntry;
+
 struct Kasaria
 {
     // int            opt_pre_resamplation;
@@ -884,6 +886,7 @@ struct Kasaria
     ToneBank   *drumset[128];
     Instrument *default_instrument; // This is only used for tracks that don't specify a program
     int         default_program;    // This is a special instrument, used for all melodic programs
+    struct SF2SampleCacheEntry *sf2_sample_cache;
 
     // Audio / output sample vars
     PlayMode    play_mode;
@@ -1163,7 +1166,8 @@ void         process_chorus(Kasaria *ksr, f32 *buf, long *send_buf, long count);
 u64          monotonic_ns(void);
 
 Instrument  *extract_soundfont(Kasaria *ksr, const char *sf_file, int bank, int preset, int keynote);
-void         free_sf2_sample_cache(void);
+//void         free_sf2_sample_cache(void);
+void free_sf2_sample_cache(Kasaria *ksr);
 
 extern void  init_mblock(MBlockList *mblock);
 extern void *new_segment(MBlockList *mblock, size_t nbytes);

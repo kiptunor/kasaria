@@ -507,10 +507,10 @@ int ksr_player_render(Kasaria *ksr, f32 *out, unsigned int frames)
 #ifdef KSR_INTERNAL_AUDIO_HANDLER
 void _internal_midi_player_cb(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount)
 {
-    (void)pDevice;
+    Kasaria *ksr_ctx = (Kasaria *)pDevice->pUserData;
     (void)pInput;
 
-    if(async_midi_player)
+    if(ksr_ctx)
         ksr_player_render(async_midi_player, (f32 *)pOutput, frameCount);
     else
         memset(pOutput, 0, (size_t)frameCount * 2 * sizeof(f32));
@@ -2730,14 +2730,14 @@ int ksr_player_begin(Kasaria *ksr, bool wait_midi_ending)
         return 0;
 
 
-    async_midi_player          = ksr; // Get the current synth context for the async player
+    //async_midi_player          = ksr; // Get the current synth context for the async player
 
     ksr->is_midi_ended         = false;
     ksr->is_midi_player_paused = false;
     ksr->phase_valid           = 0;
 
     log_info("Starting MIDI playback...");
-    ma_device_start(&async_midi_player->audio_device); // This may cause the midi player to get stuck when trying to play the midi again
+    ma_device_start(&ksr->audio_device); // This may cause the midi player to get stuck when trying to play the midi again
 
     // Wait for the MIDI playback to finish (This is required if this function is called on the main thread so it won't exit)
     if(wait_midi_ending)

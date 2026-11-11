@@ -431,7 +431,7 @@ typedef struct OverrideTiMidityData
 
 
 OVERRIDETIMIDITYDATA        otd              = { 0 };
-static SF2SampleCacheEntry *sf2_sample_cache = NULL;
+//static SF2SampleCacheEntry *sf2_sample_cache = NULL;
 
 /*----------------------------------------------------------------*/
 
@@ -1469,6 +1469,7 @@ static void dump_sample_wav(Sample *sample)
     log_info("dumped %s (%ld frames, %u Hz)", path, frames, rate);
 }
 
+/*
 static SF2SampleCacheEntry *sf2_sample_cache_find(FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate)
 {
     SF2SampleCacheEntry *e;
@@ -1485,7 +1486,29 @@ static SF2SampleCacheEntry *sf2_sample_cache_find(FILE *tf, i64 start, i64 lowbi
     }
     return NULL;
 }
+*/
 
+static SF2SampleCacheEntry *sf2_sample_cache_find(Kasaria *ksr, FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate)
+{
+    SF2SampleCacheEntry *e;
+
+    if(!ksr)
+        return NULL;
+
+    for(e = ksr->sf2_sample_cache; e; e = e->next)
+    {
+        if(e->tf != tf || e->start != start || e->lowbit != lowbit)
+            continue;
+        if(e->src_rate != src_rate || e->src_len != src_len)
+            continue;
+        if(e->note_to_use != note_to_use || e->root_key != root_key || e->play_rate != play_rate)
+            continue;
+        return e;
+    }
+    return NULL;
+}
+
+/*
 static void sf2_sample_cache_add(FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate, Sample *sample)
 {
     SF2SampleCacheEntry *e;
@@ -1517,7 +1540,41 @@ static void sf2_sample_cache_add(FILE *tf, i64 start, i64 lowbit, i32 src_rate, 
 
     sample->data_alloced   = 0; // the instrument only borrows it now
 }
+*/
 
+static void sf2_sample_cache_add(Kasaria *ksr, FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate, Sample *sample)
+{
+    SF2SampleCacheEntry *e;
+
+    if(!ksr || !sample->data)
+        return; // failed load: don't cache garbage
+
+    e              = (SF2SampleCacheEntry *)safe_malloc(sizeof(*e));
+    e->next        = ksr->sf2_sample_cache;
+    e->tf          = tf;
+    e->start       = start;
+    e->lowbit      = lowbit;
+    e->src_rate    = src_rate;
+    e->src_len     = src_len;
+    e->note_to_use = note_to_use;
+    e->root_key    = root_key;
+    e->play_rate   = play_rate;
+    memset(&e->sample, 0, sizeof(Sample));
+    e->sample.data         = sample->data;
+    e->sample.data_alloced = 1; // the cache now owns this buffer
+    e->sample.data_type    = sample->data_type;
+    e->sample.data_length  = sample->data_length;
+    e->sample.sample_rate  = sample->sample_rate;
+    e->sample.loop_start   = sample->loop_start;
+    e->sample.loop_end     = sample->loop_end;
+    e->sample.modes        = sample->modes;
+    e->sample.note_to_use  = sample->note_to_use;
+    ksr->sf2_sample_cache  = e;
+
+    sample->data_alloced   = 0; // the instrument only borrows it now
+}
+
+/*
 void free_sf2_sample_cache(void)
 {
     SF2SampleCacheEntry *e = sf2_sample_cache;
@@ -1531,6 +1588,29 @@ void free_sf2_sample_cache(void)
         e = next;
     }
     sf2_sample_cache = NULL;
+}
+*/
+
+void free_sf2_sample_cache(Kasaria *ksr)
+{
+    SF2SampleCacheEntry *e;
+
+    if(!ksr)
+        return;
+
+    e = ksr->sf2_sample_cache;
+
+    while(e)
+    {
+        SF2SampleCacheEntry *next = e->next;
+        
+        if(e->sample.data && e->sample.data_alloced)
+            safe_free(e->sample.data);
+        
+        safe_free(e);
+        e = next;
+    }
+    ksr->sf2_sample_cache = NULL;
 }
 
 static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
@@ -1589,7 +1669,7 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
 
         if(!ksr->pre_resampling_allowed || !sample->note_to_use || (sample->modes & MODES_LOOPING))
         {
-            SF2SampleCacheEntry *found = sf2_sample_cache_find(tf, sp->start, sp->lowbit, src_rate, src_len, note_to_use, root_key, play_rate);
+            SF2SampleCacheEntry *found = sf2_sample_cache_find(ksr, tf, sp->start, sp->lowbit, src_rate, src_len, note_to_use, root_key, play_rate);
 
             if(found)
             {
@@ -1863,7 +1943,7 @@ static Instrument *load_from_file(Kasaria *ksr, SFInsts *rec, InstList *ip)
         squash_sample_16to8(sample);
 #endif
         if(!ksr->pre_resampling_allowed || !sample->note_to_use || (sample->modes & MODES_LOOPING))
-            sf2_sample_cache_add(tf, sp->start, sp->lowbit, src_rate, src_len, note_to_use, root_key, play_rate, sample);
+            sf2_sample_cache_add(ksr, tf, sp->start, sp->lowbit, src_rate, src_len, note_to_use, root_key, play_rate, sample);
     } // for
 
     return inst;
