@@ -276,6 +276,8 @@ int load_soundfont_presets(Kasaria *ksr, int active_presets, bool perc_bank)
     if(!ksr || !ksr->sf_loaded || !ksr->sf_info)
         return 0;
 
+    KSR_SET_LOG_CONTEXT(ksr);
+
     log_debug("SF2 Preset count: %d", ksr->sf_info->npresets);
     log_debug("Preloading soundfont instruments");
 

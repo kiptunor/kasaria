@@ -523,6 +523,8 @@ static void     load_sfrom(Kasaria *ksr)
 
     sf_file = FILENAME_NORMALIZE("SFROM.SF2");
 
+    KSR_SET_LOG_CONTEXT(ksr);
+
     if((tf = open_file(ksr, sf_file, 1, OF_VERBOSE)) == NULL)
     {
         log_warn("Can't open SFROM.SF2");
@@ -898,6 +900,8 @@ Instrument *sndfont_load_instrument(Kasaria *ksr, int bank, int preset)
     if(!ksr || !ksr->sf_loaded || !ksr->sf_info)
         return NULL;
 
+    KSR_SET_LOG_CONTEXT(ksr);
+
     /*
      * Create the private SFInsts record.
      *
@@ -1020,6 +1024,8 @@ static void init_sf(Kasaria *ksr, SFInsts *rec)
 {
     SFInfo sfinfo = { 0 };
     int    i;
+
+    KSR_SET_LOG_CONTEXT(ksr);
 
     log_info("Init soundfonts `%s'", FILENAME_REDUCED(rec->fname));
 
@@ -1146,6 +1152,8 @@ Instrument *try_load_soundfont(Kasaria *ksr, SFInsts *rec, int order, int bank, 
     InstList   *ip;
     Instrument *inst = NULL;
     int         addr;
+
+    KSR_SET_LOG_CONTEXT(ksr);
 
     if(!rec->tf)
     {
@@ -1469,25 +1477,6 @@ static void dump_sample_wav(Sample *sample)
     log_info("dumped %s (%ld frames, %u Hz)", path, frames, rate);
 }
 
-/*
-static SF2SampleCacheEntry *sf2_sample_cache_find(FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate)
-{
-    SF2SampleCacheEntry *e;
-
-    for(e = sf2_sample_cache; e; e = e->next)
-    {
-        if(e->tf != tf || e->start != start || e->lowbit != lowbit)
-            continue;
-        if(e->src_rate != src_rate || e->src_len != src_len)
-            continue;
-        if(e->note_to_use != note_to_use || e->root_key != root_key || e->play_rate != play_rate)
-            continue;
-        return e;
-    }
-    return NULL;
-}
-*/
-
 static SF2SampleCacheEntry *sf2_sample_cache_find(Kasaria *ksr, FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate)
 {
     SF2SampleCacheEntry *e;
@@ -1507,40 +1496,6 @@ static SF2SampleCacheEntry *sf2_sample_cache_find(Kasaria *ksr, FILE *tf, i64 st
     }
     return NULL;
 }
-
-/*
-static void sf2_sample_cache_add(FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate, Sample *sample)
-{
-    SF2SampleCacheEntry *e;
-
-    if(!sample->data)
-        return; // failed load: don't cache garbage
-
-    e              = (SF2SampleCacheEntry *)safe_malloc(sizeof(*e));
-    e->next        = sf2_sample_cache;
-    e->tf          = tf;
-    e->start       = start;
-    e->lowbit      = lowbit;
-    e->src_rate    = src_rate;
-    e->src_len     = src_len;
-    e->note_to_use = note_to_use;
-    e->root_key    = root_key;
-    e->play_rate   = play_rate;
-    memset(&e->sample, 0, sizeof(Sample));
-    e->sample.data         = sample->data;
-    e->sample.data_alloced = 1; // the cache now owns this buffer
-    e->sample.data_type    = sample->data_type;
-    e->sample.data_length  = sample->data_length;
-    e->sample.sample_rate  = sample->sample_rate;
-    e->sample.loop_start   = sample->loop_start;
-    e->sample.loop_end     = sample->loop_end;
-    e->sample.modes        = sample->modes;
-    e->sample.note_to_use  = sample->note_to_use;
-    sf2_sample_cache       = e;
-
-    sample->data_alloced   = 0; // the instrument only borrows it now
-}
-*/
 
 static void sf2_sample_cache_add(Kasaria *ksr, FILE *tf, i64 start, i64 lowbit, i32 src_rate, i64 src_len, i32 note_to_use, i32 root_key, i32 play_rate, Sample *sample)
 {
@@ -1573,23 +1528,6 @@ static void sf2_sample_cache_add(Kasaria *ksr, FILE *tf, i64 start, i64 lowbit, 
 
     sample->data_alloced   = 0; // the instrument only borrows it now
 }
-
-/*
-void free_sf2_sample_cache(void)
-{
-    SF2SampleCacheEntry *e = sf2_sample_cache;
-
-    while(e)
-    {
-        SF2SampleCacheEntry *next = e->next;
-        if(e->sample.data && e->sample.data_alloced)
-            safe_free(e->sample.data);
-        safe_free(e);
-        e = next;
-    }
-    sf2_sample_cache = NULL;
-}
-*/
 
 void free_sf2_sample_cache(Kasaria *ksr)
 {
@@ -2077,6 +2015,8 @@ static int parse_layer(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl, int
 	SFPresetHdr *preset = &sf->preset[pridx];
 #endif
 
+    KSR_SET_LOG_CONTEXT(ksr);
+
     if(level >= 2)
     {
         log_debug("parse_layer: too deep instrument level :%d", pridx);
@@ -2418,6 +2358,8 @@ static int make_patch(Kasaria *ksr, SFInfo *sf, int pridx, LayerTable *tbl)
     InstList     *ip;
     SFSampleInfo *sample = &sf->sample[tbl->val[SF_sampleId]];
     SampleList   *sp;
+
+    KSR_SET_LOG_CONTEXT(ksr);
 
     if(sample->sampletype & SF_SAMPLETYPE_ROM && sfrom_load < 1) /* is ROM sample? */
     {
@@ -2860,6 +2802,8 @@ static void        set_init_info(Kasaria *ksr, SFInfo *sf, SampleList *vp, Layer
 {
     int           val;
     SFSampleInfo *sample = &sf->sample[tbl->val[SF_sampleId]];
+
+    KSR_SET_LOG_CONTEXT(ksr);
 
     // key range
     if(tbl->set[SF_keyRange])

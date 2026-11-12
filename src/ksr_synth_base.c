@@ -44,6 +44,8 @@ playmidi.c -- random stuff in need of rearrangement
 
 void reset_voices(Kasaria *ksr)
 {
+    KSR_SET_LOG_CONTEXT(ksr);
+    
     log_debug("Reset voices");
     /*
         ksr->steal_scan = 0;
@@ -1185,6 +1187,8 @@ void reset_controllers(Kasaria *ksr, int c)
 
 void reset_midi(Kasaria *ksr)
 {
+    KSR_SET_LOG_CONTEXT(ksr);
+    
     log_debug("Reset MIDI state");
     int i;
     for(i = 0; i < 16; i++)

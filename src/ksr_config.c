@@ -37,6 +37,8 @@ void ksr_lock_config(Kasaria *ksr)
     if(!ksr)
         return;
 
+    KSR_SET_LOG_CONTEXT(ksr);
+
     log_info("\033[24mConfig Locked\033[0m");
 
     ksr->is_config_locked = true;
@@ -46,6 +48,8 @@ void ksr_unlock_config(Kasaria *ksr)
 {
     if(!ksr)
         return;
+
+    KSR_SET_LOG_CONTEXT(ksr);
 
     log_info("\033[24mConfig Unlocked\033[0m");
 
@@ -79,6 +83,9 @@ void set_default_config(Kasaria *ksr)
 {
     if(!ksr)
         return;
+    
+    KSR_SET_LOG_CONTEXT(ksr);
+    
     log_trace("setting config");
     ksr->default_program        = DEFAULT_PROGRAM;
     ksr->antialiasing_allowed   = 1;

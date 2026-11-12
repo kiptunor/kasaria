@@ -35,6 +35,8 @@ typedef struct
     log_LogLevel level;  /// @var Log level
 } Callback;
 
+static _Thread_local int log_instance_idx = 0;
+
 /// @brief Log management structure
 struct LogManagemnt
 {
@@ -53,6 +55,11 @@ static const char *level_colors[] = {
     "\x1b[38;5;196m", "\x1b[31m", "\x1b[33m", "\x1b[32m", "\x1b[36m", "\x1b[94m"};
 #endif
 
+void log_set_instance_id(int id)
+{
+    log_instance_idx = id;
+}
+
 static void stdout_callback(log_Event *ev)
 {
 #if LOGC__TIME_FORMAT == 2
@@ -62,6 +69,7 @@ static void stdout_callback(log_Event *ev)
 #elif LOGC__TIME_FORMAT == 1
     fprintf(ev->stream, "%d ",  ev->time);
 #endif
+    fprintf(ev->stream, "{%d} ", log_instance_idx);
 
 #ifdef LOGC__STDOUT_COLOR
     fprintf(

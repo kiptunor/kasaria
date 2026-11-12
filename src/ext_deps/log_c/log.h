@@ -76,6 +76,12 @@ log_LogLevel;
 /// @return         String representing the corresponding log level
 const char *log_level_string(log_LogLevel level);
 
+/// @brief Set instance logging id
+/// @remark Setting instance ID is required since Kasaria API offers the posibility
+/// of initializing multiple instances and for logging it's important to keep track of each
+///
+/// @param id Current ID to set from instance
+void log_set_instance_id(int idx);
 
 /// @brief          Set the process lock function
 /// @remark         The lock function is passed true to acquire the resource, false to release

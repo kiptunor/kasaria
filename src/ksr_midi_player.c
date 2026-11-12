@@ -394,6 +394,8 @@ int  ksr_prerender_read_buf(Kasaria *ksr, float *out_buffer, unsigned int frames
     if(!ksr || !out_buffer)
         return -1;
 
+    KSR_SET_LOG_CONTEXT(ksr);
+
     MIDIPlayerPrerenderBuffer *buffer      = &ksr->mp_prerender_buf;
 
     
@@ -1959,6 +1961,8 @@ static StreamError stream_init(Kasaria *ksr, const u_char *data, size_t len)
     if(chunk < 6)
         return STREAM_ERR_INVALID_CHUNK;
 
+    KSR_SET_LOG_CONTEXT(ksr);
+
     u_char h[6];
     memcpy(h, data + 8, 6);
 
@@ -2061,6 +2065,8 @@ int ksr_load_midi_file(Kasaria *ksr, int loading_mode, int playback_mode, const 
 {
     if(!ksr || !filename)
         return 0;
+
+    KSR_SET_LOG_CONTEXT(ksr);
 
     ksr->midi_loading_mode  = loading_mode;
     ksr->midi_playback_mode = playback_mode;
@@ -2334,6 +2340,8 @@ void ksr_unload_midi(Kasaria *ksr)
 {
     if(!ksr)
         return;
+
+    KSR_SET_LOG_CONTEXT(ksr);
 
     log_debug("Unload MIDI");
 
@@ -2718,6 +2726,8 @@ int ksr_player_begin(Kasaria *ksr, bool wait_midi_ending)
 #ifdef KSR_INTERNAL_AUDIO_HANDLER
     if(!ksr)
         return 0;
+
+    KSR_SET_LOG_CONTEXT(ksr);
 
     if(!ksr->is_audio_init)
     {

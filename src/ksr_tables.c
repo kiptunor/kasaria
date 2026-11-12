@@ -399,6 +399,8 @@ void init_tables(Kasaria *ksr)
 
 void free_tables(Kasaria *ksr)
 {
+    KSR_SET_LOG_CONTEXT(ksr);
+    
     log_debug("Free tables...");
 #ifdef LOOKUP_HACK
 #ifdef LOOKUP_INTERPOLATION

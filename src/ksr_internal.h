@@ -329,6 +329,9 @@
     #define divt_4096(t) divf_4096(t)
 #endif
 
+#define KSR_SET_LOG_CONTEXT(ksr) \
+    log_set_instance_id((ksr)->current_instance_id)
+
 #define LPF_FIR_ORDER            (20)
 #define LPF_FIR_ORDER2           (10) // LPF_FIR_ORDER/2
 #define LPF_FIR_ANTIALIASING_ATT (40.0)
@@ -872,10 +875,13 @@ typedef struct
 
 struct SF2SampleCacheEntry;
 
+static int _ksr_instance_counter = 0;
 struct Kasaria
 {
     // int            opt_pre_resamplation;
     char        current_filename[1024];
+    int         current_instance_id;
+    int         instance_id_arr[MAX_INSTANCES];
     FILE       *fp;
     PathList   *pathlist; // The paths in this list will be tried whenever we're reading a file
 

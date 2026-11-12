@@ -115,7 +115,22 @@ Kasaria *ksr_init(bool disable_logs)
     Kasaria *ksr = (Kasaria *)safe_malloc(sizeof(Kasaria));
     if(!ksr)
         return NULL;
+    
+    _ksr_instance_counter++;
+    int temp_ctr = 0;
+    if(_ksr_instance_counter > MAX_INSTANCES)
+    {
+        log_error("Cannot initialize over %d instances!", MAX_INSTANCES);
+        return NULL;
+    }
+    //temp_ctr++;
+    
     memset(ksr, 0, sizeof(Kasaria));
+
+    ksr->current_instance_id = _ksr_instance_counter;
+    //ksr->instance_id_arr[temp_ctr] = _ksr_instance_counter;
+    //log_set_instance_idx(ksr->instance_id_arr[temp_ctr]);
+    KSR_SET_LOG_CONTEXT(ksr);
 
     log_set_quiet(disable_logs);
 
@@ -134,10 +149,20 @@ Kasaria *ksr_init(bool disable_logs)
     return ksr;
 }
 
+int ksr_get_instance_id(Kasaria *ksr)
+{
+    if(!ksr)
+        return -1;
+
+    return ksr->current_instance_id;
+}
+
 void ksr_set_log_level(Kasaria *ksr, int level)
 {
     if(!ksr)
         return;
+
+    KSR_SET_LOG_CONTEXT(ksr);
 
     if(level < 0 || level > 5)
     {
@@ -377,6 +402,8 @@ int ksr_load_soundfont_file(Kasaria *ksr, const char *filename, KsrSoundfontOpts
 {
     if(!ksr || !filename)
         return 0;
+    
+    KSR_SET_LOG_CONTEXT(ksr);
 
     FILE       *fp;
     const char *ext;
@@ -729,6 +756,8 @@ int ksr_init_audio(Kasaria *ksr, int init_scope)
     if(!ksr)
         return 1;
 
+    KSR_SET_LOG_CONTEXT(ksr);
+
     if(ksr->is_audio_init)
     {
         log_warn("Audio device is already initialized");
@@ -781,6 +810,8 @@ int ksr_start_audio(Kasaria *ksr)
     if(!ksr)
         return 1;
 
+    KSR_SET_LOG_CONTEXT(ksr);
+
     if(ksr->is_init_raw_midi_events)
     {
         if(ma_device_start(&ksr->audio_device) != MA_SUCCESS)
@@ -815,6 +846,8 @@ int ksr_stop_audio(Kasaria *ksr)
     if(!ksr)
         return 1;
 
+    KSR_SET_LOG_CONTEXT(ksr);
+
     if(ksr->is_init_raw_midi_events)
     {
         if(ma_device_stop(&ksr->audio_device) != MA_SUCCESS)
@@ -845,6 +878,8 @@ void ksr_shutdown(Kasaria *ksr)
 {
     if(!ksr)
         return;
+
+    KSR_SET_LOG_CONTEXT(ksr);
 
     log_info("Kasaria shutdown...");
     

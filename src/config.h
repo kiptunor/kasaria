@@ -83,6 +83,7 @@
 // #define MAX_VOICES            1000000000
 // #define MAX_VOICES            10000000 // Very large memory usage!
 #define MAX_VOICES               9024
+#define MAX_INSTANCES            20 // Only that much for now
 
 /* The size of the internal buffer is 2^AUDIO_BUFFER_BITS samples.
    This determines maximum number of samples ever computed in a row.

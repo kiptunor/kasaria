@@ -656,6 +656,8 @@ MidiEvent *read_midi_file(Kasaria *ksr, FILE *mfp, long *count, long *sp)
     int   i;
     char  tmp[4];
 
+    KSR_SET_LOG_CONTEXT(ksr);
+
     ksr->fp          = mfp;
     ksr->event_count = 0;
     ksr->at          = 0;

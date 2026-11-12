@@ -272,6 +272,12 @@ const char * ksr_get_commit_hash();
 KSR_API Kasaria *ksr_init(bool disable_logs);
 
 /*
+@brief Get the instance ID value
+@param ksr Kasaria instance
+*/
+KSR_API int ksr_get_instance_id(Kasaria *ksr);
+
+/*
 @brief              Set what log level to avoid
 @param ksr          Kasaria instance
 @param level        Log level to set from 0 to 5 (See Log level identifier macros)
