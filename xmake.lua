@@ -84,7 +84,7 @@ target("kasaria_shared")
         add_ldflags("-Wl,--as-needed")
         add_links("m")
     elseif is_plat("mingw") then
-        --set_prefixname("")
+        set_prefixname("")
         add_links("kernel32", "winpthread")
     end
     
@@ -95,10 +95,15 @@ target("kasaria_shared")
 target("kasaria_static")
     set_basename("kasaria")
     -- Build config
-    if has_config("static-lib") then
-        set_default(true)
-    else
-        set_default(false)
+    if is_plat("linux") then
+        if has_config("static-lib") then
+            set_default(true)
+        else
+            set_default(false)
+        end
+        else if is_plat("mingw") then
+            set_default(false)
+        end
     end
     add_defines("LOGC__USER_SETTINGS")
     set_kind("static")
@@ -112,7 +117,7 @@ target("kasaria_static")
         add_ldflags("-Wl,--as-needed")
         add_links("m")
     elseif is_plat("mingw") then
-        --set_prefixname("")
+        set_prefixname("")
         add_links("kernel32")
     end
     
