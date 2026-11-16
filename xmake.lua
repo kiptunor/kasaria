@@ -85,7 +85,7 @@ target("kasaria_shared")
         add_links("m")
     elseif is_plat("mingw") then
         --set_prefixname("")
-        add_links("kernel32")
+        add_links("kernel32", "winpthread")
     end
     
     add_links("m")
