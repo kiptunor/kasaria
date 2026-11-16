@@ -881,6 +881,11 @@ void ksr_shutdown(Kasaria *ksr)
 
     KSR_SET_LOG_CONTEXT(ksr);
 
+    if(_ksr_instance_counter != 0)
+        _ksr_instance_counter--;
+    else
+        log_warn("No possible instances left to shutdown");
+
     log_info("Kasaria shutdown...");
     
 #ifdef KSR_INTERNAL_AUDIO_HANDLER
