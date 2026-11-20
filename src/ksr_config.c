@@ -504,6 +504,7 @@ KasariaConfig ksr_get_config(Kasaria *ksr)
     config.allow_overlapping_notes = ksr->overlapping_notes;
     config.midi_chunk_limiter      = ksr->midi_chunk_limit_enabled;
     config.midi_chunk_size         = ksr->midi_chunk_size;
+    config.reverb_preset           = ksr->reverb_preset;
 
     return config;
 }
@@ -531,6 +532,9 @@ void ksr_set_config(Kasaria *ksr, KasariaConfig config)
     ksr->skip_initial_midi_silence  = config.skip_initial_silence;
     ksr->midi_chunk_limit_enabled   = config.midi_chunk_limiter;
     ksr->midi_chunk_size            = config.midi_chunk_size;
+    ksr->reverb_preset              = config.reverb_preset;
+
+    reset_reverb(ksr); // Not sure if necessary lol
 
     // Again don't let the user disable overlapping notes if the synth is initialized for raw MIDI events
 #ifdef KSR_INTERNAL_AUDIO_HANDLER

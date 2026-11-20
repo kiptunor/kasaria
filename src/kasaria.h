@@ -74,6 +74,7 @@ typedef struct
     int high_note_velocity;
     int audio_frame_size;
     int midi_chunk_size;
+    int reverb_preset;
     bool immediate_panning;
     bool mono_audio;
     bool fast_decay;
@@ -256,7 +257,7 @@ enum
   KSR_REVERB_PRESET_DUSTYROOM,
   KSR_REVERB_PRESET_CHAPEL,
   KSR_REVERB_PRESET_SMALLWATERROOM,
-  NUM_TIMID_REVERB_PRESETS
+  KSR_REVERB_PRESET_TOTAL_COUNT
 };
 
 
